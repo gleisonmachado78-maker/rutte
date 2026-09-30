@@ -6,6 +6,7 @@ import type {
   Category,
   Contact,
   Exercise,
+  FocusSession,
   GymData,
   Project,
   Task,
@@ -314,6 +315,29 @@ export const api = {
   async deleteSession(id: string): Promise<void> {
     const db = load();
     db.gym.sessions = db.gym.sessions.filter((s) => s.id !== id);
+    persist();
+    return delay(undefined);
+  },
+
+  /* -------------------------------- Foco -------------------------------- */
+  async listFocusSessions(): Promise<FocusSession[]> {
+    return delay([...(load().focusSessions ?? [])].sort((a, b) => b.endedAt.localeCompare(a.endedAt)));
+  },
+  /** Registra um pomodoro concluído (e anota no histórico do afazer, se houver). */
+  async saveFocusSession(data: Omit<FocusSession, 'id'>): Promise<FocusSession> {
+    const db = load();
+    const item: FocusSession = { ...data, id: uid('fs') };
+    db.focusSessions = [...(db.focusSessions ?? []), item];
+    if (data.taskId) {
+      const t = db.tasks.find((x) => x.id === data.taskId);
+      if (t) t.history = [...(t.history ?? []), entry('UPDATED', `Pomodoro de ${data.minutes} min concluído`)];
+    }
+    persist();
+    return delay(item);
+  },
+  async deleteFocusSession(id: string): Promise<void> {
+    const db = load();
+    db.focusSessions = (db.focusSessions ?? []).filter((s) => s.id !== id);
     persist();
     return delay(undefined);
   },

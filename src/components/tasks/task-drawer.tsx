@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Tag,
   Target,
+  Timer,
   Trash2,
   Video,
   X,
@@ -33,6 +34,8 @@ import {
 import { isOverdue, PRIORITIES, PRIORITY_LABEL, RECURRENCE_OPTIONS, STATUSES, STATUS_LABEL } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI, type TaskDefaults } from '@/store/ui';
+import { useFocus } from '@/store/focus';
+import { useNavigate } from 'react-router-dom';
 import type { Scope, Task } from '@/types';
 import { LIFE_AREAS } from '@/lib/life-areas';
 import { OverdueBadge, PriorityBadge, StatusBadge } from './badges';
@@ -107,6 +110,7 @@ function TaskForm({
   const remove = useDeleteTask();
   const { categories, projects } = useLookups();
   const modules = useModules();
+  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const form = useForm<TaskFormValues>({
@@ -317,6 +321,20 @@ function TaskForm({
               {status === 'COMPLETED' ? <RotateCcw /> : <CircleCheck />}
               <span className="hidden sm:inline">{status === 'COMPLETED' ? 'Reabrir' : 'Concluir'}</span>
             </Button>
+            {task && status !== 'COMPLETED' && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  useFocus.getState().setActivity({ label: task.title, taskId: task.id });
+                  onDone();
+                  navigate('/focus');
+                }}
+                title="Focar neste afazer com a técnica Pomodoro"
+              >
+                <Timer />
+                <span className="hidden sm:inline">Focar</span>
+              </Button>
+            )}
           </>
         )}
         <div className="ml-auto flex items-center gap-2">

@@ -14,6 +14,7 @@ export const qk = {
   wheel: ['wheel'] as const,
   gym: ['gym'] as const,
   user: ['user'] as const,
+  focus: ['focus'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -341,4 +342,29 @@ export function useCompleteOnboarding() {
 export function useModules() {
   const { data: user } = useUser();
   return user?.modules ?? { business: true, gym: true, life: true };
+}
+
+/* -------------------------------------- Foco -------------------------------------- */
+
+export const useFocusSessions = () => useQuery({ queryKey: qk.focus, queryFn: api.listFocusSessions });
+
+export function useSaveFocusSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveFocusSession,
+    onSuccess: (s) => {
+      qc.invalidateQueries({ queryKey: qk.focus });
+      if (s.taskId) qc.invalidateQueries({ queryKey: qk.tasks });
+    },
+    onError: errorToast,
+  });
+}
+
+export function useDeleteFocusSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteFocusSession,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.focus }),
+    onError: errorToast,
+  });
 }

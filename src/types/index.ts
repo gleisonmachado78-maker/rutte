@@ -233,3 +233,18 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ------------------------------------ Foco ------------------------------------ */
+
+/** Um pomodoro (bloco de foco) concluído. */
+export interface FocusSession {
+  id: string;
+  /** yyyy-MM-dd */
+  date: string;
+  startedAt: string;
+  endedAt: string;
+  minutes: number;
+  /** o que foi feito (texto livre ou título do afazer) */
+  activity: string;
+  taskId?: string;
+}

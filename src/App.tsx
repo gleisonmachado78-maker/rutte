@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { CalendarPage } from '@/pages/calendar';
 import { DashboardPage } from '@/pages/dashboard';
+import { FocusPage } from '@/pages/focus';
 import { GymPage } from '@/pages/gym';
 import { LifePage } from '@/pages/life';
 import { TasksPage } from '@/pages/tasks';
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="life" element={<LifePage />} />
           <Route path="gym" element={<GymPage />} />
+          <Route path="focus" element={<FocusPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

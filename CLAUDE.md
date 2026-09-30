@@ -75,6 +75,15 @@ dificuldade → dica do dia). `useModules()` esconde Academia, Roda da Vida e o 
 escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adicionar um objetivo novo, cadastre-o em
 `GOALS` com áreas e afazeres iniciais.
 
+## Foco (Pomodoro) e visual
+
+- Timer em `src/store/focus.ts` (Zustand persistido `rutte:focus`): guarda `endsAt` (horário de término), então segue
+  certo ao trocar de página, recarregar ou com a aba em segundo plano. `FocusEngine` (no layout) detecta o fim da fase,
+  registra o pomodoro (`focusSessions` no banco + histórico do afazer), toca o aviso e atualiza o título da aba;
+  `FocusPill` mostra o mini-cronômetro fora da página `/focus`.
+- Caixas “painel holográfico”: regra global em `src/index.css` para `.bg-card.border` (cantos em neon, reflexo, halo),
+  com especificidade zero (`:where`) — destaques como `border-neon`/`shadow-neon` continuam valendo.
+
 ## Dados de exemplo
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"

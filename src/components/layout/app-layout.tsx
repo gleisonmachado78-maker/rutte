@@ -2,6 +2,7 @@ import { askConfirm } from '@/components/ui/confirm';
 import {
   Building,
   DatabaseBackup,
+  Timer,
   WandSparkles,
   Dumbbell,
   CalendarDays,
@@ -23,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TaskDrawer } from '@/components/tasks/task-drawer';
 import { BackupDialog } from './backup-dialog';
+import { FocusEngine, FocusPill } from '@/components/focus/focus-engine';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
@@ -36,6 +38,7 @@ const NAV: { to: string; label: string; short?: string; icon: LucideIcon; end?: 
   { to: '/', label: 'Dashboard', short: 'Início', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'Afazeres', icon: ListTodo },
   { to: '/calendar', label: 'Calendário', icon: CalendarDays },
+  { to: '/focus', label: 'Foco', icon: Timer },
   { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life' },
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym' },
 ];
@@ -235,7 +238,7 @@ export function AppLayout() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !el.closest('input, textarea, select, [contenteditable], [role=dialog]')) {
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !el?.closest?.('input, textarea, select, [contenteditable], [role=dialog]')) {
         e.preventDefault();
         openNewTask();
       }
@@ -350,7 +353,8 @@ export function AppLayout() {
         ))}
       </nav>
 
-      {/* FAB mobile */}
+      {/* FAB mobile (fora da tela de Foco, onde atrapalharia o timer) */}
+      {location.pathname !== '/focus' && (
       <button
         type="button"
         onClick={() => openNewTask()}
@@ -360,8 +364,11 @@ export function AppLayout() {
         <Plus className="size-6" aria-hidden />
         Novo Afazer
       </button>
+      )}
 
       <TaskDrawer />
+      <FocusEngine />
+      <FocusPill />
       {showOnboarding && <Onboarding existing={user ?? null} onClose={() => setOnboardingOpen(false)} />}
     </div>
   );
