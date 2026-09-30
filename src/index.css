@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Modo claro: Branco #FFFFFF, Navy #111727, Cinza #E5E7EB */
+    --background: 255 255 255;
+    --foreground: 17 23 39;
+    --card: 255 255 255;
+    --border: 229 231 235;
+    --muted: 229 231 235;
+    /* Acento: vermelho da marca #B91B1C + brilho neon */
+    --primary: 185 27 28;
+    --neon: 255 46 59;
+    color-scheme: light;
+  }
+
+  /* Contexto Empresa: azul com o mesmo tom (saturação/luminosidade) do vermelho */
+  html[data-scope='BUSINESS'] {
+    --primary: 27 79 185;
+    --neon: 46 139 255;
+  }
+
+  .dark {
+    /* Modo escuro: Navy #111727 com superfícies derivadas (navy + branco translúcido) */
+    --background: 17 23 39;
+    --foreground: 255 255 255;
+    --card: 29 35 50;
+    --border: 46 51 64;
+    --muted: 38 43 57;
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  h1,
+  .font-brand {
+    @apply font-display;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Brilho neon para textos e ícones de destaque */
+  .text-glow {
+    text-shadow: 0 0 12px rgb(var(--neon) / 0.55);
+  }
+  .icon-glow {
+    filter: drop-shadow(0 0 6px rgb(var(--neon) / 0.7));
+  }
+  .logo-glow {
+    filter: drop-shadow(0 0 14px rgb(255 46 59 / 0.55));
+  }
+  /* Botão primário neon */
+  .btn-neon {
+    background-image: linear-gradient(180deg, rgb(var(--neon) / 0.95), rgb(var(--primary)));
+    box-shadow: 0 0 0 1px rgb(var(--neon) / 0.35), 0 4px 18px -2px rgb(var(--neon) / 0.55);
+  }
+  .btn-neon:hover {
+    box-shadow: 0 0 0 1px rgb(var(--neon) / 0.6), 0 6px 28px -2px rgb(var(--neon) / 0.75);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Holograma do gerador de treino */
+@keyframes holo-scan {
+  from { transform: translateY(-20px); }
+  to { transform: translateY(400px); }
+}
+@keyframes holo-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: .55; }
+  94% { opacity: .95; }
+  96% { opacity: .7; }
+}
+@keyframes holo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes holo-ring {
+  to { stroke-dashoffset: -120; }
+}
+@keyframes holo-pulse {
+  0%, 100% { transform: scale(1); opacity: .9; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+.holo-scan { animation: holo-scan 3.2s linear infinite; }
+.holo-scan-fast { animation: holo-scan 0.9s linear infinite; }
+.holo-flicker { animation: holo-flicker 5s steps(1) infinite; }
+.holo-float { animation: holo-float 4s ease-in-out infinite; }
+.holo-ring { animation: holo-ring 6s linear infinite; }
+.holo-ring-rev { animation: holo-ring 9s linear infinite reverse; }
+.holo-pulse { animation: holo-pulse 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.holo-region { transition: fill 400ms ease, filter 400ms ease; }
+
+/* iPhone: campos com 16px evitam o zoom automático ao tocar */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Tela inicial do iPhone: sem destaque azul ao tocar e sem “puxar” a página inteira */
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
