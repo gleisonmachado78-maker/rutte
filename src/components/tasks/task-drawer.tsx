@@ -26,6 +26,7 @@ import {
   useCreateTask,
   useDeleteTask,
   useLookups,
+  useModules,
   useTasks,
   useUpdateTask,
 } from '@/hooks/use-data';
@@ -105,6 +106,7 @@ function TaskForm({
   const update = useUpdateTask();
   const remove = useDeleteTask();
   const { categories, projects } = useLookups();
+  const modules = useModules();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const form = useForm<TaskFormValues>({
@@ -184,6 +186,7 @@ function TaskForm({
         )}
 
         <div className="grid grid-cols-2 gap-3">
+          {modules.business && (
           <fieldset className="col-span-2">
             <legend className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-foreground/60">Contexto</legend>
             <div role="radiogroup" aria-label="Contexto" className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/50 p-1">
@@ -212,6 +215,7 @@ function TaskForm({
               ))}
             </div>
           </fieldset>
+          )}
           <div>
             <Label htmlFor="f-status">Status</Label>
             <Select id="f-status" {...register('status')}>

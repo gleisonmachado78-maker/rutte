@@ -1,5 +1,5 @@
 import { addDays, format, subDays } from 'date-fns';
-import type { Category, Contact, GymData, Project, Task, WheelAssessment } from '@/types';
+import type { Category, Contact, GymData, Project, Task, UserProfile, WheelAssessment } from '@/types';
 import { createGymSeed } from '@/lib/gym';
 
 export const USER_ID = 'user_1';
@@ -13,6 +13,8 @@ export interface Database {
   contacts: Contact[];
   wheelAssessments: WheelAssessment[];
   gym: GymData;
+  /** respostas da personalização (ausente = mostrar a primeira conversa) */
+  user?: UserProfile;
 }
 
 const d = (offset: number) => format(addDays(new Date(), offset), 'yyyy-MM-dd');

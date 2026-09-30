@@ -66,6 +66,15 @@ Alias `@/` → `src/`.
 - Novo exercício na biblioteca: adicionar metadados em `workout-generator.ts` (`META`), guia/animação em
   `exercise-guide.ts` (senão cai no genérico do grupo muscular).
 
+## Personalização
+
+Na primeira visita (sem `user` no banco) abre `src/components/onboarding/onboarding.tsx`: nome, momento de vida,
+até 3 objetivos, horário em que rende mais, maior dificuldade, módulos e plano inicial. As regras ficam em
+`src/lib/onboarding.ts` (objetivos → áreas da vida, afazeres iniciais, objetivo de treino; momento → categorias;
+dificuldade → dica do dia). `useModules()` esconde Academia, Roda da Vida e o seletor Pessoal/Empresa conforme a
+escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adicionar um objetivo novo, cadastre-o em
+`GOALS` com áreas e afazeres iniciais.
+
 ## Dados de exemplo
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"

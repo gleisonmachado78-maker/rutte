@@ -203,3 +203,33 @@ export interface GymData {
   profile?: TrainingProfile;
   bodyLog?: BodyEntry[];
 }
+
+/* ------------------------------- Personalização ------------------------------- */
+
+export type Situation = 'clt' | 'empresa' | 'autonomo' | 'estudante' | 'casa';
+export type GoalId =
+  | 'rotina'
+  | 'produtividade'
+  | 'empresa'
+  | 'saude'
+  | 'emagrecer'
+  | 'massa'
+  | 'financas'
+  | 'estudos'
+  | 'familia'
+  | 'fe'
+  | 'mente';
+export type Peak = 'manha' | 'tarde' | 'noite';
+export type Struggle = 'procrastinacao' | 'esquecimento' | 'tempo' | 'motivacao' | 'sobrecarga';
+
+/** Respostas da primeira conversa com a Rutte — adaptam o app a cada pessoa. */
+export interface UserProfile {
+  name: string;
+  situations: Situation[];
+  goals: GoalId[];
+  peak: Peak;
+  struggle: Struggle;
+  modules: { business: boolean; gym: boolean; life: boolean };
+  createdAt: string;
+  updatedAt: string;
+}

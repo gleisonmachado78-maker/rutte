@@ -2,6 +2,7 @@ import { askConfirm } from '@/components/ui/confirm';
 import {
   Building,
   DatabaseBackup,
+  WandSparkles,
   Dumbbell,
   CalendarDays,
   ChartPie,
@@ -25,23 +26,25 @@ import { BackupDialog } from './backup-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
-import { useResetData, useScopedTasks } from '@/hooks/use-data';
+import { useModules, useResetData, useScopedTasks, useUser } from '@/hooks/use-data';
+import { Onboarding } from '@/components/onboarding/onboarding';
 import { isOverdue } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 
-const NAV: { to: string; label: string; short?: string; icon: LucideIcon; end?: boolean; personalOnly?: boolean }[] = [
+const NAV: { to: string; label: string; short?: string; icon: LucideIcon; end?: boolean; personalOnly?: boolean; module?: 'gym' | 'life' }[] = [
   { to: '/', label: 'Dashboard', short: 'Início', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'Afazeres', icon: ListTodo },
   { to: '/calendar', label: 'Calendário', icon: CalendarDays },
-  { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie },
-  { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true },
+  { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life' },
+  { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym' },
 ];
 
-/** Itens visíveis no contexto atual (Academia é do Pessoal — some no modo Empresa). */
+/** Itens visíveis: respeita os módulos escolhidos e o contexto (Academia some no modo Empresa). */
 function useNav() {
   const scope = useUI((s) => s.scope);
-  return NAV.filter((n) => !(n.personalOnly && scope === 'BUSINESS'));
+  const modules = useModules();
+  return NAV.filter((n) => !(n.personalOnly && scope === 'BUSINESS') && (!n.module || modules[n.module]));
 }
 
 function Brand({ collapsed }: { collapsed?: boolean }) {
@@ -148,6 +151,8 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
   const toggleTheme = useUI((s) => s.toggleTheme);
   const reset = useResetData();
   const [backupOpen, setBackupOpen] = useState(false);
+  const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
+  const setMobileMenu = useUI((s) => s.setMobileMenu);
   const btn = cn(
     'flex h-10 items-center gap-3 rounded-xl px-3 text-sm text-white/70 transition-all duration-200 hover:bg-white/10 hover:text-white',
     collapsed && 'justify-center px-0',
@@ -174,12 +179,35 @@ function SidebarFooter({ collapsed }: { collapsed?: boolean }) {
         <DatabaseBackup className="size-5" aria-hidden />
         {!collapsed && 'Backup dos dados'}
       </button>
+      <button
+        type="button"
+        className={btn}
+        onClick={() => {
+          setMobileMenu(false);
+          setOnboardingOpen(true);
+        }}
+        aria-label="Personalizar a Rutte"
+      >
+        <WandSparkles className="size-5" aria-hidden />
+        {!collapsed && 'Personalizar a Rutte'}
+      </button>
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
     </div>
   );
 }
 
 export function AppLayout() {
+  const modules = useModules();
+  const { data: user, isLoading: userLoading } = useUser();
+  const onboardingOpen = useUI((s) => s.onboardingOpen);
+  const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
+  const setScope = useUI((s) => s.setScope);
+  const currentScope = useUI((s) => s.scope);
+  // Sem o módulo Empresa não há separação: mostra tudo
+  useEffect(() => {
+    if (!modules.business && currentScope !== 'ALL') setScope('ALL');
+  }, [modules.business, currentScope, setScope]);
+  const showOnboarding = onboardingOpen || (!userLoading && user === null);
   const theme = useUI((s) => s.theme);
   const collapsed = useUI((s) => s.sidebarCollapsed);
   const toggleSidebar = useUI((s) => s.toggleSidebar);
@@ -237,7 +265,7 @@ export function AppLayout() {
         <Button onClick={() => openNewTask()} className={cn('h-11', collapsed && 'px-0')} aria-label="Novo afazer" title="Novo afazer (N)">
           <Plus className="!size-5" /> {!collapsed && 'Novo afazer'}
         </Button>
-        <ScopeSwitcher collapsed={collapsed} />
+        {modules.business && <ScopeSwitcher collapsed={collapsed} />}
         <NavItems collapsed={collapsed} />
         <div className="mt-auto flex flex-col gap-1 border-t border-white/10 pt-4">
           <SidebarFooter collapsed={collapsed} />
@@ -265,7 +293,7 @@ export function AppLayout() {
         <RutteLogo glow className="w-10" />
         <span className="font-brand truncate text-lg font-bold">{title ?? BRAND.name}</span>
         <div className="ml-auto">
-          <ScopeSwitcher compact />
+          {modules.business && <ScopeSwitcher compact />}
         </div>
       </header>
 
@@ -274,7 +302,7 @@ export function AppLayout() {
         <SheetContent side="left" className="gap-6 bg-navy p-4" aria-describedby={undefined} hideClose>
           <DialogTitle className="sr-only">Menu</DialogTitle>
           <Brand />
-          <ScopeSwitcher />
+          {modules.business && <ScopeSwitcher />}
           <NavItems onNavigate={() => setMobileMenu(false)} />
           <div className="mt-auto border-t border-white/10 pt-4">
             <SidebarFooter />
@@ -334,6 +362,7 @@ export function AppLayout() {
       </button>
 
       <TaskDrawer />
+      {showOnboarding && <Onboarding existing={user ?? null} onClose={() => setOnboardingOpen(false)} />}
     </div>
   );
 }

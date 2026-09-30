@@ -53,6 +53,9 @@ interface UIState {
   viewMode: 'list' | 'kanban';
   filters: TaskFilters;
   drawer: DrawerState;
+  /** personalização aberta manualmente pelo menu */
+  onboardingOpen: boolean;
+  setOnboardingOpen: (open: boolean) => void;
   toggleTheme: () => void;
   toggleSidebar: () => void;
   setMobileMenu: (open: boolean) => void;
@@ -80,6 +83,8 @@ export const useUI = create<UIState>()(
       viewMode: 'list',
       filters: EMPTY_FILTERS,
       drawer: { open: false, taskId: null, nonce: 0 },
+      onboardingOpen: false,
+      setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setMobileMenu: (open) => set({ mobileMenuOpen: open }),

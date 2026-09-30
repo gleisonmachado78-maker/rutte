@@ -1,7 +1,7 @@
 import { askConfirm } from '@/components/ui/confirm';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartPie, Check, CirclePlay, Lightbulb, Palette, Plus, Repeat, Save, Shuffle, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import { ChartPie, Check, CirclePlay, Lightbulb, Palette, Plus, Target, Repeat, Save, Shuffle, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
@@ -9,7 +9,8 @@ import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/
 import { WheelChart } from '@/components/life/wheel-chart';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/form-controls';
-import { useCreateTask, useDeleteWheel, useSaveWheel, useTasks, useWheelAssessments } from '@/hooks/use-data';
+import { useCreateTask, useDeleteWheel, useSaveWheel, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
+import { focusAreas } from '@/lib/onboarding';
 import { emptyScores, LIFE_AREA_BY_ID, LIFE_AREAS, LIFE_TIPS, type LifeTip } from '@/lib/life-areas';
 import { isClosed, recurrenceLabel, todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,8 @@ const avg = (s: Record<LifeAreaId, number>) =>
 export function LifePage() {
   const { data: assessments = [], isLoading } = useWheelAssessments();
   const { data: tasks = [] } = useTasks();
+  const { data: user } = useUser();
+  const focus = user ? focusAreas(user.goals) : [];
   const save = useSaveWheel();
   const remove = useDeleteWheel();
   const openNewTask = useUI((s) => s.openNewTask);
@@ -80,7 +83,9 @@ export function LifePage() {
     setFilters({ lifeAreaIds: [id] });
   };
 
-  const videoGroups = LIFE_AREAS.filter((a) => videoArea === 'ALL' || a.id === videoArea).map((a) => ({
+  // Áreas dos objetivos da pessoa aparecem primeiro
+  const ordered = [...LIFE_AREAS].sort((x, y) => Number(!focus.includes(x.id)) - Number(!focus.includes(y.id)));
+  const videoGroups = ordered.filter((a) => videoArea === 'ALL' || a.id === videoArea).map((a) => ({
     area: a,
     // Animados primeiro; palestras no fim (ou ocultas com o filtro)
     videos: LIFE_VIDEOS.filter((v) => v.area === a.id && (!onlyAnimated || v.style === 'animado')).sort(
@@ -154,8 +159,13 @@ export function LifePage() {
                 >
                   <div className="flex items-center gap-2">
                     <Icon className="size-4 shrink-0" style={{ color: a.color }} aria-hidden />
-                    <label htmlFor={`sc-${a.id}`} className="flex-1 text-sm font-medium">
+                    <label htmlFor={`sc-${a.id}`} className="flex flex-1 flex-wrap items-center gap-1.5 text-sm font-medium">
                       {a.name}
+                      {focus.includes(a.id) && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary dark:text-neon">
+                          <Target className="size-3" aria-hidden /> Seu foco
+                        </span>
+                      )}
                     </label>
                     <span className="w-8 text-right text-sm font-bold tabular-nums">{scores[a.id]}</span>
                   </div>

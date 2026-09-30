@@ -6,6 +6,8 @@ import {
   CircleCheck,
   ChartPie,
   CirclePlay,
+  Lightbulb,
+  Target,
   ListTodo,
   Sparkles,
   TriangleAlert,
@@ -15,7 +17,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
 import { TaskCard } from '@/components/tasks/task-card';
-import { useScopedTasks, useWheelAssessments } from '@/hooks/use-data';
+import { useModules, useScopedTasks, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
+import { firstName, GOALS, tipOfTheDay } from '@/lib/onboarding';
 import { LIFE_AREAS } from '@/lib/life-areas';
 import {
   buildPriorityNow,
@@ -28,7 +31,7 @@ import {
 } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI, type DateFilter } from '@/store/ui';
-import type { TaskStatus } from '@/types';
+import type { GoalId, TaskStatus } from '@/types';
 
 function Kpi({
   label,
@@ -82,6 +85,9 @@ export function DashboardPage() {
   const openTask = useUI((s) => s.openTask);
   const navigate = useNavigate();
   const scope = useUI((s) => s.scope);
+  const { data: user } = useUser();
+  const modules = useModules();
+  const nick = user ? firstName(user.name) : '';
   const now = new Date();
 
   const today = tasks.filter((t) => isDueToday(t));
@@ -110,7 +116,10 @@ export function DashboardPage() {
             {format(now, "EEEE, d 'de' MMMM", { locale: ptBR })}
             {scope !== 'ALL' && <> · {scope === 'PERSONAL' ? 'Pessoal' : 'Empresa'}</>}
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{greeting(now)}! 👋</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            {greeting(now)}
+            {nick && `, ${nick}`}! 👋
+          </h1>
           <p className="relative mt-2 inline-block rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm text-foreground/80">
             <strong className="font-brand text-primary dark:text-neon dark:text-glow">Rutte:</strong>{' '}
             {isLoading
@@ -121,8 +130,18 @@ export function DashboardPage() {
                   ? `${todayDone} de ${today.length} afazeres de hoje concluídos. Continue assim!`
                   : 'nada para hoje. Que tal planejar a semana ou revisar sua Roda da Vida?'}
           </p>
+          {user?.struggle && (
+            <p className="mt-2 flex max-w-2xl items-start gap-2 text-sm text-foreground/70">
+              <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
+              <span>
+                <strong className="text-foreground">Dica de hoje:</strong> {tipOfTheDay(user.struggle, now)}
+              </span>
+            </p>
+          )}
         </div>
       </header>
+
+      {user && user.goals.length > 0 && <GoalsSummary goals={user.goals} />}
 
       <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi label="Tarefas hoje" value={today.length} icon={ListTodo} onClick={() => goTasks({ date: 'TODAY' })} />
@@ -229,7 +248,7 @@ export function DashboardPage() {
             </ol>
           )}
         </section>
-        <WheelSummary />
+        {modules.life && <WheelSummary />}
         </div>
       </div>
     </div>
@@ -272,6 +291,56 @@ function WheelSummary() {
       ) : (
         <p className="mt-4 text-sm text-foreground/60">Faça sua primeira avaliação para ver seu equilíbrio.</p>
       )}
+    </section>
+  );
+}
+
+/** Objetivos escolhidos na personalização, com o andamento de cada um nesta semana. */
+function GoalsSummary({ goals }: { goals: GoalId[] }) {
+  const { data: tasks = [] } = useTasks();
+  const setFilters = useUI((s) => s.setFilters);
+  const resetFilters = useUI((s) => s.resetFilters);
+  const navigate = useNavigate();
+  const weekAgo = Date.now() - 7 * 86_400_000;
+
+  return (
+    <section aria-labelledby="goals-title" className="space-y-3">
+      <h2 id="goals-title" className="flex items-center gap-2 text-lg font-bold">
+        <Target className="size-5 text-primary icon-glow dark:text-neon" aria-hidden /> Seus objetivos
+      </h2>
+      <ul className={cn('grid grid-cols-1 gap-3', goals.length === 2 ? 'sm:grid-cols-2' : goals.length >= 3 ? 'sm:grid-cols-3' : '')}>
+        {goals.map((g) => {
+          const def = GOALS[g];
+          const Icon = def.icon;
+          const related = tasks.filter((t) => t.lifeAreaId && def.areas.includes(t.lifeAreaId));
+          const open = related.filter((t) => !isClosed(t)).length;
+          const doneWeek = related.filter((t) => t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
+          return (
+            <li key={g}>
+              <button
+                type="button"
+                onClick={() => {
+                  resetFilters();
+                  setFilters({ lifeAreaIds: def.areas });
+                  navigate('/tasks');
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-neon hover:shadow-neon"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary dark:text-neon">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold leading-snug">{def.label}</span>
+                  <span className="block text-xs text-foreground/60">
+                    {doneWeek} {doneWeek === 1 ? 'feito' : 'feitos'} nesta semana · {open} {open === 1 ? 'aberto' : 'abertos'}
+                  </span>
+                </span>
+                <ArrowRight className="size-4 shrink-0 text-foreground/40" aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

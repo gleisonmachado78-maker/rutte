@@ -13,12 +13,15 @@ import type {
   TaskInput,
   WheelAssessment,
   WorkoutDay,
+  TrainingGoal,
   TrainingProfile,
+  UserProfile,
   WorkoutSession,
 } from '@/types';
 import { nextOccurrence, STATUS_LABEL } from '@/lib/task-utils';
 import { uid } from '@/lib/utils';
 import { createSeed, migrate, USER_ID, type Database } from './seed';
+import { categoriesFor, type StarterTask } from '@/lib/onboarding';
 
 const STORAGE_KEY = 'secretaria:db:v1';
 const LATENCY = 120;
@@ -313,6 +316,83 @@ export const api = {
     db.gym.sessions = db.gym.sessions.filter((s) => s.id !== id);
     persist();
     return delay(undefined);
+  },
+
+  /* --------------------------- Personalização --------------------------- */
+  async getUser(): Promise<UserProfile | null> {
+    return delay(load().user ?? null);
+  },
+  /** Verdadeiro quando os dados ainda são só os exemplos iniciais (nada criado pelo usuário). */
+  isPristine(): boolean {
+    const db = load();
+    return (
+      db.tasks.every((t) => /^tsk_\d+$/.test(t.id)) &&
+      (db.gym?.sessions ?? []).every((s) => s.id.startsWith('ws_seed')) &&
+      !(db.gym?.bodyLog?.length)
+    );
+  },
+  /**
+   * Conclui a primeira conversa: salva o perfil e prepara os dados.
+   * mode: 'fresh' = começa do zero só com o que foi escolhido · 'keep' = mantém tudo · 'examples' = dados de exemplo.
+   */
+  async completeOnboarding(input: {
+    profile: UserProfile;
+    mode: 'fresh' | 'keep' | 'examples';
+    starter: StarterTask[];
+    time: string;
+    gymGoal?: TrainingGoal;
+  }): Promise<{ created: number }> {
+    const { profile, mode, starter, time, gymGoal } = input;
+    if (mode === 'examples') memory = createSeed();
+    if (mode === 'fresh') {
+      const seed = createSeed();
+      memory = {
+        ...seed,
+        tasks: [],
+        projects: [],
+        contacts: [],
+        wheelAssessments: [],
+        categories: [],
+        gym: { exercises: seed.gym.exercises, plan: seed.gym.plan.map((d) => ({ ...d, title: '', exercises: [] })), sessions: [], bodyLog: [] },
+      };
+    }
+    const db = load();
+    // Categorias do perfil que ainda não existem (por nome)
+    const names = new Set(db.categories.map((c) => c.name.toLowerCase()));
+    for (const c of categoriesFor(profile)) if (!names.has(c.name.toLowerCase())) db.categories.push(c);
+    // Afazeres iniciais escolhidos
+    const now = new Date().toISOString();
+    const today = new Date().toISOString().slice(0, 10);
+    let created = 0;
+    for (const s of starter) {
+      if (db.tasks.some((t) => t.title === s.title && t.status !== 'COMPLETED' && t.status !== 'CANCELLED')) continue;
+      const cat = s.categoryName ? db.categories.find((c) => c.name.toLowerCase() === s.categoryName!.toLowerCase()) : undefined;
+      db.tasks.unshift({
+        id: uid('tsk'),
+        title: s.title,
+        status: 'NOT_STARTED',
+        priority: 'MEDIUM',
+        dueDate: today,
+        deadlineTime: time,
+        recurrenceRule: s.recurrence,
+        scope: s.scope,
+        categoryId: cat?.id,
+        lifeAreaId: s.lifeAreaId,
+        userId: USER_ID,
+        subtasks: [],
+        links: [],
+        history: [entry('CREATED', 'Criado na personalização com a Rutte')],
+        createdAt: now,
+        updatedAt: now,
+      });
+      created++;
+    }
+    if (gymGoal && !db.gym.profile) {
+      db.gym.profile = { goal: gymGoal, level: 'iniciante', weekdays: [1, 3, 5], minutes: 45, focus: [], place: 'academia', restrictions: [] };
+    }
+    db.user = { ...profile, updatedAt: now };
+    persist();
+    return delay({ created });
   },
 
   /** Backup: todos os dados em JSON. */

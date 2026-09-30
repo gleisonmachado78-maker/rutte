@@ -13,6 +13,7 @@ export const qk = {
   contacts: ['contacts'] as const,
   wheel: ['wheel'] as const,
   gym: ['gym'] as const,
+  user: ['user'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -316,4 +317,28 @@ export function useImportData() {
     },
     onError: errorToast,
   });
+}
+
+/* --------------------------------- Personalização --------------------------------- */
+
+export const useUser = () => useQuery({ queryKey: qk.user, queryFn: api.getUser });
+
+export function useCompleteOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.completeOnboarding,
+    onSuccess: ({ created }, vars) => {
+      qc.invalidateQueries();
+      toast.success(`Tudo pronto, ${vars.profile.name.split(' ')[0]}!`, {
+        description: created ? `A Rutte criou ${created} afazeres para os seus objetivos.` : 'Seu app foi ajustado aos seus objetivos.',
+      });
+    },
+    onError: errorToast,
+  });
+}
+
+/** Módulos ligados na personalização (sem perfil = tudo ligado). */
+export function useModules() {
+  const { data: user } = useUser();
+  return user?.modules ?? { business: true, gym: true, life: true };
 }
