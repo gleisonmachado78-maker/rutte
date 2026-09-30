@@ -96,7 +96,7 @@ export function LifePage() {
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-center gap-4">
-        <RutteLogo glow className="w-20 sm:w-28" />
+        <RutteLogo className="w-12 shrink-0 sm:w-14" />
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
             <ChartPie className="size-7 text-primary" aria-hidden /> Roda da Vida

@@ -110,7 +110,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       <header className="flex items-start gap-4">
-        <RutteLogo glow className="w-20 sm:w-28" />
+        <RutteLogo className="w-12 shrink-0 sm:w-14" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground/60 first-letter:uppercase">
             {format(now, "EEEE, d 'de' MMMM", { locale: ptBR })}
@@ -141,14 +141,14 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {user && user.goals.length > 0 && <GoalsSummary goals={user.goals} />}
-
       <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi label="Tarefas hoje" value={today.length} icon={ListTodo} onClick={() => goTasks({ date: 'TODAY' })} />
         <Kpi label="Atrasadas" value={overdue.length} icon={TriangleAlert} tone="danger" onClick={() => goTasks({ date: 'OVERDUE' })} />
         <Kpi label="Em andamento" value={inProgress.length} icon={CirclePlay} onClick={() => goTasks({ statuses: ['IN_PROGRESS'] })} />
         <Kpi label="Concluídas" value={completed.length} icon={CircleCheck} tone="success" onClick={() => goTasks({ statuses: ['COMPLETED'] })} />
       </section>
+
+      {user && user.goals.length > 0 && <GoalsSummary goals={user.goals} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section aria-labelledby="prio-title" className="min-w-0 space-y-4">

@@ -138,7 +138,7 @@ export function FocusPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         {/* Timer */}
-        <section aria-label="Cronômetro" className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <section aria-label="Cronômetro" className="hud rounded-2xl border border-border bg-card p-4 sm:p-6">
           <div role="tablist" aria-label="Fase" className="mx-auto mb-4 flex max-w-sm gap-1 rounded-xl bg-muted/60 p-1">
             {PHASES.map((p) => (
               <button

@@ -26,9 +26,9 @@ export default {
       },
       borderRadius: { xl: '0.75rem', '2xl': '1rem' },
       boxShadow: {
-        neon: '0 0 0 1px rgb(var(--neon) / .35), 0 0 16px rgb(var(--neon) / .45)',
-        'neon-lg': '0 0 0 1px rgb(var(--neon) / .5), 0 0 28px rgb(var(--neon) / .6)',
-        'neon-brand': '0 0 0 1px rgb(255 46 59 / .4), 0 0 20px rgb(255 46 59 / .5)',
+        neon: '0 0 0 1px rgb(var(--neon) / .3), 0 0 10px rgb(var(--neon) / .18)',
+        'neon-lg': '0 0 0 1px rgb(var(--neon) / .4), 0 0 16px rgb(var(--neon) / .28)',
+        'neon-brand': '0 0 0 1px rgb(255 46 59 / .3), 0 0 10px rgb(255 46 59 / .2)',
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],

@@ -81,8 +81,11 @@ escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adic
   certo ao trocar de página, recarregar ou com a aba em segundo plano. `FocusEngine` (no layout) detecta o fim da fase,
   registra o pomodoro (`focusSessions` no banco + histórico do afazer), toca o aviso e atualiza o título da aba;
   `FocusPill` mostra o mini-cronômetro fora da página `/focus`.
-- Caixas “painel holográfico”: regra global em `src/index.css` para `.bg-card.border` (cantos em neon, reflexo, halo),
-  com especificidade zero (`:where`) — destaques como `border-neon`/`shadow-neon` continuam valendo.
+- Caixas leves: regra global em `src/index.css` para `.bg-card.border` (borda fina + sombra discreta); cantos em neon
+  só com a classe opcional `.hud` (timer do Foco). Brilhos (`btn-neon`, `shadow-neon`) são sutis — manter assim,
+  com especificidade zero (`:where`) para não sobrescrever destaques.
+- Navegação: menu lateral em grupos “Organizar” e “Evoluir” + menu de Configurações (nome da pessoa); no celular,
+  barra inferior com 4 atalhos (`primary` em `NAV`) + “Mais” (gaveta com o resto e as configurações).
 
 ## Dados de exemplo
 
