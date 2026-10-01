@@ -122,3 +122,9 @@ público ou publicações oficiais gratuitas — nunca PDFs piratas.
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"
 substitui **todos** os dados; o usuário pode exportar/importar backup JSON pelo menu.
+
+## Meus PDFs
+
+`src/lib/local-files.ts` (IndexedDB `rutte-files`): a pessoa anexa o próprio PDF a um livro (`MyPdf` no card).
+O arquivo fica só no navegador dela — nunca no código, no repositório (`*.pdf` no .gitignore), no backup ou no build.
+Não incluir PDFs de livros protegidos em `free-books.ts`.

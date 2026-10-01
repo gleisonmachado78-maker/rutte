@@ -5,6 +5,7 @@ import { coverUrl, SHELF_LABEL, TOPIC_BY_ID, whereToFind, type Book, type ShelfS
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { ratingKey, StarRating } from '@/components/ui/star-rating';
+import { MyPdf } from '@/components/library/my-pdf';
 
 /** Capa do Google Livros; sem internet (ou se a imagem falhar), mostra uma capa tipográfica. */
 export function BookCover({ book, className }: { book: Book; className?: string }) {
@@ -117,6 +118,8 @@ export function BookCard({ book, status }: { book: Book; status?: ShelfStatus })
             </a>
           ))}
         </div>
+
+        <MyPdf bookKey={book.googleId} title={book.title.split(': ')[0]} />
 
         {status !== 'lido' && (
           <button

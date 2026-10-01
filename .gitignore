@@ -32,3 +32,6 @@ rutte-celular.zip
 # Segredos
 .env
 .env.*
+
+# PDFs pessoais nunca vão para o repositório
+*.pdf
