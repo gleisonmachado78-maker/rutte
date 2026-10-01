@@ -135,3 +135,10 @@ Aba Podcasts na Biblioteca (`src/lib/podcasts.ts`, IDs conferidos em `https://op
 o `title` do oEmbed de um show é o do último episódio — usar o nome do programa). `src/lib/spotify.ts`: `openSpotify` tenta o app
 (`spotify:show:ID`) e cai para open.spotify.com; “Ouvir aqui” usa o embed. Cada livro tem links de audiolivro (Spotify, Audible,
 Google Play, Ubook — buscas).
+
+## Holograma 3D dos exercícios
+
+`components/gym/exercise-hologram-3d.tsx` (three.js, carregado sob demanda no modal "Como fazer"): usa as mesmas poses de
+`exercise-motion.ts` — o plano 2D vira X/Y e cada lado do corpo ganha profundidade Z (`DEPTH`). Material holográfico em shader
+(fresnel + linhas de varredura, blending aditivo), cor de `--neon`, OrbitControls (arrastar para girar, sem zoom), auto-rotação.
+Miniaturas continuam em 2D (limite de contextos WebGL). Sem WebGL, cai para o 2D. Liberar tudo no unmount.

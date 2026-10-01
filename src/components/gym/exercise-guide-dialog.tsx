@@ -1,11 +1,13 @@
-import { CircleAlert, Gauge, ListOrdered, Pause, Play, Target, Wind } from 'lucide-react';
-import { useState } from 'react';
+import { Box, CircleAlert, Gauge, ListOrdered, Pause, Play, RotateCw, Square, Target, Wind } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { guideFor } from '@/lib/exercise-guide';
 import { MUSCLE_LABEL } from '@/lib/gym';
 import { cn } from '@/lib/utils';
 import type { Exercise } from '@/types';
 import { ExerciseHologram } from './exercise-hologram';
+
+const ExerciseHologram3D = lazy(() => import('./exercise-hologram-3d').then((m) => ({ default: m.ExerciseHologram3D })));
 
 /** Modal "Como fazer": holograma grande + passo a passo, erros comuns e respiração. */
 export function ExerciseGuideDialog({
@@ -19,6 +21,8 @@ export function ExerciseGuideDialog({
 }) {
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
+  const [mode, setMode] = useState<'3d' | '2d'>('3d');
+  const [spin, setSpin] = useState(true);
   const guide = exercise ? guideFor(exercise) : null;
 
   return (
@@ -27,7 +31,13 @@ export function ExerciseGuideDialog({
         {exercise && guide && (
           <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
             <div className="bg-navy p-3">
-              <ExerciseHologram exercise={exercise} playing={playing} speed={speed} />
+              {mode === '3d' ? (
+                <Suspense fallback={<ExerciseHologram exercise={exercise} playing={playing} speed={speed} />}>
+                  <ExerciseHologram3D exercise={exercise} playing={playing} speed={speed} autoRotate={spin} />
+                </Suspense>
+              ) : (
+                <ExerciseHologram exercise={exercise} playing={playing} speed={speed} />
+              )}
               <div className="mt-2 flex items-center justify-between gap-2">
                 <button
                   type="button"
@@ -54,7 +64,40 @@ export function ExerciseGuideDialog({
                   ))}
                 </div>
               </div>
-              <p className="mt-2 text-center text-[11px] text-white/50">As silhuetas tênues mostram as posições inicial e final.</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div role="radiogroup" aria-label="Tipo de holograma" className="flex items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
+                  {(
+                    [
+                      ['3d', 'Holograma 3D', Box],
+                      ['2d', 'Vista 2D', Square],
+                    ] as const
+                  ).map(([id, label, Icon]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={mode === id}
+                      onClick={() => setMode(id)}
+                      className={cn('inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold', mode === id ? 'bg-white text-navy' : 'text-white/70 hover:text-white')}
+                    >
+                      <Icon className="size-3.5" aria-hidden /> {label}
+                    </button>
+                  ))}
+                </div>
+                {mode === '3d' && (
+                  <button
+                    type="button"
+                    aria-pressed={spin}
+                    onClick={() => setSpin((v) => !v)}
+                    className={cn('inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold', spin ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white')}
+                  >
+                    <RotateCw className="size-3.5" aria-hidden /> {spin ? 'Girando' : 'Girar sozinho'}
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-center text-[11px] text-white/50">
+                {mode === '3d' ? 'Arraste o holograma para ver de qualquer ângulo. As silhuetas tênues mostram o início e o fim do movimento.' : 'As silhuetas tênues mostram as posições inicial e final.'}
+              </p>
             </div>
 
             <div className="space-y-4 p-5">
