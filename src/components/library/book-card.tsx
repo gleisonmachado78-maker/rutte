@@ -6,6 +6,7 @@ import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { ratingKey, StarRating } from '@/components/ui/star-rating';
 import { MyPdf } from '@/components/library/my-pdf';
+import { AudiobookLinks } from '@/components/library/audiobook-links';
 
 /** Capa do Google Livros; sem internet (ou se a imagem falhar), mostra uma capa tipográfica. */
 export function BookCover({ book, className }: { book: Book; className?: string }) {
@@ -119,6 +120,7 @@ export function BookCard({ book, status }: { book: Book; status?: ShelfStatus })
           ))}
         </div>
 
+        <AudiobookLinks title={book.title.split(': ')[0]} author={book.author} />
         <MyPdf bookKey={book.googleId} title={book.title.split(': ')[0]} />
 
         {status !== 'lido' && (
