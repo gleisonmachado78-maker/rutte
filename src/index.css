@@ -164,6 +164,15 @@ a {
   touch-action: manipulation;
 }
 
+/* Campo de endereço do Google (PlaceAutocompleteElement) acompanha o tema */
+.rutte-place-input > gmp-place-autocomplete {
+  width: 100%;
+  color-scheme: light;
+}
+.dark .rutte-place-input > gmp-place-autocomplete {
+  color-scheme: dark;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

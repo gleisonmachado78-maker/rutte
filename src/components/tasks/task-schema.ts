@@ -22,6 +22,9 @@ export const taskSchema = z.object({
   categoryId: z.string(),
   projectId: z.string(),
   meetingUrl: optionalUrl,
+  location: z
+    .object({ address: z.string(), name: z.string().optional(), placeId: z.string().optional(), lat: z.number().optional(), lng: z.number().optional() })
+    .optional(),
   subtasks: z.array(z.object({ id: z.string(), title: z.string().trim().min(1, 'Subtarefa vazia'), isCompleted: z.boolean() })),
   links: z.array(z.object({ id: z.string(), title: z.string(), url: z.url('URL inválida') })),
   contactIds: z.array(z.string()),
@@ -53,6 +56,7 @@ export function toFormValues(task?: Task, defaults?: TaskDefaults): TaskFormValu
     categoryId: task?.categoryId ?? '',
     projectId: task?.projectId ?? '',
     meetingUrl: task?.meetingUrl ?? '',
+    location: task?.location,
     subtasks: task?.subtasks ?? [],
     links: task?.links ?? [],
     contactIds: task?.contactIds ?? [],
@@ -80,6 +84,7 @@ export function toTaskInput(v: TaskFormValues): TaskInput {
     categoryId: opt(v.categoryId),
     projectId: opt(v.projectId),
     meetingUrl: opt(v.meetingUrl),
+    location: v.location?.address.trim() ? v.location : undefined,
     subtasks: v.subtasks,
     links: v.links.map((l) => ({ ...l, title: l.title.trim() || l.url })),
     contactIds: v.contactIds,

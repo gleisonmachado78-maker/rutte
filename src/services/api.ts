@@ -84,6 +84,7 @@ const FIELD_LABELS: Partial<Record<keyof Task, string>> = {
   links: 'links',
   contactIds: 'pessoas',
   meetingUrl: 'link de reunião',
+  location: 'local',
   attachments: 'anexos',
   recurrenceRule: 'recorrência',
   startDate: 'início',

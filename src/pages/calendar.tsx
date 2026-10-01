@@ -13,7 +13,9 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Plus, Video } from 'lucide-react';
+import { RouteLinks } from '@/components/tasks/location-field';
+import { shortPlace } from '@/lib/maps';
 import { useMemo, useState } from 'react';
 import { PriorityBadge } from '@/components/tasks/badges';
 import { Button } from '@/components/ui/button';
@@ -90,9 +92,19 @@ function DayList({ date, tasks }: { date: Date; tasks: Task[] }) {
                         <Video className="size-3" aria-hidden /> Reunião
                       </span>
                     )}
+                    {t.location && (
+                      <span className="inline-flex min-w-0 items-center gap-1 text-xs text-foreground/60">
+                        <MapPin className="size-3 shrink-0" aria-hidden /> <span className="truncate">{shortPlace(t.location)}</span>
+                      </span>
+                    )}
                   </span>
                 </span>
               </button>
+              {t.location && (
+                <div className="mt-1.5 pl-[3.75rem]">
+                  <RouteLinks location={t.location} compact />
+                </div>
+              )}
             </li>
           ))}
         </ul>

@@ -95,6 +95,14 @@ Roda da Vida). Livros em `src/lib/books.ts` — só edições brasileiras com ca
 links de busca (Amazon por ISBN, Estante Virtual, Google Livros). Estante pessoal em `bookShelf` no banco. Cada
 vídeo tem descrição curta em `VIDEO_DESC` (`src/lib/videos.ts`).
 
+## Local dos compromissos (Google Maps)
+
+`Task.location` (endereço, nome, placeId, lat/lng). `src/lib/maps.ts`: chave da pessoa (localStorage `rutte:maps-key`
+ou `VITE_GOOGLE_MAPS_API_KEY` no `.env` — nunca no código), carregador oficial e links de rota. Com chave,
+`location-field.tsx` usa `PlaceAutocompleteElement` (evento `gmp-select` → `placePrediction.toPlace()` →
+`fetchFields`) e mini-mapa com `AdvancedMarkerElement`; sem chave, campo de texto comum. “Como chegar” (Google Maps
+por modo + Waze) são links e funcionam sem chave. A chave é cadastrada em Configurações → Google Maps.
+
 ## Dados de exemplo
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"

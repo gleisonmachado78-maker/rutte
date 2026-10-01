@@ -1,9 +1,10 @@
-import { Building, Clock, FolderKanban, UserRound, Link2, ListChecks, Paperclip, Repeat, Tag, Users, Video } from 'lucide-react';
+import { Building, Clock, FolderKanban, MapPin, UserRound, Link2, ListChecks, Paperclip, Repeat, Tag, Users, Video } from 'lucide-react';
 import type { DragEvent } from 'react';
 import { Checkbox } from '@/components/ui/form-controls';
 import { useLookups, useUpdateTask } from '@/hooks/use-data';
 import { isClosed, isOverdue, relativeDueLabel } from '@/lib/task-utils';
 import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
+import { shortPlace } from '@/lib/maps';
 import { cn } from '@/lib/utils';
 import { useUI } from '@/store/ui';
 import type { Task } from '@/types';
@@ -115,6 +116,12 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
               <ListChecks className="size-3.5" aria-hidden />
               {subDone}/{task.subtasks.length}
               <span className="sr-only"> subtarefas</span>
+            </span>
+          )}
+          {task.location && (
+            <span className="inline-flex min-w-0 max-w-[14rem] items-center gap-1" title={task.location.address}>
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{shortPlace(task.location)}</span>
             </span>
           )}
           {task.meetingUrl && (

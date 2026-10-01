@@ -7,6 +7,8 @@ import {
   ChartPie,
   CirclePlay,
   Lightbulb,
+  MapPin,
+  Navigation,
   Target,
   WandSparkles,
   ListTodo,
@@ -21,6 +23,7 @@ import { TaskCard } from '@/components/tasks/task-card';
 import { Button } from '@/components/ui/button';
 import { useModules, useScopedTasks, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
 import { firstName, GOALS, tipOfTheDay } from '@/lib/onboarding';
+import { directionsUrl, shortPlace } from '@/lib/maps';
 import { LIFE_AREAS } from '@/lib/life-areas';
 import {
   buildPriorityNow,
@@ -99,7 +102,7 @@ export function DashboardPage() {
   const completed = tasks.filter((t) => t.status === 'COMPLETED');
   const priorityNow = buildPriorityNow(tasks);
   const agenda = today
-    .filter((t) => !isClosed(t) && (t.deadlineTime || t.meetingUrl))
+    .filter((t) => !isClosed(t) && (t.deadlineTime || t.meetingUrl || t.location))
     .sort((a, b) => dueDateTime(a).getTime() - dueDateTime(b).getTime());
 
   const goTasks = (patch: { date?: DateFilter; statuses?: TaskStatus[] }) => {
@@ -239,6 +242,10 @@ export function DashboardPage() {
                               <>
                                 <Video className="size-3" aria-hidden /> Reunião
                               </>
+                            ) : t.location ? (
+                              <>
+                                <MapPin className="size-3 shrink-0" aria-hidden /> <span className="truncate">{shortPlace(t.location)}</span>
+                              </>
                             ) : (
                               'Prazo'
                             )}
@@ -246,6 +253,17 @@ export function DashboardPage() {
                           </span>
                         </span>
                       </button>
+                      {t.location && !t.meetingUrl && (
+                        <a
+                          href={directionsUrl(t.location)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-neon inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white"
+                          aria-label={`Como chegar: ${t.location.address}`}
+                        >
+                          <Navigation className="size-3" aria-hidden /> Ir
+                        </a>
+                      )}
                       {t.meetingUrl && (
                         <a
                           href={t.meetingUrl}

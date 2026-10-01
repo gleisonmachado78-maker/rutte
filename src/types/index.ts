@@ -60,6 +60,8 @@ export interface Task {
   lifeAreaId?: LifeAreaId;
   userId: string;
   meetingUrl?: string;
+  /** onde é o compromisso */
+  location?: TaskLocation;
   subtasks: Subtask[];
   links: TaskLink[];
   contactIds?: string[];
@@ -247,4 +249,15 @@ export interface FocusSession {
   /** o que foi feito (texto livre ou título do afazer) */
   activity: string;
   taskId?: string;
+}
+
+/** Local de um compromisso (preenchido pelo Google Places ou digitado). */
+export interface TaskLocation {
+  /** endereço legível */
+  address: string;
+  /** nome do lugar (ex.: "Shopping Ibirapuera"), quando vier do Google */
+  name?: string;
+  placeId?: string;
+  lat?: number;
+  lng?: number;
 }

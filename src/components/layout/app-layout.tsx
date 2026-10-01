@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Library,
   ListTodo,
+  MapPin,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -37,6 +38,7 @@ import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 import { BackupDialog } from './backup-dialog';
+import { MapsKeyDialog } from './maps-key-dialog';
 
 interface NavEntry {
   to: string;
@@ -173,6 +175,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const setMobileMenu = useUI((s) => s.setMobileMenu);
   const reset = useResetData();
   const [backupOpen, setBackupOpen] = useState(false);
+  const [mapsOpen, setMapsOpen] = useState(false);
   const name = user?.name && user.name !== 'Você' ? user.name : 'Você';
 
   return (
@@ -211,6 +214,9 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           <DropdownMenuItem onSelect={() => setBackupOpen(true)}>
             <DatabaseBackup /> Backup dos dados
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setMapsOpen(true)}>
+            <MapPin /> Google Maps (endereços)
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-brand"
@@ -228,6 +234,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
+      <MapsKeyDialog open={mapsOpen} onOpenChange={setMapsOpen} />
     </>
   );
 }

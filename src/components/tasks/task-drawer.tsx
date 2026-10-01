@@ -40,6 +40,7 @@ import type { Scope, Task } from '@/types';
 import { LIFE_AREAS } from '@/lib/life-areas';
 import { OverdueBadge, PriorityBadge, StatusBadge } from './badges';
 import { taskSchema, toFormValues, toTaskInput, type TaskFormValues } from './task-schema';
+import { LocationField } from './location-field';
 import { ContactsSection, HistorySection, LinksAndFilesSection, Section, SubtasksSection } from './task-sections';
 
 const SCOPE_OPTIONS: { value: Scope; label: string; hint: string; icon: typeof Tag }[] = [
@@ -123,9 +124,9 @@ function TaskForm({
     onDirtyChange(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  const [status, priority, meetingUrl, title, scope, categoryId, projectId] = useWatch({
+  const [status, priority, meetingUrl, title, scope, categoryId, projectId, location] = useWatch({
     control,
-    name: ['status', 'priority', 'meetingUrl', 'title', 'scope', 'categoryId', 'projectId'],
+    name: ['status', 'priority', 'meetingUrl', 'title', 'scope', 'categoryId', 'projectId', 'location'],
   });
   const scopedCategories = categories.filter((c) => !c.scope || c.scope === scope);
   const scopedProjects = projects.filter((p) => !p.scope || p.scope === scope);
@@ -291,6 +292,10 @@ function TaskForm({
             <Label htmlFor="f-meet">Link da reunião</Label>
             <Input id="f-meet" type="url" placeholder="https://meet.google.com/…" {...register('meetingUrl')} className={cn(errors.meetingUrl && 'border-primary')} />
             {errors.meetingUrl && <p className="mt-1 text-xs text-primary">{errors.meetingUrl.message}</p>}
+          </div>
+          <div className="col-span-2">
+            <Label htmlFor="f-location">Local do compromisso</Label>
+            <LocationField value={location} onChange={(l) => setValue('location', l, { shouldDirty: true })} />
           </div>
         </div>
 
