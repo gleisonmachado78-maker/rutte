@@ -128,3 +128,10 @@ substitui **todos** os dados; o usuário pode exportar/importar backup JSON pelo
 `src/lib/local-files.ts` (IndexedDB `rutte-files`): a pessoa anexa o próprio PDF a um livro (`MyPdf` no card).
 O arquivo fica só no navegador dela — nunca no código, no repositório (`*.pdf` no .gitignore), no backup ou no build.
 Não incluir PDFs de livros protegidos em `free-books.ts`.
+
+## Podcasts e audiolivros
+
+Aba Podcasts na Biblioteca (`src/lib/podcasts.ts`, IDs conferidos em `https://open.spotify.com/oembed?url=https://open.spotify.com/show/ID`;
+o `title` do oEmbed de um show é o do último episódio — usar o nome do programa). `src/lib/spotify.ts`: `openSpotify` tenta o app
+(`spotify:show:ID`) e cai para open.spotify.com; “Ouvir aqui” usa o embed. Cada livro tem links de audiolivro (Spotify, Audible,
+Google Play, Ubook — buscas).
