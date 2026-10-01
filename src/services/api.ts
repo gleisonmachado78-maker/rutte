@@ -342,6 +342,21 @@ export const api = {
     return delay(undefined);
   },
 
+  /* ------------------------------ Biblioteca ------------------------------ */
+  async getBookShelf(): Promise<Record<string, 'quero' | 'lendo' | 'lido'>> {
+    return delay(load().bookShelf ?? {});
+  },
+  /** Define (ou remove, com null) o status de um livro na estante. */
+  async setBookStatus(id: string, status: 'quero' | 'lendo' | 'lido' | null): Promise<void> {
+    const db = load();
+    const shelf = { ...(db.bookShelf ?? {}) };
+    if (status) shelf[id] = status;
+    else delete shelf[id];
+    db.bookShelf = shelf;
+    persist();
+    return delay(undefined);
+  },
+
   /* --------------------------- Personalização --------------------------- */
   async getUser(): Promise<UserProfile | null> {
     return delay(load().user ?? null);

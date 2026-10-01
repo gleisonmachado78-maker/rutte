@@ -9,6 +9,7 @@ import { CalendarPage } from '@/pages/calendar';
 import { DashboardPage } from '@/pages/dashboard';
 import { FocusPage } from '@/pages/focus';
 import { GymPage } from '@/pages/gym';
+import { LibraryPage } from '@/pages/library';
 import { LifePage } from '@/pages/life';
 import { TasksPage } from '@/pages/tasks';
 import { useUI } from '@/store/ui';
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="life" element={<LifePage />} />
           <Route path="gym" element={<GymPage />} />
           <Route path="focus" element={<FocusPage />} />
+          <Route path="library" element={<LibraryPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

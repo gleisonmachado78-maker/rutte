@@ -15,6 +15,7 @@ export const qk = {
   gym: ['gym'] as const,
   user: ['user'] as const,
   focus: ['focus'] as const,
+  shelf: ['shelf'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -366,5 +367,31 @@ export function useDeleteFocusSession() {
     mutationFn: api.deleteFocusSession,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.focus }),
     onError: errorToast,
+  });
+}
+
+/* ------------------------------------ Biblioteca ------------------------------------ */
+
+export const useBookShelf = () => useQuery({ queryKey: qk.shelf, queryFn: api.getBookShelf });
+
+export function useSetBookStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'quero' | 'lendo' | 'lido' | null }) => api.setBookStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: qk.shelf });
+      const prev = qc.getQueryData<Record<string, string>>(qk.shelf);
+      qc.setQueryData<Record<string, string>>(qk.shelf, (old = {}) => {
+        const next = { ...old };
+        if (status) next[id] = status;
+        else delete next[id];
+        return next;
+      });
+      return { prev };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qk.shelf, ctx.prev);
+      errorToast(err);
+    },
   });
 }

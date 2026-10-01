@@ -1,20 +1,19 @@
 import { askConfirm } from '@/components/ui/confirm';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartPie, Check, CirclePlay, Lightbulb, Palette, Plus, Target, Repeat, Save, Shuffle, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { ChartPie, Check, CirclePlay, Lightbulb, Plus, Target, Repeat, Save, Shuffle, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
-import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/videos';
 import { WheelChart } from '@/components/life/wheel-chart';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/form-controls';
 import { useCreateTask, useDeleteWheel, useSaveWheel, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
 import { focusAreas } from '@/lib/onboarding';
-import { emptyScores, LIFE_AREA_BY_ID, LIFE_AREAS, LIFE_TIPS, type LifeTip } from '@/lib/life-areas';
+import { emptyScores, LIFE_AREAS, LIFE_TIPS, type LifeTip } from '@/lib/life-areas';
 import { isClosed, recurrenceLabel, todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import { LIFE_VIDEOS } from '@/lib/videos';
+import { topicForArea } from '@/lib/library';
 import { useUI } from '@/store/ui';
 import type { LifeAreaId } from '@/types';
 
@@ -25,21 +24,18 @@ export function LifePage() {
   const { data: assessments = [], isLoading } = useWheelAssessments();
   const { data: tasks = [] } = useTasks();
   const { data: user } = useUser();
+  const navigate = useNavigate();
   const focus = user ? focusAreas(user.goals) : [];
   const save = useSaveWheel();
   const remove = useDeleteWheel();
   const openNewTask = useUI((s) => s.openNewTask);
   const setFilters = useUI((s) => s.setFilters);
   const resetFilters = useUI((s) => s.resetFilters);
-  const player = useVideoPlayer();
-  const videosRef = useRef<HTMLElement>(null);
 
   const latest = assessments.at(-1);
   const [scores, setScores] = useState<Record<LifeAreaId, number>>(emptyScores);
   const [note, setNote] = useState('');
   const [selected, setSelected] = useState<LifeAreaId | null>(null);
-  const [videoArea, setVideoArea] = useState<LifeAreaId | 'ALL'>('ALL');
-  const [onlyAnimated, setOnlyAnimated] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   // Começa a partir da última avaliação
@@ -73,25 +69,12 @@ export function LifePage() {
     setDirty(false);
   };
 
-  const showVideos = (id: LifeAreaId) => {
-    setVideoArea(id);
-    videosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const showVideos = (id: LifeAreaId) => navigate('/library', { state: { tab: 'videos', topic: topicForArea(id) } });
 
   const seeTasks = (id: LifeAreaId) => {
     resetFilters();
     setFilters({ lifeAreaIds: [id] });
   };
-
-  // Áreas dos objetivos da pessoa aparecem primeiro
-  const ordered = [...LIFE_AREAS].sort((x, y) => Number(!focus.includes(x.id)) - Number(!focus.includes(y.id)));
-  const videoGroups = ordered.filter((a) => videoArea === 'ALL' || a.id === videoArea).map((a) => ({
-    area: a,
-    // Animados primeiro; palestras no fim (ou ocultas com o filtro)
-    videos: LIFE_VIDEOS.filter((v) => v.area === a.id && (!onlyAnimated || v.style === 'animado')).sort(
-      (x, y) => Number(x.style !== 'animado') - Number(y.style !== 'animado'),
-    ),
-  }));
 
   return (
     <div className="space-y-8">
@@ -242,66 +225,6 @@ export function LifePage() {
         </div>
       </section>
 
-      {/* Vídeos por área */}
-      <section ref={videosRef} aria-labelledby="videos-title" className="scroll-mt-20 space-y-4">
-        <div>
-          <h2 id="videos-title" className="flex items-center gap-2 text-lg font-bold">
-            <CirclePlay className="size-5 text-primary" aria-hidden /> Vídeos para cada área da vida
-          </h2>
-          <p className="text-sm text-foreground/60">Vídeos em português, a maioria animados e ilustrados. Clique e o vídeo abre na hora.</p>
-        </div>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none]" role="toolbar" aria-label="Filtrar vídeos por área">
-          <button
-            type="button"
-            aria-pressed={onlyAnimated}
-            onClick={() => setOnlyAnimated((v) => !v)}
-            className={cn(
-              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-all duration-200',
-              onlyAnimated ? 'border-neon bg-navy text-white shadow-neon dark:bg-primary' : 'border-border bg-background hover:bg-muted',
-            )}
-          >
-            <Palette className="size-4" aria-hidden /> Só animados
-          </button>
-          <span className="mx-1 w-px shrink-0 self-stretch bg-border" aria-hidden />
-          {(['ALL', ...LIFE_AREAS.map((a) => a.id)] as const).map((id) => {
-            const active = videoArea === id;
-            const area = id === 'ALL' ? null : LIFE_AREA_BY_ID[id];
-            const Icon = area?.icon;
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setVideoArea(id)}
-                className={cn(
-                  'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-all duration-200',
-                  active ? 'border-neon bg-primary text-white shadow-neon' : 'border-border bg-background hover:bg-muted',
-                )}
-              >
-                {Icon && <Icon className="size-4" style={{ color: active ? undefined : area.color }} aria-hidden />}
-                {area ? area.short : 'Todas'}
-              </button>
-            );
-          })}
-        </div>
-
-        {videoGroups.map(({ area, videos }) => {
-          const Icon = area.icon;
-          return (
-            <div key={area.id} className="space-y-3">
-              <h3 className="flex items-center gap-2 font-semibold">
-                <Icon className="size-4" style={{ color: area.color }} aria-hidden /> {area.name}
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {videos.map((v) => (
-                  <VideoCard key={v.youtubeId} video={v} onPlay={player.play} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
       {/* Histórico */}
       {assessments.length > 0 && (
         <section aria-labelledby="hist-title" className="space-y-3">
@@ -327,7 +250,6 @@ export function LifePage() {
         </section>
       )}
 
-      <VideoPlayerDialog video={player.video} onClose={player.close} />
     </div>
   );
 }

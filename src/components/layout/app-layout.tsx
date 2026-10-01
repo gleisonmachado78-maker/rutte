@@ -7,6 +7,7 @@ import {
   Ellipsis,
   Layers,
   LayoutDashboard,
+  Library,
   ListTodo,
   Moon,
   PanelLeftClose,
@@ -57,6 +58,7 @@ const NAV: NavEntry[] = [
   { to: '/focus', label: 'Foco', icon: Timer, group: 'organizar', primary: true },
   { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life', group: 'evoluir' },
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
+  { to: '/library', label: 'Biblioteca', short: 'Livros', icon: Library, group: 'evoluir' },
 ];
 
 const GROUP_LABEL = { organizar: 'Organizar', evoluir: 'Evoluir' } as const;

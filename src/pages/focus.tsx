@@ -1,6 +1,6 @@
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Coffee, ListTodo, Pause, Play, RotateCcw, Settings2, SkipForward, Target, Timer, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { Check, Coffee, Lightbulb, ListTodo, Pause, Play, RotateCcw, Settings2, SkipForward, Target, Timer, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { unlockAudio, useNow } from '@/components/focus/focus-engine';
 import { Button } from '@/components/ui/button';
@@ -375,6 +375,81 @@ export function FocusPage() {
           </ul>
         </section>
       )}
+
+      <PomodoroExplainer focus={f.settings.focus} short={f.settings.short} long={f.settings.long} every={f.settings.every} />
     </div>
+  );
+}
+
+/** Explicação da técnica, no fim da página. */
+function PomodoroExplainer({ focus, short, long, every }: { focus: number; short: number; long: number; every: number }) {
+  const steps = [
+    { t: 'Escolha uma tarefa', d: 'Uma só. Escreva no campo “O que você vai fazer agora?” para não se perder.' },
+    { t: `Foque por ${focus} minutos`, d: 'Sem celular, sem e-mail, sem trocar de tarefa. Se lembrar de outra coisa, anote e volte.' },
+    { t: `Pause ${short} minutos`, d: 'Levante, beba água, olhe para longe da tela. A pausa faz parte do método.' },
+    { t: `A cada ${every} focos, pausa de ${long} min`, d: 'Uma pausa maior recupera a energia para o próximo ciclo.' },
+  ];
+  const why = [
+    'Tarefas grandes ficam pequenas: você só precisa começar um bloco.',
+    'O cérebro rende melhor em períodos curtos de atenção total do que em horas de foco pela metade.',
+    'As pausas evitam o cansaço mental e mantêm o ritmo o dia todo.',
+    'Contar pomodoros mostra quanto tempo cada tarefa realmente leva e melhora seu planejamento.',
+  ];
+  const tips = [
+    'Silencie as notificações antes de começar.',
+    'Foi interrompido? Pause e recomece o bloco quando puder — sem culpa.',
+    'Ajuste os tempos: estudos densos podem pedir 45/10; tarefas chatas, 15/3.',
+    'Use as pausas longe de telas para descansar de verdade.',
+  ];
+
+  return (
+    <section aria-labelledby="pomo-what" className="space-y-5 border-t border-border pt-6">
+      <div className="max-w-3xl">
+        <h2 id="pomo-what" className="flex items-center gap-2 text-lg font-bold">
+          <span aria-hidden>🍅</span> O que é a técnica Pomodoro?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/75">
+          É um método de gestão de tempo criado pelo italiano <strong className="text-foreground">Francesco Cirillo</strong> no fim dos anos 1980. O nome vem do
+          cronômetro de cozinha em forma de tomate (<em>pomodoro</em>, em italiano) que ele usava quando era estudante. A ideia é simples: trabalhar em
+          <strong className="text-foreground"> blocos curtos de foco total</strong>, separados por pausas, em vez de tentar se concentrar por horas seguidas.
+        </p>
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground/60">Como funciona</h3>
+        <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s, i) => (
+            <li key={s.t} className="rounded-xl border border-border bg-card p-4">
+              <span className="grid size-7 place-items-center rounded-full bg-primary text-xs font-bold text-white">{i + 1}</span>
+              <p className="mt-2 font-semibold">{s.t}</p>
+              <p className="mt-1 text-sm text-foreground/70">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground/60">Por que funciona</h3>
+          <ul className="space-y-2 text-sm text-foreground/80">
+            {why.map((w) => (
+              <li key={w} className="flex gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden /> {w}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground/60">Dicas para render mais</h3>
+          <ul className="space-y-2 text-sm text-foreground/80">
+            {tips.map((t) => (
+              <li key={t} className="flex gap-2">
+                <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden /> {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   );
 }

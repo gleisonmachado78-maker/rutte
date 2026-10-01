@@ -17,6 +17,8 @@ export interface Database {
   user?: UserProfile;
   /** pomodoros concluídos */
   focusSessions?: FocusSession[];
+  /** estante pessoal de livros: id do Google Livros → status */
+  bookShelf?: Record<string, 'quero' | 'lendo' | 'lido'>;
 }
 
 const d = (offset: number) => format(addDays(new Date(), offset), 'yyyy-MM-dd');
