@@ -103,6 +103,13 @@ ou `VITE_GOOGLE_MAPS_API_KEY` no `.env` — nunca no código), carregador oficia
 `fetchFields`) e mini-mapa com `AdvancedMarkerElement`; sem chave, campo de texto comum. “Como chegar” (Google Maps
 por modo + Waze) são links e funcionam sem chave. A chave é cadastrada em Configurações → Google Maps.
 
+## Gratidão
+
+`/gratitude`: diário (o que tenho / já tive / ainda terei; um registro por dia em `gratitude`), respiração guiada
+(`components/gratitude/breathing.tsx`), orações tradicionais de domínio público e reflexões (`src/lib/gratitude.ts`), vídeos
+verificados em `src/lib/gratitude-videos.ts` e “Relembrar”. Livros gratuitos (`src/lib/free-books.ts`): só domínio
+público ou publicações oficiais gratuitas — nunca PDFs piratas.
+
 ## Dados de exemplo
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"

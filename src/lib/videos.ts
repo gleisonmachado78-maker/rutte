@@ -1,6 +1,6 @@
 import type { LifeAreaId } from '@/types';
 
-export type VideoStyle = 'animado' | 'palestra';
+export type VideoStyle = 'animado' | 'palestra' | 'guiada';
 
 export interface LifeVideo {
   area: LifeAreaId;
@@ -11,6 +11,8 @@ export interface LifeVideo {
   style: VideoStyle;
   /** Duração aproximada e popularidade no momento da curadoria */
   meta: string;
+  /** descrição própria (senão usa VIDEO_DESC) */
+  desc?: string;
 }
 
 /**

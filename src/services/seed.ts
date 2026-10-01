@@ -1,5 +1,5 @@
 import { addDays, format, subDays } from 'date-fns';
-import type { Category, Contact, FocusSession, GymData, Project, Task, UserProfile, WheelAssessment } from '@/types';
+import type { Category, Contact, FocusSession, GratitudeEntry, GymData, Project, Task, UserProfile, WheelAssessment } from '@/types';
 import { createGymSeed } from '@/lib/gym';
 
 export const USER_ID = 'user_1';
@@ -19,6 +19,8 @@ export interface Database {
   focusSessions?: FocusSession[];
   /** estante pessoal de livros: id do Google Livros → status */
   bookShelf?: Record<string, 'quero' | 'lendo' | 'lido'>;
+  /** diário de gratidão */
+  gratitude?: GratitudeEntry[];
 }
 
 const d = (offset: number) => format(addDays(new Date(), offset), 'yyyy-MM-dd');

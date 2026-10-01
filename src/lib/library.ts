@@ -82,3 +82,16 @@ export function whereToFind(b: Book) {
     { label: 'Google Livros', hint: 'prévia', href: `https://books.google.com.br/books?id=${b.googleId}` },
   ];
 }
+
+/** Livro legalmente gratuito (domínio público ou publicação oficial). */
+export interface FreeBook {
+  topic: TopicId;
+  title: string;
+  author: string;
+  source: string;
+  url: string;
+  kind: 'pdf' | 'pagina';
+  license: 'Domínio público' | 'Publicação oficial gratuita' | 'Distribuição gratuita do autor';
+  pages: number;
+  why: string;
+}

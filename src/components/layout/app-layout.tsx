@@ -5,6 +5,7 @@ import {
   DatabaseBackup,
   Dumbbell,
   Ellipsis,
+  HandHeart,
   Layers,
   LayoutDashboard,
   Library,
@@ -60,6 +61,7 @@ const NAV: NavEntry[] = [
   { to: '/focus', label: 'Foco', icon: Timer, group: 'organizar', primary: true },
   { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life', group: 'evoluir' },
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
+  { to: '/gratitude', label: 'Gratidão', icon: HandHeart, group: 'evoluir' },
   { to: '/library', label: 'Biblioteca', short: 'Livros', icon: Library, group: 'evoluir' },
 ];
 

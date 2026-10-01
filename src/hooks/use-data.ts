@@ -16,6 +16,7 @@ export const qk = {
   user: ['user'] as const,
   focus: ['focus'] as const,
   shelf: ['shelf'] as const,
+  gratitude: ['gratitude'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -393,5 +394,30 @@ export function useSetBookStatus() {
       if (ctx?.prev) qc.setQueryData(qk.shelf, ctx.prev);
       errorToast(err);
     },
+  });
+}
+
+/* ------------------------------------- Gratidão ------------------------------------- */
+
+export const useGratitude = () => useQuery({ queryKey: qk.gratitude, queryFn: api.listGratitude });
+
+export function useSaveGratitude() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveGratitude,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.gratitude });
+      toast.success('Gratidão registrada 🙏', { description: 'A Rutte guardou o seu dia.' });
+    },
+    onError: errorToast,
+  });
+}
+
+export function useDeleteGratitude() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteGratitude,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.gratitude }),
+    onError: errorToast,
   });
 }

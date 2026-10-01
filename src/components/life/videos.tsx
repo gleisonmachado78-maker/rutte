@@ -1,4 +1,4 @@
-import { CirclePlay, ExternalLink, Mic, Palette } from 'lucide-react';
+import { CirclePlay, ExternalLink, Mic, Palette, Wind } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
@@ -33,8 +33,8 @@ export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: Lif
             video.style === 'animado' ? 'bg-navy/85 text-white' : 'bg-white/95 text-navy',
           )}
         >
-          {video.style === 'animado' ? <Palette className="size-3" aria-hidden /> : <Mic className="size-3" aria-hidden />}
-          {video.style === 'animado' ? 'Animado' : 'Palestra'}
+          {video.style === 'animado' ? <Palette className="size-3" aria-hidden /> : video.style === 'guiada' ? <Wind className="size-3" aria-hidden /> : <Mic className="size-3" aria-hidden />}
+          {video.style === 'animado' ? 'Animado' : video.style === 'guiada' ? 'Guiada' : 'Palestra'}
         </span>
         <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-navy">
           <Icon className="size-3" style={{ color: area.color }} aria-hidden />
@@ -43,7 +43,7 @@ export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: Lif
       </span>
       <span className="flex flex-1 flex-col gap-1 p-3">
         <span className="line-clamp-2 text-sm font-semibold leading-snug">{video.title}</span>
-        {videoDesc(video.youtubeId) && <span className="line-clamp-2 text-xs leading-snug text-foreground/70">{videoDesc(video.youtubeId)}</span>}
+        {(video.desc ?? videoDesc(video.youtubeId)) && <span className="line-clamp-2 text-xs leading-snug text-foreground/70">{video.desc ?? videoDesc(video.youtubeId)}</span>}
         <span className="mt-auto pt-1 text-xs text-foreground/50">
           {video.channel} · {video.meta}
         </span>
@@ -76,7 +76,7 @@ export function VideoPlayerDialog({ video, onClose }: { video: LifeVideo | null;
                 <DialogDescription className="mt-1 text-sm text-foreground/60">
                   {video.channel} · {LIFE_AREA_BY_ID[video.area].name}
                 </DialogDescription>
-                {videoDesc(video.youtubeId) && <p className="mt-1.5 text-sm text-foreground/80">{videoDesc(video.youtubeId)}</p>}
+                {(video.desc ?? videoDesc(video.youtubeId)) && <p className="mt-1.5 text-sm text-foreground/80">{video.desc ?? videoDesc(video.youtubeId)}</p>}
               </div>
               <a
                 href={watchUrl(video.youtubeId)}

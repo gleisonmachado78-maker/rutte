@@ -261,3 +261,16 @@ export interface TaskLocation {
   lat?: number;
   lng?: number;
 }
+
+/* ---------------------------------- Gratidão ---------------------------------- */
+
+/** Um dia do diário de gratidão: o que tenho (hoje), o que já tive e o que ainda terei. */
+export interface GratitudeEntry {
+  id: string;
+  /** yyyy-MM-dd */
+  date: string;
+  present: string[];
+  past: string;
+  future: string;
+  createdAt: string;
+}

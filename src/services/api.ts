@@ -7,6 +7,7 @@ import type {
   Contact,
   Exercise,
   FocusSession,
+  GratitudeEntry,
   GymData,
   Project,
   Task,
@@ -354,6 +355,27 @@ export const api = {
     if (status) shelf[id] = status;
     else delete shelf[id];
     db.bookShelf = shelf;
+    persist();
+    return delay(undefined);
+  },
+
+  /* ------------------------------- Gratidão ------------------------------- */
+  async listGratitude(): Promise<GratitudeEntry[]> {
+    return delay([...(load().gratitude ?? [])].sort((a, b) => b.date.localeCompare(a.date)));
+  },
+  /** Salva o diário do dia (um registro por data: salvar de novo substitui). */
+  async saveGratitude(data: Omit<GratitudeEntry, 'id' | 'createdAt'>): Promise<GratitudeEntry> {
+    const db = load();
+    const list = db.gratitude ?? [];
+    const prev = list.find((g) => g.date === data.date);
+    const item: GratitudeEntry = { ...data, id: prev?.id ?? uid('gr'), createdAt: prev?.createdAt ?? new Date().toISOString() };
+    db.gratitude = [...list.filter((g) => g.date !== data.date), item];
+    persist();
+    return delay(item);
+  },
+  async deleteGratitude(id: string): Promise<void> {
+    const db = load();
+    db.gratitude = (db.gratitude ?? []).filter((g) => g.id !== id);
     persist();
     return delay(undefined);
   },

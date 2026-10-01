@@ -1,7 +1,9 @@
-import { BookOpen, CirclePlay, Library, Palette, Search, X } from 'lucide-react';
+import { BookOpen, CirclePlay, Gift, Library, Palette, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BookCard } from '@/components/library/book-card';
+import { FreeBookCard } from '@/components/library/free-book-card';
+import { FREE_BOOKS } from '@/lib/free-books';
 import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/videos';
 import { useBookShelf, useUser } from '@/hooks/use-data';
 import { BOOKS } from '@/lib/books';
@@ -25,6 +27,7 @@ export function LibraryPage() {
   const [q, setQ] = useState('');
   const [shelfFilter, setShelfFilter] = useState<ShelfStatus | null>(null);
   const [onlyAnimated, setOnlyAnimated] = useState(false);
+  const [onlyFree, setOnlyFree] = useState(false);
   const { data: shelf = {} } = useBookShelf();
   const { data: user } = useUser();
   const player = useVideoPlayer();
@@ -46,9 +49,13 @@ export function LibraryPage() {
   const query = norm(q.trim());
   const books = BOOKS.filter(
     (b) =>
+      !onlyFree &&
       (topic === 'ALL' || b.topic === topic) &&
       (!shelfFilter || shelf[b.googleId] === shelfFilter) &&
       (!query || norm(`${b.title} ${b.author}`).includes(query)),
+  );
+  const freeBooks = FREE_BOOKS.filter(
+    (b) => !shelfFilter && (topic === 'ALL' || b.topic === topic) && (!query || norm(`${b.title} ${b.author}`).includes(query)),
   );
   const videoTopic = (area: string) => TOPICS.find((t) => t.videoAreas.includes(area as never))?.id;
   const videos = LIFE_VIDEOS.filter(
@@ -59,7 +66,7 @@ export function LibraryPage() {
   ).sort((a, b) => Number(a.style !== 'animado') - Number(b.style !== 'animado'));
 
   const topicsWithItems = ordered.filter((t) =>
-    tab === 'livros' ? BOOKS.some((b) => b.topic === t.id) : LIFE_VIDEOS.some((v) => t.videoAreas.includes(v.area)),
+    tab === 'livros' ? BOOKS.some((b) => b.topic === t.id) || FREE_BOOKS.some((b) => b.topic === t.id) : LIFE_VIDEOS.some((v) => t.videoAreas.includes(v.area)),
   );
   const shelfCount = (s: ShelfStatus) => Object.values(shelf).filter((x) => x === s).length;
 
@@ -75,7 +82,7 @@ export function LibraryPage() {
       <div role="tablist" aria-label="Tipo de conteúdo" className="flex w-fit gap-1 rounded-xl border border-border bg-card p-1">
         {(
           [
-            { id: 'livros', label: 'Livros', icon: BookOpen, n: BOOKS.length },
+            { id: 'livros', label: 'Livros', icon: BookOpen, n: BOOKS.length + FREE_BOOKS.length },
             { id: 'videos', label: 'Vídeos', icon: CirclePlay, n: LIFE_VIDEOS.length },
           ] as const
         ).map(({ id, label, icon: Icon, n }) => (
@@ -129,6 +136,11 @@ export function LibraryPage() {
 
         {tab === 'livros' ? (
           <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Minha estante">
+            {FREE_BOOKS.length > 0 && (
+              <button type="button" aria-pressed={onlyFree} onClick={() => { setOnlyFree((v) => !v); setShelfFilter(null); }} className={cn(chip, 'h-8 text-xs', onlyFree ? 'border-emerald-600 bg-emerald-600 text-white' : chipOff)}>
+                <Gift className="size-3.5" aria-hidden /> Só grátis (PDF) <span className="tabular-nums opacity-70">{FREE_BOOKS.length}</span>
+              </button>
+            )}
             <span className="self-center text-xs font-semibold uppercase tracking-wide text-foreground/50">Minha estante:</span>
             {(['quero', 'lendo', 'lido'] as ShelfStatus[]).map((s) => (
               <button key={s} type="button" aria-pressed={shelfFilter === s} onClick={() => setShelfFilter((x) => (x === s ? null : s))} className={cn(chip, 'h-8 text-xs', shelfFilter === s ? chipOn : chipOff)}>
@@ -144,13 +156,13 @@ export function LibraryPage() {
       </div>
 
       {tab === 'livros' ? (
-        books.length === 0 ? (
+        books.length + freeBooks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">
             {shelfFilter ? `Nenhum livro marcado como “${SHELF_LABEL[shelfFilter]}” neste tema.` : 'Nenhum livro encontrado.'}
           </p>
         ) : (
           ordered
-            .filter((t) => books.some((b) => b.topic === t.id))
+            .filter((t) => books.some((b) => b.topic === t.id) || freeBooks.some((b) => b.topic === t.id))
             .map((t) => (
               <section key={t.id} aria-labelledby={`bk-${t.id}`} className="space-y-2">
                 <h2 id={`bk-${t.id}`} className="flex items-center gap-2 font-bold">
@@ -161,6 +173,11 @@ export function LibraryPage() {
                     .filter((b) => b.topic === t.id)
                     .map((b) => (
                       <BookCard key={b.googleId} book={b} status={shelf[b.googleId]} />
+                    ))}
+                  {freeBooks
+                    .filter((b) => b.topic === t.id)
+                    .map((b) => (
+                      <FreeBookCard key={b.url} book={b} />
                     ))}
                 </div>
               </section>
