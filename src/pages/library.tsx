@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BookCard } from '@/components/library/book-card';
 import { FreeBookCard } from '@/components/library/free-book-card';
+import { ReadingPlatforms } from '@/components/library/reading-platforms';
 import { FREE_BOOKS } from '@/lib/free-books';
 import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/videos';
 import { useBookShelf, useRatings, useUser } from '@/hooks/use-data';
@@ -170,6 +171,8 @@ export function LibraryPage() {
         )}
       </div>
 
+      {tab === 'livros' && !topRated && !shelfFilter && <ReadingPlatforms />}
+
       {tab === 'livros' ? (
         books.length + freeBooks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">
@@ -184,15 +187,16 @@ export function LibraryPage() {
                   <t.icon className="size-5" style={{ color: t.color }} aria-hidden /> {t.label}
                 </h2>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {freeBooks
+                    .filter((b) => b.topic === t.id)
+                    .sort((x, y) => Number(x.category !== 'classico') - Number(y.category !== 'classico'))
+                    .map((b) => (
+                      <FreeBookCard key={b.url} book={b} />
+                    ))}
                   {books
                     .filter((b) => b.topic === t.id)
                     .map((b) => (
                       <BookCard key={b.googleId} book={b} status={shelf[b.googleId]} />
-                    ))}
-                  {freeBooks
-                    .filter((b) => b.topic === t.id)
-                    .map((b) => (
-                      <FreeBookCard key={b.url} book={b} />
                     ))}
                 </div>
               </section>

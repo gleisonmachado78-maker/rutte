@@ -1,4 +1,4 @@
-import { Download, ExternalLink, Gift, Scale } from 'lucide-react';
+import { Award, Download, ExternalLink, Gift, Scale, UserPlus, Wrench } from 'lucide-react';
 import { TOPIC_BY_ID, type FreeBook } from '@/lib/library';
 import { ratingKey, StarRating } from '@/components/ui/star-rating';
 
@@ -39,10 +39,25 @@ export function FreeBookCard({ book }: { book: FreeBook }) {
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-300">
             <Gift className="size-3" aria-hidden /> Grátis
           </span>
+          {book.category === 'classico' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300">
+              <Award className="size-3" aria-hidden /> Clássico best-seller
+            </span>
+          )}
+          {book.category === 'tecnica' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 font-semibold text-sky-700 dark:text-sky-300">
+              <Wrench className="size-3" aria-hidden /> Técnicas
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium text-foreground/70" title="Por que é legal baixar">
             <Scale className="size-3" aria-hidden /> {book.license}
           </span>
           <span className="text-foreground/55">Fonte: {book.source}</span>
+          {book.needsSignup && (
+            <span className="inline-flex items-center gap-1 text-foreground/55" title="O site pede um cadastro gratuito antes do download">
+              <UserPlus className="size-3" aria-hidden /> pede cadastro grátis
+            </span>
+          )}
         </div>
         <StarRating itemKey={ratingKey('free', book.url)} label={book.title} />
         <a
@@ -52,7 +67,7 @@ export function FreeBookCard({ book }: { book: FreeBook }) {
           className="mt-auto inline-flex h-9 w-fit items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           {book.kind === 'pdf' ? <Download className="size-4" aria-hidden /> : <ExternalLink className="size-4" aria-hidden />}
-          {book.kind === 'pdf' ? 'Baixar PDF grátis' : 'Abrir na fonte oficial'}
+          {book.kind === 'pdf' ? 'Baixar PDF grátis' : 'Baixar grátis na fonte oficial'}
         </a>
       </div>
     </article>

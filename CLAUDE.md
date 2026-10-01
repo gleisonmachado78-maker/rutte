@@ -114,7 +114,8 @@ por modo + Waze) são links e funcionam sem chave. A chave é cadastrada em Conf
 `/gratitude`: diário (o que tenho / já tive / ainda terei; um registro por dia em `gratitude`), respiração guiada
 (`components/gratitude/breathing.tsx`), meditação do dia (roteiros guiados em `src/lib/meditations.ts`, rodízio
 pelo dia do ano com `meditationOfDay`/`dailyPick`; vídeo do dia), oração e reflexão do dia, orações por tema tradicionais de domínio público e reflexões (`src/lib/gratitude.ts`), vídeos
-verificados em `src/lib/gratitude-videos.ts` e “Relembrar”. Livros gratuitos (`src/lib/free-books.ts`): só domínio
+verificados em `src/lib/gratitude-videos.ts` e “Relembrar”. Livros gratuitos (`src/lib/free-books.ts`, com `category` clássico/técnica e `needsSignup`) e plataformas legais
+para ler best-sellers (`src/lib/reading-platforms.ts`): só domínio
 público ou publicações oficiais gratuitas — nunca PDFs piratas.
 
 ## Dados de exemplo
