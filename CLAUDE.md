@@ -138,7 +138,9 @@ Google Play, Ubook — buscas).
 
 ## Holograma 3D dos exercícios
 
-`components/gym/exercise-hologram-3d.tsx` (three.js, carregado sob demanda no modal "Como fazer"): usa as mesmas poses de
+`components/gym/exercise-hologram-3d.tsx` (three.js, carregado sob demanda no modal "Como fazer") + `src/lib/exercise-3d.ts`
+(esqueleto 3D com IK de dois segmentos e vetor de polo; dicas de profundidade em `Motion.d3`: afastamento de mãos/pés,
+`armPole`/`legPole`, `slerpHands`; coreografias só do 3D em `OVERRIDE_3D`, ex.: crucifixo deitado). Usa as mesmas poses de
 `exercise-motion.ts` — o plano 2D vira X/Y e cada lado do corpo ganha profundidade Z (`DEPTH`). Material holográfico em shader
 (fresnel + linhas de varredura, blending aditivo), cor de `--neon`, OrbitControls (arrastar para girar, sem zoom), auto-rotação.
 Miniaturas continuam em 2D (limite de contextos WebGL). Sem WebGL, cai para o 2D. Liberar tudo no unmount.

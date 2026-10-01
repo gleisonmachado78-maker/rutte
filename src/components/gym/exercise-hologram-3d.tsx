@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { guideFor, type Load } from '@/lib/exercise-guide';
-import { ease, frameFor, interpolate, MOTIONS, SEG, solve, type Motion, type P, type Skeleton } from '@/lib/exercise-motion';
+import { motion3DFor, skeleton3D, U, v3, type Skel3 } from '@/lib/exercise-3d';
+import { ease, frameFor, MOTIONS, SEG, type Motion, type P } from '@/lib/exercise-motion';
 import { cn } from '@/lib/utils';
 import type { Exercise } from '@/types';
 import { ExerciseHologram } from './exercise-hologram';
@@ -12,12 +13,6 @@ import { ExerciseHologram } from './exercise-hologram';
  * o plano do desenho vira o plano X/Y da cena e cada lado do corpo ganha profundidade (Z),
  * então a figura pode ser girada e vista de qualquer ângulo.
  */
-
-const U = 0.1; // 1 unidade do desenho = 0,1 na cena
-const DEPTH = { shoulder: 12, hip: 7 };
-
-/** Converte um ponto do desenho (y para baixo, chão em 140) para a cena (y para cima, chão em 0). */
-const v3 = (p: P, z = 0) => new THREE.Vector3((p[0] - 100) * U, (140 - p[1]) * U, z * U);
 
 /* ------------------------------- Material holográfico ------------------------------- */
 
@@ -104,47 +99,31 @@ class Figure {
     this.pelvis = mk(CYL);
   }
 
-  update(s: Skeleton) {
-    const side = s.view === 'side';
-    // Profundidade de cada lado: na vista lateral o lado "perto" fica em +Z
-    const sh = (i: 0 | 1) => (side ? v3(s.shoulders[i], i ? -DEPTH.shoulder : DEPTH.shoulder) : v3(s.shoulders[i]));
-    const hp = (i: 0 | 1) => (side ? v3(s.hips[i], i ? -DEPTH.hip : DEPTH.hip) : v3(s.hips[i]));
-    const zOf = (i: 0 | 1, base: number) => (side ? (i ? -base : base) : 0);
-
-    const pts = ([0, 1] as const).map((i) => ({
-      sh: sh(i),
-      el: v3(s.elbows[i], zOf(i, DEPTH.shoulder)),
-      ha: v3(s.hands[i], zOf(i, DEPTH.shoulder - 2)),
-      hp: hp(i),
-      kn: v3(s.knees[i], zOf(i, DEPTH.hip)),
-      an: v3(s.ankles[i], zOf(i, DEPTH.hip)),
-      to: v3(s.toes[i], zOf(i, DEPTH.hip)),
-    }));
-
+  update(s: Skel3) {
     let b = 0;
     let j = 0;
-    for (const p of pts) {
-      placeBone(this.bones[b++], p.sh, p.el, 0.32);
-      placeBone(this.bones[b++], p.el, p.ha, 0.26);
-      placeBone(this.bones[b++], p.hp, p.kn, 0.42);
-      placeBone(this.bones[b++], p.kn, p.an, 0.33);
-      placeBone(this.bones[b++], p.an, p.to, 0.2);
-      for (const [q, r] of [[p.sh, 0.4], [p.el, 0.3], [p.ha, 0.3], [p.kn, 0.38], [p.an, 0.28], [p.hp, 0.4]] as const) {
+    for (const i of [0, 1] as const) {
+      const [sh, el, ha, hp, kn, an, to] = [s.shoulders[i], s.elbows[i], s.hands[i], s.hips[i], s.knees[i], s.ankles[i], s.toes[i]];
+      placeBone(this.bones[b++], sh, el, 0.32);
+      placeBone(this.bones[b++], el, ha, 0.26);
+      placeBone(this.bones[b++], hp, kn, 0.42);
+      placeBone(this.bones[b++], kn, an, 0.33);
+      placeBone(this.bones[b++], an, to, 0.2);
+      for (const [q, r] of [[sh, 0.4], [el, 0.3], [ha, 0.3], [kn, 0.38], [an, 0.28], [hp, 0.4]] as const) {
         const m = this.joints[j++];
         m.position.copy(q);
         m.scale.setScalar(r);
       }
     }
-
-    const neck = v3(s.neck);
-    const hip = v3(s.hip);
-    placeBone(this.torso, hip, neck, 0.62);
-    placeBone(this.chest, pts[0].sh, pts[1].sh, 0.42);
-    placeBone(this.pelvis, pts[0].hp, pts[1].hp, 0.46);
-    this.head.position.copy(v3(s.head));
+    placeBone(this.torso, s.hip, s.neck, 0.62);
+    placeBone(this.chest, s.shoulders[0], s.shoulders[1], 0.42);
+    placeBone(this.pelvis, s.hips[0], s.hips[1], 0.46);
+    this.head.position.copy(s.head);
     this.head.scale.set(SEG.headR * U, SEG.headR * U * 1.12, SEG.headR * U);
   }
 }
+
+const Z = new THREE.Vector3(0, 0, 1);
 
 /** Barra / halteres nas mãos. */
 class LoadMesh {
@@ -160,35 +139,39 @@ class LoadMesh {
       this.group.add(m);
     }
   }
-  update(s: Skeleton) {
+  update(s: Skel3) {
     if (this.load === 'none') return;
-    const side = s.view === 'side';
     if (this.load === 'barbell') {
-      // Barra atravessando as duas mãos, com anilhas nas pontas
+      // Barra passando pelas duas mãos, com anilhas nas pontas
       const [bar, d1, d2, c1, c2] = this.parts;
-      let a: THREE.Vector3, b: THREE.Vector3;
-      if (side) {
-        const h = v3(s.hands[0]);
-        a = h.clone().setZ(-3.6);
-        b = h.clone().setZ(3.6);
-      } else {
-        a = v3([s.hands[1][0] - 18, s.hands[1][1]]);
-        b = v3([s.hands[0][0] + 18, s.hands[0][1]]);
-      }
+      const [h0, h1] = s.hands;
+      const dir = h0.clone().sub(h1);
+      if (dir.lengthSq() < 0.04) dir.copy(Z);
+      dir.normalize();
+      const mid = h0.clone().add(h1).multiplyScalar(0.5);
+      const half = Math.max(h0.distanceTo(h1) / 2 + 2.2, 3.4);
+      const a = mid.clone().addScaledVector(dir, -half);
+      const b = mid.clone().addScaledVector(dir, half);
       placeBone(bar, a, b, 0.09);
-      const dir = b.clone().sub(a).normalize();
-      for (const [m, at, r, w] of [[d1, a.clone().addScaledVector(dir, 0.5), 1.5, 0.28], [d2, b.clone().addScaledVector(dir, -0.5), 1.5, 0.28], [c1, a.clone().addScaledVector(dir, 0.9), 1.05, 0.2], [c2, b.clone().addScaledVector(dir, -0.9), 1.05, 0.2]] as const) {
+      for (const [m, at, r, w] of [
+        [d1, a.clone().addScaledVector(dir, 0.5), 1.5, 0.28],
+        [d2, b.clone().addScaledVector(dir, -0.5), 1.5, 0.28],
+        [c1, a.clone().addScaledVector(dir, 0.9), 1.05, 0.2],
+        [c2, b.clone().addScaledVector(dir, -0.9), 1.05, 0.2],
+      ] as const) {
         m.position.copy(at);
         m.scale.set(r, w, r);
         m.quaternion.setFromUnitVectors(UP, dir);
       }
       return;
     }
-    // Halteres: um em cada mão, cabo atravessando a mão
+    // Halteres: um em cada mão, cabo atravessando a mão (perpendicular ao antebraço)
     ([0, 1] as const).forEach((i) => {
-      const z = side ? (i ? -(DEPTH.shoulder - 2) : DEPTH.shoulder - 2) : 0;
-      const h = v3(s.hands[i], z);
-      const axis = side ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 0, 1);
+      const h = s.hands[i];
+      const fore = h.clone().sub(s.elbows[i]).normalize();
+      let axis = Z.clone().sub(fore.clone().multiplyScalar(Z.dot(fore)));
+      if (axis.lengthSq() < 1e-4) axis = new THREE.Vector3(1, 0, 0);
+      axis.normalize();
       const a = h.clone().addScaledVector(axis, -0.75);
       const b = h.clone().addScaledVector(axis, 0.75);
       const [bar, w1, w2] = this.parts.slice(i * 3, i * 3 + 3);
@@ -223,7 +206,7 @@ class PropsMesh {
             const m = add(BOX);
             const dir = b.clone().sub(a);
             m.position.copy(a).add(b).multiplyScalar(0.5);
-            m.scale.set(dir.length(), w, 2.8);
+            m.scale.set(dir.length(), w, motion.view === 'front' ? 3.6 : 2.8);
             m.rotation.z = Math.atan2(dir.y, dir.x);
           } else {
             placeBone(add(CYL), a, b, w * 0.6);
@@ -241,33 +224,35 @@ class PropsMesh {
       }
     }
   }
-  update(s: Skeleton) {
+  update(s: Skel3) {
+    const f = s.flat;
     for (const d of this.dyn) {
       const [m, m2, m3] = d.meshes;
       if (d.kind === 'cable' && d.anchor) {
-        const h = v3(s.hands[0]);
+        const h = s.hands[0].clone().add(s.hands[1]).multiplyScalar(0.5);
         placeBone(m, v3(d.anchor), h, 0.04);
-        placeBone(m2, h.clone().setZ(-1.2), h.clone().setZ(1.2), 0.1);
+        const w = Math.max(s.hands[0].distanceTo(s.hands[1]) / 2 + 0.3, 0.9);
+        placeBone(m2, h.clone().setZ(h.z - w), h.clone().setZ(h.z + w), 0.1);
       } else if (d.kind === 'feetplate') {
-        const f = s.ankles[0];
-        const a = v3([f[0] - 10, f[1] - 13]);
-        const b = v3([f[0] + 12, f[1] + 14]);
+        const an = f.ankles[0];
+        const a = v3([an[0] - 10, an[1] - 13]);
+        const b = v3([an[0] + 12, an[1] + 14]);
         const dir = b.clone().sub(a);
         m.position.copy(a).add(b).multiplyScalar(0.5);
         m.scale.set(dir.length(), 0.35, 3);
         m.rotation.set(0, 0, Math.atan2(dir.y, dir.x));
       } else if (d.kind === 'pad') {
-        const a = v3(s.ankles[0]);
+        const a = s.ankles[0].clone().add(s.ankles[1]).multiplyScalar(0.5);
         placeBone(m, a.clone().setZ(-1.4), a.clone().setZ(1.4), 0.5);
       } else if (d.kind === 'hipbar') {
-        const c = v3([s.hip[0], s.hip[1] - 8]);
+        const c = v3([f.hip[0], f.hip[1] - 8]);
         const a = c.clone().setZ(-3.4);
         const b = c.clone().setZ(3.4);
         placeBone(m, a, b, 0.09);
         for (const [disc, at] of [[m2, a.clone().setZ(-2.9)], [m3, b.clone().setZ(2.9)]] as const) {
           disc.position.copy(at);
           disc.scale.set(1.3, 0.28, 1.3);
-          disc.quaternion.setFromUnitVectors(UP, new THREE.Vector3(0, 0, 1));
+          disc.quaternion.setFromUnitVectors(UP, Z);
         }
       }
     }
@@ -338,12 +323,18 @@ export function ExerciseHologram3D({
   playing = true,
   speed = 1,
   autoRotate = true,
+  freezeAt,
+  angle,
 }: {
   exercise: Pick<Exercise, 'id' | 'muscle' | 'name'>;
   className?: string;
   playing?: boolean;
   speed?: number;
   autoRotate?: boolean;
+  /** fixa a pose (0 = início, 1 = fim) — usado para conferir os movimentos */
+  freezeAt?: number;
+  /** ângulo inicial da câmera (radianos) */
+  angle?: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const live = useRef({ playing, speed, autoRotate });
@@ -355,7 +346,7 @@ export function ExerciseHologram3D({
   useEffect(() => {
     const el = host.current;
     if (!el || !ok) return;
-    const motion: Motion = MOTIONS[motionKey];
+    const motion: Motion = motion3DFor(motionKey);
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
@@ -377,7 +368,7 @@ export function ExerciseHologram3D({
     const size = Math.max(f.w, f.h) * U;
     const camera = new THREE.PerspectiveCamera(32, 200 / 170, 0.1, 200);
     const dist = size * 1.85;
-    const startAngle = motion.view === 'side' ? 0.62 : 0.32;
+    const startAngle = angle ?? (motion.view === 'side' ? 0.62 : 0.32);
     camera.position.set(center.x + Math.sin(startAngle) * dist, center.y + dist * 0.2, Math.cos(startAngle) * dist);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -398,8 +389,8 @@ export function ExerciseHologram3D({
     const figure = new Figure(mat);
     scene.add(figure.group);
     const ghosts = [new Figure(ghostMat), new Figure(ghostMat)];
-    ghosts[0].update(solve(motion.view, motion.a));
-    ghosts[1].update(solve(motion.view, motion.b));
+    ghosts[0].update(skeleton3D(motion, 0));
+    ghosts[1].update(skeleton3D(motion, 1));
     ghosts.forEach((g) => scene.add(g.group));
     const load = new LoadMesh(guide.load, mat);
     scene.add(load.group);
@@ -463,8 +454,8 @@ export function ExerciseHologram3D({
       if (!visible) return;
       const { playing: play, speed: sp, autoRotate: spin } = live.current;
       if (play && !reduced) phase = (phase + (dt * sp) / motion.dur) % 1;
-      const k = reduced ? 0.5 : ease(phase);
-      const s = solve(motion.view, interpolate(motion, k));
+      const k = freezeAt ?? (reduced ? 0.5 : ease(phase));
+      const s = skeleton3D(motion, k);
       figure.update(s);
       load.update(s);
       props.update(s);
@@ -505,7 +496,7 @@ export function ExerciseHologram3D({
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [motionKey, guide.load, ok]);
+  }, [motionKey, guide.load, ok, freezeAt, angle]);
 
   if (!ok) return <ExerciseHologram exercise={exercise} playing={playing} speed={speed} className={className} />;
 

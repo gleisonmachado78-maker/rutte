@@ -41,6 +41,25 @@ export interface Motion {
   hold?: boolean;
   /** interpola mãos/pés em arco (ao redor do ombro/quadril) em vez de linha reta */
   arc?: ('hands' | 'feet')[];
+  /** profundidade para o holograma 3D (ignorada no 2D) */
+  d3?: Motion3D;
+}
+
+type Pair = [number, number];
+
+/** Dicas de profundidade de um movimento para o 3D (em unidades do desenho). */
+export interface Motion3D {
+  /**
+   * Afastamento das mãos/pés. Vista lateral: distância para fora do centro do corpo.
+   * Vista frontal: quanto ficam à frente do corpo.
+   */
+  a?: { hands?: Pair; feet?: Pair };
+  b?: { hands?: Pair; feet?: Pair };
+  /** para onde apontam cotovelos / joelhos: [x (+ = frente), y (+ = para baixo), lado (+ = para fora / frente)] */
+  armPole?: [number, number, number];
+  legPole?: [number, number, number];
+  /** mãos percorrem um arco ao redor do ombro (crucifixo) */
+  slerpHands?: boolean;
 }
 
 export const SEG = { torso: 46, upperArm: 24, foreArm: 22, thigh: 30, shin: 30, head: 13, headR: 8 };
@@ -68,16 +87,19 @@ export const MOTIONS = {
     view: 'side', dur: 2600,
     a: stand({ hands: [[140, 44], [138, 46]], feet: [[104, 140], [98, 140]] }),
     b: { hip: [84, 108], t: 38, hands: [[148, 76], [146, 78]], feet: [[104, 140], [98, 140]] },
+    d3: { a: { hands: [8, 8], feet: [10, 10] } },
   },
   squatBar: {
     view: 'side', dur: 2800,
-    a: stand({ hands: [[104, 33], [102, 34]], feet: [[104, 140], [98, 140]] }),
-    b: { hip: [84, 108], t: 38, hands: [[116, 70], [114, 71]], feet: [[104, 140], [98, 140]] },
+    a: stand({ hands: [[95, 36], [95, 36]], feet: [[104, 140], [98, 140]], eb: [-1, -1] }),
+    b: { hip: [84, 108], t: 38, hands: [[107, 70], [107, 70]], feet: [[104, 140], [98, 140]], eb: [-1, -1] },
+    d3: { a: { hands: [22, 22], feet: [10, 10] }, armPole: [-1, 1, 0.4] },
   },
   squatGoblet: {
     view: 'side', dur: 2600,
     a: stand({ hands: [[112, 48], [110, 48]], feet: [[104, 140], [98, 140]] }),
     b: { hip: [84, 108], t: 38, hands: [[124, 84], [122, 84]], feet: [[104, 140], [98, 140]] },
+    d3: { a: { hands: [3, 3], feet: [10, 10] }, armPole: [0, 1, 0.6] },
   },
   lunge: {
     view: 'side', dur: 2600,
@@ -115,13 +137,15 @@ export const MOTIONS = {
   hipThrust: {
     view: 'side', dur: 2400,
     props: [{ kind: 'line', pts: [[30, 122], [62, 122]], w: 6 }, { kind: 'line', pts: [[40, 122], [40, 140]], w: 3 }, { kind: 'hipbar' }],
-    a: { hip: [100, 126], t: -100, hands: [[104, 124], [102, 124]], feet: [[130, 140], [128, 140]] },
-    b: { hip: [100, 102], t: -104, hands: [[104, 100], [102, 100]], feet: [[130, 140], [128, 140]] },
+    a: { hip: [100, 126], t: -76, hands: [[104, 124], [102, 124]], feet: [[130, 140], [128, 140]] },
+    b: { hip: [100, 102], t: -106, hands: [[104, 100], [102, 100]], feet: [[130, 140], [128, 140]] },
+    d3: { a: { hands: [11, 11], feet: [11, 11] } },
   },
   bridge: {
     view: 'side', dur: 2400,
-    a: { hip: [100, 130], t: -96, hands: [[82, 138], [80, 138]], feet: [[128, 140], [126, 140]], eb: [-1, -1] },
-    b: { hip: [100, 106], t: -112, hands: [[82, 138], [80, 138]], feet: [[128, 140], [126, 140]], eb: [-1, -1] },
+    a: { hip: [100, 130], t: -96, hands: [[98, 139], [96, 139]], feet: [[128, 140], [126, 140]], eb: [-1, -1] },
+    b: { hip: [96, 110], t: -118, hands: [[98, 139], [96, 139]], feet: [[128, 140], [126, 140]], eb: [-1, -1] },
+    d3: { a: { hands: [16, 16], feet: [11, 11] }, armPole: [0, 1, 0.3] },
   },
   calf: {
     view: 'side', dur: 1800,
@@ -132,8 +156,9 @@ export const MOTIONS = {
   benchPress: {
     view: 'side', dur: 2600,
     props: [BENCH, ...BENCH_LEGS],
-    a: { hip: [120, 105], t: -90, hands: [[76, 59], [74, 59]], feet: [[148, 140], [142, 140]] },
-    b: { hip: [120, 105], t: -90, hands: [[80, 95], [78, 95]], feet: [[148, 140], [142, 140]] },
+    a: { hip: [120, 105], t: -90, hands: [[76, 61], [76, 61]], feet: [[148, 140], [142, 140]] },
+    b: { hip: [120, 105], t: -90, hands: [[80, 90], [80, 90]], feet: [[148, 140], [142, 140]] },
+    d3: { a: { hands: [19, 19], feet: [14, 14] }, armPole: [0, 1, 1] },
   },
   inclinePress: {
     view: 'side', dur: 2600,
@@ -144,6 +169,7 @@ export const MOTIONS = {
     ],
     a: { hip: [118, 108], t: -58, hands: [[92, 40], [90, 40]], feet: [[148, 140], [142, 140]] },
     b: { hip: [118, 108], t: -58, hands: [[92, 76], [90, 76]], feet: [[148, 140], [142, 140]] },
+    d3: { a: { hands: [17, 17], feet: [14, 14] }, armPole: [0, 1, 1] },
   },
   fly: {
     view: 'front', dur: 2600, arc: ['hands'],
@@ -152,8 +178,9 @@ export const MOTIONS = {
   },
   pushUp: {
     view: 'side', dur: 2200,
-    a: { hip: [90, 108], t: 61, hands: [[132, 138], [128, 138]], feet: [[40, 138], [40, 138]], kb: [1, 1] },
-    b: { hip: [90, 122], t: 73, hands: [[132, 138], [128, 138]], feet: [[40, 138], [40, 138]], kb: [1, 1] },
+    a: { hip: [93, 113], t: 65, hands: [[136, 138], [134, 138]], feet: [[40, 138], [40, 138]], kb: [1, 1] },
+    b: { hip: [97, 125], t: 78, hands: [[136, 138], [134, 138]], feet: [[40, 138], [40, 138]], kb: [1, 1] },
+    d3: { a: { hands: [16, 16], feet: [5, 5] }, armPole: [-1, 0, 0.7] },
   },
   dip: {
     view: 'side', dur: 2400,
@@ -166,12 +193,14 @@ export const MOTIONS = {
     props: [...SEAT(70, 118, 108), { kind: 'line', pts: [[112, 94], [134, 94]], w: 5 }, { kind: 'cable', anchor: [98, -16] }],
     a: { hip: [96, 104], t: -10, hands: [[96, 14], [94, 14]], feet: [[128, 140], [124, 140]] },
     b: { hip: [96, 104], t: -18, hands: [[92, 54], [90, 54]], feet: [[128, 140], [124, 140]] },
+    d3: { a: { hands: [24, 24], feet: [10, 10] }, armPole: [0, 0, 1] },
   },
   pullUp: {
     view: 'side', dur: 2600, floor: false,
     props: [{ kind: 'line', pts: [[66, 18], [136, 18]], w: 5 }],
     a: { hip: [100, 104], t: 0, hands: [[104, 18], [100, 18]], feet: [[96, 160], [94, 160]] },
     b: { hip: [100, 78], t: 0, hands: [[104, 18], [100, 18]], feet: [[96, 134], [94, 134]] },
+    d3: { a: { hands: [22, 22], feet: [5, 5] }, armPole: [0, 0, 1] },
   },
   bentRow: {
     view: 'side', dur: 2400,
@@ -204,13 +233,15 @@ export const MOTIONS = {
   shoulderPress: {
     view: 'front', dur: 2600,
     props: [{ kind: 'line', pts: [[76, 108], [124, 108]], w: 6 }],
-    a: { hip: [100, 104], t: 0, hands: [[126, 56], [74, 56]], feet: [[118, 140], [82, 140]], eb: [1, -1] },
-    b: { hip: [100, 104], t: 0, hands: [[108, 16], [92, 16]], feet: [[118, 140], [82, 140]], eb: [1, -1] },
+    a: { hip: [100, 104], t: 0, hands: [[126, 56], [74, 56]], feet: [[112, 140], [88, 140]], eb: [1, -1] },
+    b: { hip: [100, 104], t: 0, hands: [[108, 16], [92, 16]], feet: [[112, 140], [88, 140]], eb: [1, -1] },
+    d3: { a: { hands: [4, 4], feet: [27, 27] }, legPole: [0, -1, 1] },
   },
   lateralRaise: {
     view: 'front', dur: 2600, arc: ['hands'],
-    a: stand({ hands: [[118, 80], [82, 80]], feet: [[106, 140], [94, 140]] }),
-    b: stand({ hands: [[156, 42], [44, 42]], feet: [[106, 140], [94, 140]] }),
+    a: stand({ hands: [[117, 84], [83, 84]], feet: [[106, 140], [94, 140]] }),
+    b: stand({ hands: [[158, 40], [42, 40]], feet: [[106, 140], [94, 140]] }),
+    d3: { a: { hands: [3, 3] } },
   },
   facePull: {
     view: 'side', dur: 2400,
@@ -230,8 +261,9 @@ export const MOTIONS = {
   },
   legRaise: {
     view: 'side', dur: 2600, arc: ['feet'],
-    a: { hip: [110, 134], t: -90, hands: [[84, 138], [82, 138]], feet: [[170, 136], [170, 136]], eb: [-1, -1] },
-    b: { hip: [110, 134], t: -90, hands: [[84, 138], [82, 138]], feet: [[114, 74], [114, 74]], eb: [-1, -1] },
+    a: { hip: [110, 134], t: -90, hands: [[106, 139], [104, 139]], feet: [[170, 136], [170, 136]], eb: [-1, -1] },
+    b: { hip: [110, 134], t: -90, hands: [[106, 139], [104, 139]], feet: [[114, 74], [114, 74]], eb: [-1, -1] },
+    d3: { a: { hands: [15, 15], feet: [4, 4] }, armPole: [0, 1, 0.3] },
   },
   bicycle: {
     view: 'side', dur: 1600,
