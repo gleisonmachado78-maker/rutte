@@ -176,11 +176,13 @@ export function LibraryPage() {
               <h2 id={`vd-${t.id}`} className="flex items-center gap-2 font-bold">
                 <t.icon className="size-5" style={{ color: t.color }} aria-hidden /> {t.label}
               </h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 [scrollbar-width:thin]" role="list" aria-label={`Vídeos de `}>
                 {videos
                   .filter((v) => t.videoAreas.includes(v.area))
                   .map((v) => (
-                    <VideoCard key={v.youtubeId} video={v} onPlay={player.play} />
+                    <div key={v.youtubeId} role="listitem" className="w-[78vw] max-w-[280px] shrink-0 snap-start sm:w-[260px]">
+                      <VideoCard video={v} onPlay={player.play} />
+                    </div>
                   ))}
               </div>
             </section>

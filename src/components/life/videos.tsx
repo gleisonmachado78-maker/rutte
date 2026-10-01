@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
 import { cn } from '@/lib/utils';
-import { embedUrl, thumbUrl, watchUrl, type LifeVideo } from '@/lib/videos';
+import { embedUrl, thumbUrl, videoDesc, watchUrl, type LifeVideo } from '@/lib/videos';
 
 export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: LifeVideo) => void }) {
   const area = LIFE_AREA_BY_ID[video.area];
@@ -12,7 +12,7 @@ export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: Lif
     <button
       type="button"
       onClick={() => onPlay(video)}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       aria-label={`Assistir: ${video.title}`}
     >
       <span className="relative block aspect-video w-full overflow-hidden bg-muted">
@@ -43,7 +43,8 @@ export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: Lif
       </span>
       <span className="flex flex-1 flex-col gap-1 p-3">
         <span className="line-clamp-2 text-sm font-semibold leading-snug">{video.title}</span>
-        <span className="mt-auto text-xs text-foreground/60">
+        {videoDesc(video.youtubeId) && <span className="line-clamp-2 text-xs leading-snug text-foreground/70">{videoDesc(video.youtubeId)}</span>}
+        <span className="mt-auto pt-1 text-xs text-foreground/50">
           {video.channel} · {video.meta}
         </span>
       </span>
@@ -75,6 +76,7 @@ export function VideoPlayerDialog({ video, onClose }: { video: LifeVideo | null;
                 <DialogDescription className="mt-1 text-sm text-foreground/60">
                   {video.channel} · {LIFE_AREA_BY_ID[video.area].name}
                 </DialogDescription>
+                {videoDesc(video.youtubeId) && <p className="mt-1.5 text-sm text-foreground/80">{videoDesc(video.youtubeId)}</p>}
               </div>
               <a
                 href={watchUrl(video.youtubeId)}

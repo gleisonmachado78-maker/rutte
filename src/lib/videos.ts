@@ -81,3 +81,56 @@ export const thumbUrl = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.
 export const embedUrl = (id: string) =>
   `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&hl=pt-BR&cc_lang_pref=pt`;
 export const watchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+
+/** Descrição curta de cada vídeo: o que você leva dele (baseada no tema do título). */
+export const VIDEO_DESC: Record<string, string> = {
+  // Saúde
+  Un67JkVy0xo: 'O que a ciência diz sobre os prós e contras do leite, sem mitos e com animação clara.',
+  '9YtebqIFB9Q': 'Como o sono funciona, por que a insônia aparece e o que ajuda a dormir melhor.',
+  IBHyEn6qMe4: 'Os efeitos do exercício no corpo e na mente — e por que vale começar mesmo pequeno.',
+  Hvte3XpPceQ: 'Drauzio explica por que ficar parado faz tão mal e como o movimento protege a saúde.',
+  // Emocional
+  Tv0gJTBmVuc: 'O que é a ansiedade, de onde ela vem e como reconhecer os sinais no dia a dia.',
+  AwxYSQGT734: 'Oito técnicas práticas para lidar com raiva, medo e estresse no momento em que surgem.',
+  '5QFMjbwxJc0': 'Dez hábitos simples de rotina que ajudam a diminuir a ansiedade com o tempo.',
+  // Intelectual
+  'O_v-tIndr1M': 'Por que mudanças pequenas e constantes vencem grandes resoluções que não duram.',
+  '9BtrLf6PfYY': 'O ciclo gatilho → rotina → recompensa e como usá-lo para trocar maus hábitos.',
+  xjkHcFKUkKY: 'As ideias de “Hábitos Atômicos”: melhorar 1% ao dia e facilitar o hábito certo.',
+  TRPBY_lxJfE: 'Clóvis de Barros fala sobre a energia de querer aprender e não desistir dos estudos.',
+  // Profissional
+  hfxfJ7Qa4sg: 'Como funciona a técnica Pomodoro e por que blocos curtos de foco rendem mais.',
+  PRcB4gGC4eA: 'Resumo dos 7 hábitos de Stephen Covey para ser mais eficaz no trabalho e na vida.',
+  'Mivz8Qh-DwI': 'Por que adiamos as tarefas e estratégias práticas para vencer a procrastinação.',
+  ypt0YZKqwo8: 'Cortella reflete sobre o que diferencia um bom profissional: competência e atitude.',
+  // Finanças
+  Mx6EEpsIE5w: 'As lições de “Pai Rico, Pai Pobre”: ativos, passivos e fazer o dinheiro trabalhar.',
+  d6CI30Y_iSU: 'As regras de “O Homem Mais Rico da Babilônia” para guardar e multiplicar dinheiro.',
+  CB5zuxQl5ro: 'O básico da educação financeira: para que serve o dinheiro e como usá-lo melhor.',
+  in0XbfQEm2A: 'Um passo a passo para organizar o orçamento e começar a guardar dinheiro.',
+  // Relacionamento amoroso
+  '8RzFggd8Nc8': 'As 5 linguagens do amor e como descobrir a sua e a de quem você ama.',
+  Y_hyuGHogCE: 'O que acontece no cérebro quando nos apaixonamos e como o amor evolui.',
+  sm7_I41LIC8: 'Sete fatos da psicologia sobre relacionamentos amorosos que poucos conhecem.',
+  // Família
+  'y_r-S7KMq_8': 'Como a família em que crescemos molda quem somos — e como lidar com isso.',
+  'h4-YXXKPXVg': 'O que muda no cérebro e nas emoções na adolescência, para entender melhor os filhos.',
+  '9GghNaQBX8o': 'Os principais estilos de criar filhos e os efeitos de cada um no futuro deles.',
+  n32rp06PqfQ: 'Marcos Piangers conta, com humor, o que aprendeu sobre ser um pai presente.',
+  // Vida social
+  OIsPAA9T7m4: 'Por que a solidão faz tão mal e o que podemos fazer para nos conectar de novo.',
+  '2EnWN3e59XI': 'Cinco dicas para conversas mais interessantes e para ser lembrado de um jeito bom.',
+  M77vgtZVkJU: 'Os princípios de Dale Carnegie para fazer amigos e se comunicar melhor.',
+  // Espiritualidade
+  fOPF8khGeII: 'Uma visão animada do livro de Salmos: oração, lamento e esperança.',
+  JHwKaiF6XYA: 'Por que nunca nos sentimos satisfeitos e como a gratidão pode mudar isso.',
+  LVBzJRfG0eM: 'O que a ciência já mostrou sobre os efeitos da meditação no cérebro.',
+  r3w3Uj3rX5Q: 'Padre Fábio de Melo fala sobre responsabilidade, escolhas e o sentido da vida.',
+  // Lazer
+  '-gtlWxYf9LI': 'As ideias de Shawn Achor: como a felicidade vem antes do sucesso, e não depois.',
+  q_8iqvFLrvU: 'O que a psicologia diz sobre felicidade e o que realmente nos deixa mais felizes.',
+  '8P-zRYfbmYQ': 'Por que ter hobbies e fazer trabalhos manuais faz bem para a mente.',
+  HsQx02JdZ2Q: 'Clóvis de Barros sobre viver o presente em vez de adiar a felicidade.',
+};
+
+export const videoDesc = (id: string) => VIDEO_DESC[id] ?? '';

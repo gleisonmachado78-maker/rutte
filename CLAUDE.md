@@ -87,6 +87,14 @@ escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adic
 - Navegação: menu lateral em grupos “Organizar” e “Evoluir” + menu de Configurações (nome da pessoa); no celular,
   barra inferior com 4 atalhos (`primary` em `NAV`) + “Mais” (gaveta com o resto e as configurações).
 
+## Biblioteca
+
+`/library`: abas Livros e Vídeos por tema (`TOPICS` em `src/lib/library.ts`; vídeos entram no tema pela área da
+Roda da Vida). Livros em `src/lib/books.ts` — só edições brasileiras com capa real do Google Livros (conferir
+`https://books.google.com/books/content?id=ID&printsec=frontcover&img=1&zoom=1` → imagem > 2 KB). Onde comprar =
+links de busca (Amazon por ISBN, Estante Virtual, Google Livros). Estante pessoal em `bookShelf` no banco. Cada
+vídeo tem descrição curta em `VIDEO_DESC` (`src/lib/videos.ts`).
+
 ## Dados de exemplo
 
 Seed com datas relativas a "hoje" (tarefas atrasadas/hoje/futuras, ~3 meses de treinos). "Restaurar exemplos"

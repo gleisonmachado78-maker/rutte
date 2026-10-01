@@ -72,9 +72,11 @@ export function BookCard({ book, status }: { book: Book; status?: ShelfStatus })
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div>
-          <h4 className="font-semibold leading-snug">{book.title}</h4>
+          <h4 className="font-semibold leading-snug">{book.title.split(': ')[0]}</h4>
+          {book.title.includes(': ') && <p className="line-clamp-2 text-xs leading-snug text-foreground/60">{book.title.split(': ').slice(1).join(': ')}</p>}
           <p className="text-xs text-foreground/60">
             {book.author}
+            {book.publisher ? ` · ${book.publisher}` : ''}
             {book.pages ? ` · ${book.pages} págs.` : ''}
           </p>
           <p className="mt-1.5 text-sm leading-snug text-foreground/80">{book.why}</p>
@@ -103,7 +105,7 @@ export function BookCard({ book, status }: { book: Book; status?: ShelfStatus })
         </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span className="font-semibold text-foreground/60">Onde encontrar:</span>
+          <span className="font-semibold text-foreground/60">Onde comprar:</span>
           {whereToFind(book).map((l) => (
             <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline dark:text-neon">
               {l.label}

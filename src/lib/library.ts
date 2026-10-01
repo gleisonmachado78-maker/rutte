@@ -75,10 +75,10 @@ const q = (s: string) => encodeURIComponent(s);
 
 /** Onde encontrar: lojas e acervos (links de busca, sempre válidos). */
 export function whereToFind(b: Book) {
-  const key = b.isbn13 || `${b.title} ${b.author}`;
+  const key = b.isbn13 || `${b.title.split(': ')[0]} ${b.author}`;
   return [
     { label: 'Amazon', href: `https://www.amazon.com.br/s?k=${q(key)}&i=stripbooks` },
-    { label: 'Estante Virtual', hint: 'usados', href: `https://www.estantevirtual.com.br/busca?q=${q(`${b.title} ${b.author.split(',')[0]}`)}` },
+    { label: 'Estante Virtual', hint: 'usados', href: `https://www.estantevirtual.com.br/busca?q=${q(`${b.title.split(': ')[0]} ${b.author.split(',')[0]}`)}` },
     { label: 'Google Livros', hint: 'prévia', href: `https://books.google.com.br/books?id=${b.googleId}` },
   ];
 }
