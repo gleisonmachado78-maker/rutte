@@ -93,7 +93,13 @@ escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adic
 Roda da Vida). Livros em `src/lib/books.ts` — só edições brasileiras com capa real do Google Livros (conferir
 `https://books.google.com/books/content?id=ID&printsec=frontcover&img=1&zoom=1` → imagem > 2 KB). Onde comprar =
 links de busca (Amazon por ISBN, Estante Virtual, Google Livros). Estante pessoal em `bookShelf` no banco. Cada
-vídeo tem descrição curta em `VIDEO_DESC` (`src/lib/videos.ts`).
+vídeo tem descrição curta em `VIDEO_DESC` ou no campo `desc` (`src/lib/videos.ts`).
+
+## Avaliações
+
+`ratings` no banco: chave `tipo:id` (`book:googleId`, `free:url`, `video:youtubeId`, `prayer:id`, `meditation:id`)
+→ `{ stars 1–5, note?, at }`. Componente `StarRating`/`StarsBadge` em `components/ui/star-rating.tsx`;
+hooks `useRatings`/`useSetRating`. Filtro “Mais bem avaliados” na Biblioteca e “Minhas favoritas” nas orações.
 
 ## Local dos compromissos (Google Maps)
 
@@ -106,7 +112,8 @@ por modo + Waze) são links e funcionam sem chave. A chave é cadastrada em Conf
 ## Gratidão
 
 `/gratitude`: diário (o que tenho / já tive / ainda terei; um registro por dia em `gratitude`), respiração guiada
-(`components/gratitude/breathing.tsx`), orações tradicionais de domínio público e reflexões (`src/lib/gratitude.ts`), vídeos
+(`components/gratitude/breathing.tsx`), meditação do dia (roteiros guiados em `src/lib/meditations.ts`, rodízio
+pelo dia do ano com `meditationOfDay`/`dailyPick`; vídeo do dia), oração e reflexão do dia, orações por tema tradicionais de domínio público e reflexões (`src/lib/gratitude.ts`), vídeos
 verificados em `src/lib/gratitude-videos.ts` e “Relembrar”. Livros gratuitos (`src/lib/free-books.ts`): só domínio
 público ou publicações oficiais gratuitas — nunca PDFs piratas.
 

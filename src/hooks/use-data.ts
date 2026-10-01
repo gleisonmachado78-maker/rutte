@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
+import type { Rating } from '@/services/seed';
 import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
 import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
@@ -17,6 +18,7 @@ export const qk = {
   focus: ['focus'] as const,
   shelf: ['shelf'] as const,
   gratitude: ['gratitude'] as const,
+  ratings: ['ratings'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -419,5 +421,31 @@ export function useDeleteGratitude() {
     mutationFn: api.deleteGratitude,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.gratitude }),
     onError: errorToast,
+  });
+}
+
+/* ------------------------------------ Avaliações ------------------------------------ */
+
+export const useRatings = () => useQuery({ queryKey: qk.ratings, queryFn: api.getRatings });
+
+export function useSetRating() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, stars, note }: { key: string; stars: number; note?: string }) => api.setRating(key, stars, note),
+    onMutate: async ({ key, stars, note }) => {
+      await qc.cancelQueries({ queryKey: qk.ratings });
+      const prev = qc.getQueryData<Record<string, Rating>>(qk.ratings);
+      qc.setQueryData<Record<string, Rating>>(qk.ratings, (old = {}) => {
+        const next = { ...old };
+        if (stars > 0) next[key] = { stars, note: note?.trim() || undefined, at: new Date().toISOString() };
+        else delete next[key];
+        return next;
+      });
+      return { prev };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qk.ratings, ctx.prev);
+      errorToast(err);
+    },
   });
 }

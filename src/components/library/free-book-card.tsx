@@ -1,5 +1,6 @@
 import { Download, ExternalLink, Gift, Scale } from 'lucide-react';
 import { TOPIC_BY_ID, type FreeBook } from '@/lib/library';
+import { ratingKey, StarRating } from '@/components/ui/star-rating';
 
 /** Capa tipográfica para livros gratuitos (sem capa no Google Livros). */
 function FreeCover({ book }: { book: FreeBook }) {
@@ -43,6 +44,7 @@ export function FreeBookCard({ book }: { book: FreeBook }) {
           </span>
           <span className="text-foreground/55">Fonte: {book.source}</span>
         </div>
+        <StarRating itemKey={ratingKey('free', book.url)} label={book.title} />
         <a
           href={book.url}
           target="_blank"

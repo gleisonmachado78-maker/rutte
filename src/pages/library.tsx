@@ -1,11 +1,11 @@
-import { BookOpen, CirclePlay, Gift, Library, Palette, Search, X } from 'lucide-react';
+import { BookOpen, CirclePlay, Gift, Library, Palette, Search, Star, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BookCard } from '@/components/library/book-card';
 import { FreeBookCard } from '@/components/library/free-book-card';
 import { FREE_BOOKS } from '@/lib/free-books';
 import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/videos';
-import { useBookShelf, useUser } from '@/hooks/use-data';
+import { useBookShelf, useRatings, useUser } from '@/hooks/use-data';
 import { BOOKS } from '@/lib/books';
 import { SHELF_LABEL, TOPICS, type ShelfStatus, type TopicId } from '@/lib/library';
 import { focusAreas } from '@/lib/onboarding';
@@ -28,7 +28,12 @@ export function LibraryPage() {
   const [shelfFilter, setShelfFilter] = useState<ShelfStatus | null>(null);
   const [onlyAnimated, setOnlyAnimated] = useState(false);
   const [onlyFree, setOnlyFree] = useState(false);
+  const [topRated, setTopRated] = useState(false);
   const { data: shelf = {} } = useBookShelf();
+  const { data: ratings = {} } = useRatings();
+  const stars = (key: string) => ratings[key]?.stars ?? 0;
+  /** com "Mais bem avaliados": só o que tem nota, da maior para a menor */
+  const byRating = <T,>(list: T[], key: (x: T) => string) => (topRated ? list.filter((x) => stars(key(x)) > 0).sort((a, b) => stars(key(b)) - stars(key(a))) : list);
   const { data: user } = useUser();
   const player = useVideoPlayer();
 
@@ -47,23 +52,29 @@ export function LibraryPage() {
   );
 
   const query = norm(q.trim());
-  const books = BOOKS.filter(
+  const books = byRating(BOOKS.filter(
     (b) =>
       !onlyFree &&
       (topic === 'ALL' || b.topic === topic) &&
       (!shelfFilter || shelf[b.googleId] === shelfFilter) &&
       (!query || norm(`${b.title} ${b.author}`).includes(query)),
-  );
-  const freeBooks = FREE_BOOKS.filter(
+  ), (b) => `book:${b.googleId}`);
+  const freeBooks = byRating(FREE_BOOKS.filter(
     (b) => !shelfFilter && (topic === 'ALL' || b.topic === topic) && (!query || norm(`${b.title} ${b.author}`).includes(query)),
-  );
+  ), (b) => `free:${b.url}`);
   const videoTopic = (area: string) => TOPICS.find((t) => t.videoAreas.includes(area as never))?.id;
-  const videos = LIFE_VIDEOS.filter(
+  const videos = byRating(LIFE_VIDEOS.filter(
     (v) =>
       (topic === 'ALL' || videoTopic(v.area) === topic) &&
       (!onlyAnimated || v.style === 'animado') &&
       (!query || norm(`${v.title} ${v.channel}`).includes(query)),
-  ).sort((a, b) => Number(a.style !== 'animado') - Number(b.style !== 'animado'));
+  ).sort((a, b) => Number(a.style !== 'animado') - Number(b.style !== 'animado')), (v) => `video:${v.youtubeId}`);
+  const ratedCount = (prefix: string) => Object.keys(ratings).filter((k) => k.startsWith(prefix)).length;
+  const topRatedChip = (n: number) => (
+    <button type="button" aria-pressed={topRated} onClick={() => setTopRated((v) => !v)} className={cn(chip, 'h-8 text-xs', topRated ? 'border-amber-500 bg-amber-500 text-navy' : chipOff)} title="Mostra só o que você avaliou, da maior nota para a menor">
+      <Star className={cn('size-3.5', topRated && 'fill-current')} aria-hidden /> Mais bem avaliados <span className="tabular-nums opacity-70">{n}</span>
+    </button>
+  );
 
   const topicsWithItems = ordered.filter((t) =>
     tab === 'livros' ? BOOKS.some((b) => b.topic === t.id) || FREE_BOOKS.some((b) => b.topic === t.id) : LIFE_VIDEOS.some((v) => t.videoAreas.includes(v.area)),
@@ -136,6 +147,7 @@ export function LibraryPage() {
 
         {tab === 'livros' ? (
           <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Minha estante">
+            {topRatedChip(ratedCount('book:') + ratedCount('free:'))}
             {FREE_BOOKS.length > 0 && (
               <button type="button" aria-pressed={onlyFree} onClick={() => { setOnlyFree((v) => !v); setShelfFilter(null); }} className={cn(chip, 'h-8 text-xs', onlyFree ? 'border-emerald-600 bg-emerald-600 text-white' : chipOff)}>
                 <Gift className="size-3.5" aria-hidden /> Só grátis (PDF) <span className="tabular-nums opacity-70">{FREE_BOOKS.length}</span>
@@ -149,16 +161,19 @@ export function LibraryPage() {
             ))}
           </div>
         ) : (
-          <button type="button" aria-pressed={onlyAnimated} onClick={() => setOnlyAnimated((v) => !v)} className={cn(chip, 'h-8 text-xs', onlyAnimated ? chipOn : chipOff)}>
-            <Palette className="size-3.5" aria-hidden /> Só animados
-          </button>
+          <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Filtros de vídeo">
+            {topRatedChip(ratedCount('video:'))}
+            <button type="button" aria-pressed={onlyAnimated} onClick={() => setOnlyAnimated((v) => !v)} className={cn(chip, 'h-8 text-xs', onlyAnimated ? chipOn : chipOff)}>
+              <Palette className="size-3.5" aria-hidden /> Só animados
+            </button>
+          </div>
         )}
       </div>
 
       {tab === 'livros' ? (
         books.length + freeBooks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">
-            {shelfFilter ? `Nenhum livro marcado como “${SHELF_LABEL[shelfFilter]}” neste tema.` : 'Nenhum livro encontrado.'}
+            {topRated ? 'Você ainda não avaliou livros aqui. Toque nas estrelas de um livro para dar sua nota.' : shelfFilter ? `Nenhum livro marcado como “${SHELF_LABEL[shelfFilter]}” neste tema.` : 'Nenhum livro encontrado.'}
           </p>
         ) : (
           ordered
@@ -184,7 +199,7 @@ export function LibraryPage() {
             ))
         )
       ) : videos.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">Nenhum vídeo encontrado.</p>
+        <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">{topRated ? 'Você ainda não avaliou vídeos. Abra um vídeo e dê sua nota abaixo do player.' : 'Nenhum vídeo encontrado.'}</p>
       ) : (
         ordered
           .filter((t) => videos.some((v) => t.videoAreas.includes(v.area)))
@@ -193,7 +208,7 @@ export function LibraryPage() {
               <h2 id={`vd-${t.id}`} className="flex items-center gap-2 font-bold">
                 <t.icon className="size-5" style={{ color: t.color }} aria-hidden /> {t.label}
               </h2>
-              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 [scrollbar-width:thin]" role="list" aria-label={`Vídeos de `}>
+              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 [scrollbar-width:thin]" role="list" aria-label={`Vídeos de ${t.label}`}>
                 {videos
                   .filter((v) => t.videoAreas.includes(v.area))
                   .map((v) => (

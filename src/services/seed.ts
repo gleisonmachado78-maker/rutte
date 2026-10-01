@@ -21,6 +21,14 @@ export interface Database {
   bookShelf?: Record<string, 'quero' | 'lendo' | 'lido'>;
   /** diário de gratidão */
   gratitude?: GratitudeEntry[];
+  /** avaliações do usuário: "book:ID", "video:ID", "prayer:ID"… → nota */
+  ratings?: Record<string, Rating>;
+}
+
+export interface Rating {
+  stars: number;
+  note?: string;
+  at: string;
 }
 
 const d = (offset: number) => format(addDays(new Date(), offset), 'yyyy-MM-dd');

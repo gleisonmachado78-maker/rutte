@@ -94,4 +94,17 @@ export interface FreeBook {
   license: 'Domínio público' | 'Publicação oficial gratuita' | 'Distribuição gratuita do autor';
   pages: number;
   why: string;
+  /** clássico famoso (best-seller em domínio público) ou e-book de técnicas */
+  category?: 'classico' | 'tecnica';
+  /** o site pede cadastro (gratuito) antes de baixar */
+  needsSignup?: boolean;
+}
+
+/** Onde ler best-sellers pagos de graça, legalmente (bibliotecas digitais e serviços). */
+export interface ReadingPlatform {
+  name: string;
+  what: string;
+  condition: string;
+  url: string;
+  bestSellersExamples: string;
 }

@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
 import { cn } from '@/lib/utils';
+import { ratingKey, StarRating, StarsBadge, useStars } from '@/components/ui/star-rating';
 import { embedUrl, thumbUrl, videoDesc, watchUrl, type LifeVideo } from '@/lib/videos';
 
 export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: LifeVideo) => void }) {
   const area = LIFE_AREA_BY_ID[video.area];
   const Icon = area.icon;
+  const stars = useStars(ratingKey('video', video.youtubeId));
   return (
     <button
       type="button"
@@ -36,6 +38,7 @@ export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: Lif
           {video.style === 'animado' ? <Palette className="size-3" aria-hidden /> : video.style === 'guiada' ? <Wind className="size-3" aria-hidden /> : <Mic className="size-3" aria-hidden />}
           {video.style === 'animado' ? 'Animado' : video.style === 'guiada' ? 'Guiada' : 'Palestra'}
         </span>
+        <StarsBadge stars={stars} className="absolute left-2 top-2" />
         <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-navy">
           <Icon className="size-3" style={{ color: area.color }} aria-hidden />
           {area.short}
@@ -77,6 +80,7 @@ export function VideoPlayerDialog({ video, onClose }: { video: LifeVideo | null;
                   {video.channel} · {LIFE_AREA_BY_ID[video.area].name}
                 </DialogDescription>
                 {(video.desc ?? videoDesc(video.youtubeId)) && <p className="mt-1.5 text-sm text-foreground/80">{video.desc ?? videoDesc(video.youtubeId)}</p>}
+                <StarRating itemKey={ratingKey('video', video.youtubeId)} label={video.title} className="mt-2" />
               </div>
               <a
                 href={watchUrl(video.youtubeId)}

@@ -4,13 +4,16 @@ import { BookHeart, ChevronDown, ClipboardCopy, Flame, HandHeart, History, Hourg
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BreathingGuide } from '@/components/gratitude/breathing';
+import { DailyMeditation } from '@/components/gratitude/daily-meditation';
+import { ratingKey, StarRating, StarsBadge } from '@/components/ui/star-rating';
 import { VideoCard, VideoPlayerDialog, useVideoPlayer } from '@/components/life/videos';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { Input, Textarea } from '@/components/ui/form-controls';
-import { useDeleteGratitude, useGratitude, useSaveGratitude, useUser } from '@/hooks/use-data';
+import { useDeleteGratitude, useGratitude, useRatings, useSaveGratitude, useUser } from '@/hooks/use-data';
 import { GRATITUDE_VIDEOS, GRATITUDE_VIDEO_GROUPS } from '@/lib/gratitude-videos';
-import { PRAYERS, PROMPTS, promptOf, REFLECTIONS } from '@/lib/gratitude';
+import { PRAYER_THEMES, PRAYERS, PROMPTS, promptOf, REFLECTIONS, type PrayerTheme } from '@/lib/gratitude';
+import { dailyPick } from '@/lib/meditations';
 import { firstName } from '@/lib/onboarding';
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
@@ -93,8 +96,8 @@ function Journal({ entries }: { entries: GratitudeEntry[] }) {
   );
 }
 
-function PrayerCard({ title, origin, text }: { title: string; origin?: string; text: string }) {
-  const [open, setOpen] = useState(false);
+function PrayerCard({ title, origin, text, rateId, stars = 0, featured, defaultOpen = false }: { title: string; origin?: string; text: string; rateId?: string; stars?: number; featured?: string; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(`${title}\n\n${text}`);
@@ -104,10 +107,13 @@ function PrayerCard({ title, origin, text }: { title: string; origin?: string; t
     }
   };
   return (
-    <li className="rounded-xl border border-border bg-card">
+    <li className={cn('rounded-xl border bg-card', featured ? 'border-primary/40 md:col-span-2' : 'border-border')}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-2 p-3 text-left">
         <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{title}</span>
+          {featured && <span className="block text-[11px] font-semibold uppercase tracking-wide text-primary dark:text-neon">{featured}</span>}
+          <span className="flex items-center gap-2 font-semibold">
+            {title} <StarsBadge stars={stars} />
+          </span>
           {origin && <span className="block text-xs text-foreground/55">{origin}</span>}
         </span>
         <ChevronDown className={cn('size-4 shrink-0 text-foreground/50 transition-transform', open && 'rotate-180')} aria-hidden />
@@ -115,9 +121,12 @@ function PrayerCard({ title, origin, text }: { title: string; origin?: string; t
       {open && (
         <div className="border-t border-border px-4 pb-4 pt-3">
           <p className="whitespace-pre-line font-brand text-[15px] leading-relaxed text-foreground/85">{text}</p>
-          <Button variant="ghost" size="sm" className="mt-2" onClick={copy}>
-            <ClipboardCopy /> Copiar
-          </Button>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            {rateId ? <StarRating itemKey={rateId} label={title} withNote={false} /> : <span />}
+            <Button variant="ghost" size="sm" onClick={copy}>
+              <ClipboardCopy /> Copiar
+            </Button>
+          </div>
         </div>
       )}
     </li>
@@ -130,6 +139,15 @@ export function GratitudePage() {
   const remove = useDeleteGratitude();
   const player = useVideoPlayer();
   const [tab, setTab] = useState<'oracoes' | 'reflexoes'>('oracoes');
+  const [theme, setTheme] = useState<PrayerTheme | 'ALL' | 'FAV'>('ALL');
+  const { data: ratings = {} } = useRatings();
+  const starsOf = (id: string) => ratings[ratingKey('prayer', id)]?.stars ?? 0;
+  const prayerOfDay = dailyPick(PRAYERS);
+  const reflectionOfDay = dailyPick(REFLECTIONS, new Date(), 3);
+  const prayers =
+    theme === 'FAV'
+      ? PRAYERS.filter((p) => starsOf(p.id) > 0).sort((a, b) => starsOf(b.id) - starsOf(a.id))
+      : PRAYERS.filter((p) => (theme === 'ALL' ? p.id !== prayerOfDay.id : p.theme === theme));
   const [memorySeed, setMemorySeed] = useState(0);
   const streak = streakOf(entries);
   const thanksCount = entries.reduce((n, e) => n + e.present.length + (e.past ? 1 : 0) + (e.future ? 1 : 0), 0);
@@ -165,6 +183,8 @@ export function GratitudePage() {
         <Journal entries={entries} />
         <BreathingGuide />
       </div>
+
+      <DailyMeditation onPlay={player.play} />
 
       {memory && (
         <section aria-labelledby="memory-title" className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 sm:p-5">
@@ -210,10 +230,40 @@ export function GratitudePage() {
             ))}
           </div>
         </div>
+        {tab === 'oracoes' && (
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none]" role="toolbar" aria-label="Temas das orações">
+            {[{ id: 'ALL' as const, label: 'Todas' }, ...PRAYER_THEMES, { id: 'FAV' as const, label: '⭐ Minhas favoritas' }].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={theme === t.id}
+                onClick={() => setTheme(t.id)}
+                className={cn('h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors', theme === t.id ? 'border-primary bg-primary text-white' : 'border-border bg-background hover:bg-muted')}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
         <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          {tab === 'oracoes'
-            ? PRAYERS.map((p) => <PrayerCard key={p.id} title={p.title} origin={p.origin} text={p.text} />)
-            : REFLECTIONS.map((r) => <PrayerCard key={r.title} title={r.title} text={r.text} />)}
+          {tab === 'oracoes' ? (
+            <>
+              {theme === 'ALL' && <PrayerCard key={`dia-${prayerOfDay.id}`} featured="Oração do dia" defaultOpen title={prayerOfDay.title} origin={prayerOfDay.origin} text={prayerOfDay.text} rateId={ratingKey('prayer', prayerOfDay.id)} stars={starsOf(prayerOfDay.id)} />}
+              {prayers.map((p) => (
+                <PrayerCard key={p.id} title={p.title} origin={p.origin} text={p.text} rateId={ratingKey('prayer', p.id)} stars={starsOf(p.id)} />
+              ))}
+              {theme === 'FAV' && prayers.length === 0 && (
+                <li className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-foreground/60 md:col-span-2">Abra uma oração e dê estrelas a ela — as suas favoritas aparecem aqui.</li>
+              )}
+            </>
+          ) : (
+            <>
+              <PrayerCard key={`dia-${reflectionOfDay.title}`} featured="Reflexão do dia" defaultOpen title={reflectionOfDay.title} text={reflectionOfDay.text} />
+              {REFLECTIONS.filter((r) => r !== reflectionOfDay).map((r) => (
+                <PrayerCard key={r.title} title={r.title} text={r.text} />
+              ))}
+            </>
+          )}
         </ul>
       </section>
 

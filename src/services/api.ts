@@ -22,7 +22,7 @@ import type {
 } from '@/types';
 import { nextOccurrence, STATUS_LABEL } from '@/lib/task-utils';
 import { uid } from '@/lib/utils';
-import { createSeed, migrate, USER_ID, type Database } from './seed';
+import { createSeed, migrate, USER_ID, type Database, type Rating } from './seed';
 import { categoriesFor, type StarterTask } from '@/lib/onboarding';
 
 const STORAGE_KEY = 'secretaria:db:v1';
@@ -376,6 +376,21 @@ export const api = {
   async deleteGratitude(id: string): Promise<void> {
     const db = load();
     db.gratitude = (db.gratitude ?? []).filter((g) => g.id !== id);
+    persist();
+    return delay(undefined);
+  },
+
+  /* ------------------------------ Avaliações ------------------------------ */
+  async getRatings(): Promise<Record<string, Rating>> {
+    return delay(load().ratings ?? {});
+  },
+  /** Salva (ou remove, com stars 0) a avaliação de um item. */
+  async setRating(key: string, stars: number, note?: string): Promise<void> {
+    const db = load();
+    const ratings = { ...(db.ratings ?? {}) };
+    if (stars > 0) ratings[key] = { stars: Math.min(5, Math.round(stars)), note: note?.trim() || undefined, at: new Date().toISOString() };
+    else delete ratings[key];
+    db.ratings = ratings;
     persist();
     return delay(undefined);
   },
