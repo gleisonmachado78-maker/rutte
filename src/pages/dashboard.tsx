@@ -8,6 +8,7 @@ import {
   CirclePlay,
   Lightbulb,
   Target,
+  WandSparkles,
   ListTodo,
   Sparkles,
   TriangleAlert,
@@ -17,6 +18,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
 import { TaskCard } from '@/components/tasks/task-card';
+import { Button } from '@/components/ui/button';
 import { useModules, useScopedTasks, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
 import { firstName, GOALS, tipOfTheDay } from '@/lib/onboarding';
 import { LIFE_AREAS } from '@/lib/life-areas';
@@ -87,6 +89,7 @@ export function DashboardPage() {
   const scope = useUI((s) => s.scope);
   const { data: user } = useUser();
   const modules = useModules();
+  const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const nick = user ? firstName(user.name) : '';
   const now = new Date();
 
@@ -148,7 +151,20 @@ export function DashboardPage() {
         <Kpi label="Concluídas" value={completed.length} icon={CircleCheck} tone="success" onClick={() => goTasks({ statuses: ['COMPLETED'] })} />
       </section>
 
-      {user && user.goals.length > 0 && <GoalsSummary goals={user.goals} />}
+      {user && user.goals.length > 0 ? (
+        <GoalsSummary goals={user.goals} />
+      ) : (
+        <section aria-label="Personalização" className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+          <WandSparkles className="size-6 shrink-0 text-primary dark:text-neon" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Deixe a Rutte do seu jeito</p>
+            <p className="text-sm text-foreground/70">Responda 6 perguntas rápidas e ela ajusta menus, afazeres, horários e dicas aos seus objetivos.</p>
+          </div>
+          <Button onClick={() => setOnboardingOpen(true)}>
+            <WandSparkles /> Responder agora
+          </Button>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section aria-labelledby="prio-title" className="min-w-0 space-y-4">
