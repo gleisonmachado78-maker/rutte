@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
-import type { Rating } from '@/services/seed';
+import type { Rating, RelationshipStatus } from '@/services/seed';
 import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
 import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
@@ -19,6 +19,7 @@ export const qk = {
   shelf: ['shelf'] as const,
   gratitude: ['gratitude'] as const,
   ratings: ['ratings'] as const,
+  relationship: ['relationship'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -447,5 +448,19 @@ export function useSetRating() {
       if (ctx?.prev) qc.setQueryData(qk.ratings, ctx.prev);
       errorToast(err);
     },
+  });
+}
+
+/* --------------------------------- Situação amorosa --------------------------------- */
+
+export const useRelationship = () => useQuery({ queryKey: qk.relationship, queryFn: api.getRelationship });
+
+export function useSetRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (s: RelationshipStatus | null) => api.setRelationship(s),
+    onMutate: (s) => qc.setQueryData(qk.relationship, s),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.relationship }),
+    onError: errorToast,
   });
 }

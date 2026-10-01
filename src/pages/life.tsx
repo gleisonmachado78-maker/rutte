@@ -1,16 +1,16 @@
 import { askConfirm } from '@/components/ui/confirm';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartPie, Check, CirclePlay, Lightbulb, Plus, Target, Repeat, Save, Shuffle, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { ChartPie, Check, CirclePlay, Heart, HeartHandshake, Lightbulb, Plus, Target, Repeat, Save, Shuffle, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
 import { WheelChart } from '@/components/life/wheel-chart';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/form-controls';
-import { useCreateTask, useDeleteWheel, useSaveWheel, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
+import { useCreateTask, useDeleteWheel, useRelationship, useSaveWheel, useSetRelationship, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
 import { focusAreas } from '@/lib/onboarding';
-import { emptyScores, LIFE_AREAS, LIFE_TIPS, type LifeTip } from '@/lib/life-areas';
+import { emptyScores, LIFE_AREAS, LIFE_TIPS, SINGLE_STEPS, SINGLE_TIPS, type LifeTip, type SingleStepId } from '@/lib/life-areas';
 import { isClosed, recurrenceLabel, todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { topicForArea } from '@/lib/library';
@@ -188,12 +188,12 @@ export function LifePage() {
       {/* Onde focar */}
       <section aria-labelledby="focus-title" className="space-y-3">
         <h2 id="focus-title" className="text-lg font-bold">Onde focar agora</h2>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {weakest.map((a) => {
             const Icon = a.icon;
             const open = openByArea.get(a.id) ?? 0;
             return (
-              <article key={a.id} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
+              <article key={a.id} className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center gap-2">
                   <span className="grid size-9 place-items-center rounded-lg" style={{ background: `${a.color}22`, color: a.color }}>
                     <Icon className="size-5" aria-hidden />
@@ -254,17 +254,79 @@ export function LifePage() {
   );
 }
 
-/** Dicas de atividades da área: mostra 3 por vez; um clique vira afazer (Pessoal, ligado à área). */
+/** Dicas de atividades da área. Na área amorosa, pergunta antes se a pessoa tem um par. */
 function TipsList({ area }: { area: LifeAreaId }) {
-  const tips = LIFE_TIPS[area];
+  if (area === 'relacionamentos') return <LoveTips />;
+  return <TipItems area={area} tips={LIFE_TIPS[area]} />;
+}
+
+function LoveTips() {
+  const { data: status, isLoading } = useRelationship();
+  const set = useSetRelationship();
+  const [step, setStep] = useState<SingleStepId>('comecar');
+  if (isLoading) return null;
+
+  if (!status) {
+    return (
+      <div className="rounded-lg bg-rose-500/10 p-3">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          <Heart className="size-4 shrink-0 text-rose-500" aria-hidden /> Para a Rutte te ajudar melhor: você está em um relacionamento?
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => set.mutate('casal')}>
+            <HeartHandshake /> Sim, namoro ou sou casado(a)
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => set.mutate('solteiro')}>
+            <Sparkles /> Não, estou solteiro(a)
+          </Button>
+        </div>
+        <p className="mt-1.5 text-[11px] text-foreground/55">A resposta muda as sugestões desta área. Dá para mudar quando quiser.</p>
+      </div>
+    );
+  }
+
+  const change = (
+    <button type="button" onClick={() => set.mutate(null)} className="text-[11px] font-medium text-foreground/50 underline-offset-2 hover:text-foreground hover:underline">
+      {status === 'casal' ? 'Em um relacionamento' : 'Solteiro(a)'} · mudar
+    </button>
+  );
+
+  if (status === 'casal') return <TipItems area="relacionamentos" tips={LIFE_TIPS.relacionamentos} extra={change} />;
+
+  const current = SINGLE_STEPS.find((x) => x.id === step)!;
+  return (
+    <div className="space-y-2">
+      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]" role="tablist" aria-label="Etapas para encontrar um amor">
+        {SINGLE_STEPS.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={step === x.id}
+            onClick={() => setStep(x.id)}
+            className={cn('h-7 shrink-0 rounded-full border px-2.5 text-[11px] font-semibold transition-colors', step === x.id ? 'border-rose-500 bg-rose-500 text-white' : 'border-border hover:bg-muted')}
+          >
+            {i + 1}. {x.label}
+          </button>
+        ))}
+      </div>
+      <p className="px-1 text-xs leading-snug text-foreground/65">{current.intro}</p>
+      <TipItems key={step} area="relacionamentos" tips={SINGLE_TIPS[step]} extra={change} title="Para encontrar um amor" />
+    </div>
+  );
+}
+
+/** Lista de dicas: mostra 3 por vez; um clique vira afazer (Pessoal, ligado à área). */
+function TipItems({ area, tips, extra, title = 'Dicas da Rutte' }: { area: LifeAreaId; tips: LifeTip[]; extra?: ReactNode; title?: string }) {
   const create = useCreateTask();
   const [offset, setOffset] = useState(0);
   const [added, setAdded] = useState<string[]>([]);
-  const visible = [0, 1, 2].map((i) => tips[(offset + i) % tips.length]);
+  const visible = tips.length <= 3 ? tips : [0, 1, 2].map((i) => tips[(offset + i) % tips.length]);
 
   const add = async (tip: LifeTip) => {
     await create.mutateAsync({
       title: tip.title,
+      whatToDo: tip.how,
       status: 'NOT_STARTED',
       priority: 'MEDIUM',
       dueDate: todayISO(),
@@ -279,19 +341,22 @@ function TipsList({ area }: { area: LifeAreaId }) {
 
   return (
     <div className="rounded-lg bg-muted/50 p-2">
-      <div className="flex items-center justify-between px-1 pb-1">
+      <div className="flex flex-wrap items-center justify-between gap-1 px-1 pb-1">
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground/70">
-          <Lightbulb className="size-3.5 text-amber-500" aria-hidden /> Dicas da Rutte
+          <Lightbulb className="size-3.5 text-amber-500" aria-hidden /> {title}
         </span>
-        {tips.length > 3 && (
-          <button
-            type="button"
-            onClick={() => setOffset((o) => (o + 3) % tips.length)}
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-foreground/60 hover:bg-muted hover:text-foreground"
-          >
-            <Shuffle className="size-3" aria-hidden /> Outras
-          </button>
-        )}
+        <span className="flex items-center gap-2">
+          {extra}
+          {tips.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setOffset((o) => (o + 3) % tips.length)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-foreground/60 hover:bg-muted hover:text-foreground"
+            >
+              <Shuffle className="size-3" aria-hidden /> Outras
+            </button>
+          )}
+        </span>
       </div>
       <ul className="space-y-1">
         {visible.map((tip) => {
@@ -300,6 +365,7 @@ function TipsList({ area }: { area: LifeAreaId }) {
             <li key={tip.title} className="flex items-center gap-2 rounded-md px-1 py-1 text-sm">
               <span className="min-w-0 flex-1">
                 <span className="block leading-snug">{tip.title}</span>
+                {tip.how && <span className="block text-[11px] leading-snug text-foreground/55">{tip.how}</span>}
                 {tip.recurrence && (
                   <span className="inline-flex items-center gap-1 text-[11px] text-foreground/50">
                     <Repeat className="size-3" aria-hidden /> {recurrenceLabel(tip.recurrence)}

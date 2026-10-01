@@ -22,7 +22,7 @@ import type {
 } from '@/types';
 import { nextOccurrence, STATUS_LABEL } from '@/lib/task-utils';
 import { uid } from '@/lib/utils';
-import { createSeed, migrate, USER_ID, type Database, type Rating } from './seed';
+import { createSeed, migrate, USER_ID, type Database, type Rating, type RelationshipStatus } from './seed';
 import { categoriesFor, type StarterTask } from '@/lib/onboarding';
 
 const STORAGE_KEY = 'secretaria:db:v1';
@@ -376,6 +376,18 @@ export const api = {
   async deleteGratitude(id: string): Promise<void> {
     const db = load();
     db.gratitude = (db.gratitude ?? []).filter((g) => g.id !== id);
+    persist();
+    return delay(undefined);
+  },
+
+  /* ------------------------- Situação amorosa ------------------------- */
+  async getRelationship(): Promise<RelationshipStatus | null> {
+    return delay(load().relationship ?? null);
+  },
+  async setRelationship(status: RelationshipStatus | null): Promise<void> {
+    const db = load();
+    if (status) db.relationship = status;
+    else delete db.relationship;
     persist();
     return delay(undefined);
   },

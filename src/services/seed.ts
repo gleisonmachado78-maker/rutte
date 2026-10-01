@@ -23,7 +23,11 @@ export interface Database {
   gratitude?: GratitudeEntry[];
   /** avaliações do usuário: "book:ID", "video:ID", "prayer:ID"… → nota */
   ratings?: Record<string, Rating>;
+  /** situação amorosa (muda as sugestões da área Relacionamento) */
+  relationship?: RelationshipStatus;
 }
+
+export type RelationshipStatus = 'casal' | 'solteiro';
 
 export interface Rating {
   stars: number;

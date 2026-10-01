@@ -142,3 +142,9 @@ Google Play, Ubook — buscas).
 `exercise-motion.ts` — o plano 2D vira X/Y e cada lado do corpo ganha profundidade Z (`DEPTH`). Material holográfico em shader
 (fresnel + linhas de varredura, blending aditivo), cor de `--neon`, OrbitControls (arrastar para girar, sem zoom), auto-rotação.
 Miniaturas continuam em 2D (limite de contextos WebGL). Sem WebGL, cai para o 2D. Liberar tudo no unmount.
+
+## Relacionamento amoroso
+
+Na área `relacionamentos` da Roda da Vida, `LoveTips` pergunta a situação (`relationship: casal | solteiro` no banco).
+Casal: `LIFE_TIPS.relacionamentos`. Solteiro: etapas `SINGLE_STEPS` (começar, onde conhecer, ações, cuidados) com `SINGLE_TIPS`;
+`how` de cada dica vira o “o que fazer” do afazer.
