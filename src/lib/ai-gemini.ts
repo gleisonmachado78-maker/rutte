@@ -33,11 +33,57 @@ const write = (k: string, v: string) => {
   window.dispatchEvent(new Event('rutte:ai-key'));
 };
 
+/** Limpa o que costuma vir junto ao colar: espaços, quebras de linha, aspas, "key=". */
+export const cleanKey = (k: string) => k.replace(/^\s*(?:GEMINI_API_KEY|GOOGLE_API_KEY|key)\s*[=:]\s*/i, '').replace(/["'`\s]/g, '');
+
 export const getGeminiKey = () => read(KEY_STORAGE);
-export const setGeminiKey = (k: string) => write(KEY_STORAGE, k.trim());
+export const setGeminiKey = (k: string) => write(KEY_STORAGE, cleanKey(k));
 export const getGeminiModel = () => read(MODEL_STORAGE) || GEMINI_MODELS[0].id;
 export const setGeminiModel = (m: string) => write(MODEL_STORAGE, m);
-export const looksLikeGeminiKey = (k: string) => /^AIza[0-9A-Za-z_-]{30,}$/.test(k.trim());
+/** Aceita o formato clássico ("AIza…") e formatos novos; quem decide de verdade é o teste com o Google. */
+export const looksLikeGeminiKey = (k: string) => /^[A-Za-z0-9._-]{20,}$/.test(cleanKey(k));
+
+/**
+ * Testa a chave com o Google (lista os modelos da conta) e escolhe um modelo disponível.
+ * Devolve o modelo a usar ou lança um erro com a explicação.
+ */
+export async function testGeminiKey(rawKey: string, preferred: string): Promise<{ model: string; models: string[] }> {
+  const key = cleanKey(rawKey);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}?pageSize=200`, { headers: { 'x-goog-api-key': key } });
+  } catch {
+    throw new AiError('Não consegui falar com o Google. Verifique a internet (ou se alguma extensão/antivírus está bloqueando).');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail: string = data?.error?.message ?? '';
+    const reason: string = JSON.stringify(data?.error?.details ?? '');
+    throw new AiError(
+      /API key not valid|API_KEY_INVALID/i.test(detail + reason)
+        ? 'O Google recusou a chave: ela não é válida. Copie de novo em aistudio.google.com/apikey (botão de copiar ao lado da chave) e cole aqui.'
+        : /SERVICE_DISABLED|has not been used|is disabled/i.test(detail + reason)
+          ? 'A “Generative Language API” está desligada no projeto dessa chave. Crie a chave pelo AI Studio (aistudio.google.com/apikey), que já liga a API, ou ative-a no Google Cloud.'
+          : /location is not supported|User location/i.test(detail)
+            ? 'O Google informou que o Gemini não está disponível para a sua região/conta.'
+            : /API_KEY_SERVICE_BLOCKED|blocked/i.test(detail + reason)
+              ? 'Essa chave tem restrições que bloqueiam o Gemini. No Google Cloud, em Credenciais, deixe a chave sem restrição de API (ou libere a Generative Language API) e sem restrição de site.'
+              : `O Google respondeu com erro ${res.status}${detail ? `: ${detail}` : ''}.`,
+      401,
+    );
+  }
+  const models: string[] = (data.models ?? [])
+    .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+  const has = (id: string) => models.includes(id);
+  const pick =
+    (has(preferred) && preferred) ||
+    GEMINI_MODELS.map((m) => m.id).find(has) ||
+    models.find((m) => /flash/.test(m) && !/image|tts|audio|live|embedding|thinking/.test(m)) ||
+    models[0];
+  if (!pick) throw new AiError('A chave funciona, mas nenhum modelo de texto do Gemini está liberado para ela.');
+  return { model: pick, models };
+}
 
 /* ------------------------------- Formato do Gemini ------------------------------- */
 

@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles, Trash2 } from 'lucide-react';
+import { CheckCircle2, CircleAlert, ExternalLink, Loader2, PlugZap, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
   setProvider,
   type AiProvider,
 } from '@/lib/ai';
-import { GEMINI_MODELS, getGeminiKey, getGeminiModel, looksLikeGeminiKey, setGeminiKey, setGeminiModel } from '@/lib/ai-gemini';
+import { cleanKey, GEMINI_MODELS, getGeminiKey, getGeminiModel, looksLikeGeminiKey, setGeminiKey, setGeminiModel, testGeminiKey } from '@/lib/ai-gemini';
 import { cn } from '@/lib/utils';
 
 const LINK = 'inline-flex items-center gap-0.5 font-medium text-primary hover:underline';
@@ -28,6 +28,8 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   const [value, setValue] = useState('');
   const [model, setModel] = useState('');
   const [web, setWeb] = useState(getAiWeb());
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
 
   const isGemini = provider === 'gemini';
   const current = isGemini ? getGeminiKey() : getAiKey();
@@ -40,20 +42,40 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
       setValue('');
       setModel(p === 'gemini' ? getGeminiModel() : getAiModel());
       setWeb(getAiWeb());
+      setTest(null);
     }
   }, [open]);
 
   const pick = (p: AiProvider) => {
     setProv(p);
     setValue('');
+    setTest(null);
     setModel(p === 'gemini' ? getGeminiModel() : getAiModel());
   };
 
-  const save = () => {
-    const k = value.trim();
+  /** Testa a chave do Gemini com o Google; devolve o modelo escolhido (ou null se falhou). */
+  const runTest = async (k: string) => {
+    setTesting(true);
+    setTest(null);
+    try {
+      const r = await testGeminiKey(k, model);
+      if (r.model !== model) setModel(r.model);
+      const label = GEMINI_MODELS.find((m) => m.id === r.model)?.label ?? r.model;
+      setTest({ ok: true, text: `Chave funcionando! Modelo: ${label}.` });
+      return r.model;
+    } catch (e) {
+      setTest({ ok: false, text: e instanceof Error ? e.message : 'Não foi possível testar a chave.' });
+      return null;
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const save = async () => {
+    const k = isGemini ? cleanKey(value) : value.trim();
     if (k && !(isGemini ? looksLikeGeminiKey(k) : looksLikeAnthropicKey(k))) {
       toast.error(isGemini ? 'Essa não parece uma chave do Gemini' : 'Essa não parece uma chave da Claude', {
-        description: isGemini ? 'Ela começa com “AIza” e tem cerca de 39 caracteres.' : 'Ela começa com “sk-ant-”.',
+        description: isGemini ? 'Copie a chave inteira no AI Studio (sem espaços) e cole de novo.' : 'Ela começa com “sk-ant-”.',
       });
       return;
     }
@@ -61,8 +83,14 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
       toast.error('Cole sua chave para ativar a Rutte IA');
       return;
     }
+    let chosen = model;
+    if (isGemini) {
+      const ok = await runTest(k || current);
+      if (!ok) return;
+      chosen = ok;
+    }
     if (k) (isGemini ? setGeminiKey : setAiKey)(k);
-    (isGemini ? setGeminiModel : setAiModel)(model);
+    (isGemini ? setGeminiModel : setAiModel)(chosen);
     setAiWeb(web);
     setProvider(provider);
     toast.success(`Rutte IA pronta com ${isGemini ? 'Gemini' : 'Claude'}`, { description: 'Abra “Rutte IA” no menu e comece a conversar.' });
@@ -150,6 +178,17 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             placeholder={current ? 'Chave já salva — cole uma nova para trocar' : isGemini ? 'AIza…' : 'sk-ant-…'}
           />
           {current && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Chave configurada neste navegador (termina em …{current.slice(-4)}).</p>}
+          {isGemini && (
+            <Button type="button" variant="outline" size="sm" className="mt-2" disabled={testing || (!value.trim() && !current)} onClick={() => runTest(value.trim() ? value : current)}>
+              {testing ? <Loader2 className="animate-spin" /> : <PlugZap />} {testing ? 'Testando…' : 'Testar chave'}
+            </Button>
+          )}
+          {test && (
+            <p role="status" className={cn('mt-2 flex items-start gap-1.5 rounded-lg p-2 text-xs leading-snug', test.ok ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-brand/10 text-foreground')}>
+              {test.ok ? <CheckCircle2 className="mt-px size-4 shrink-0" aria-hidden /> : <CircleAlert className="mt-px size-4 shrink-0 text-brand" aria-hidden />}
+              {test.text}
+            </p>
+          )}
         </div>
 
         <fieldset className="mt-4">
@@ -196,7 +235,9 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={save}>Salvar e usar {isGemini ? 'Gemini' : 'Claude'}</Button>
+          <Button onClick={save} disabled={testing}>
+            {testing && <Loader2 className="animate-spin" />} Salvar e usar {isGemini ? 'Gemini' : 'Claude'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
