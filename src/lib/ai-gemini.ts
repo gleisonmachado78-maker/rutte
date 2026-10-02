@@ -137,39 +137,83 @@ function toGemini(history: ApiMessage[]): GContent[] {
   return out;
 }
 
+/** Modelos reserva, na ordem em que a Rutte tenta quando o escolhido está ocupado ou sem cota. */
+const FALLBACKS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+
+const wait = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const t = window.setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      window.clearTimeout(t);
+      reject(new DOMException('Abortado', 'AbortError'));
+    });
+  });
+
+/** Modelo que respondeu por último (quando a Rutte precisou trocar). */
+let activeModel = '';
+export const lastGeminiModel = () => activeModel || getGeminiModel();
+
+/**
+ * Chama o Gemini. Se o modelo estiver sobrecarregado (500/503) tenta de novo com espera;
+ * se continuar, ou se faltar cota (429) ou o modelo não existir (404), passa para um modelo reserva.
+ */
 async function call(path: string, body: unknown, signal: AbortSignal) {
   const key = getGeminiKey();
   if (!key) throw new AiError('Configure sua chave do Gemini primeiro.');
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}/${getGeminiModel()}:${path}`, {
-      method: 'POST',
-      signal,
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw e;
-    throw new AiError('Sem conexão com o Gemini. Verifique a internet.');
-  }
-  if (!res.ok) {
-    let detail = '';
-    try {
-      detail = (await res.json())?.error?.message ?? '';
-    } catch {
-      /* sem corpo */
+  const chosen = getGeminiModel();
+  const order = [chosen, ...FALLBACKS.filter((m) => m !== chosen)];
+  let last: { status: number; detail: string } = { status: 0, detail: '' };
+
+  for (const model of order) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let res: Response;
+      try {
+        res = await fetch(`${BASE}/${model}:${path}`, {
+          method: 'POST',
+          signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') throw e;
+        throw new AiError('Sem conexão com o Gemini. Verifique a internet.');
+      }
+      if (res.ok) {
+        activeModel = model;
+        return res;
+      }
+      let detail = '';
+      try {
+        detail = (await res.json())?.error?.message ?? '';
+      } catch {
+        /* sem corpo */
+      }
+      last = { status: res.status, detail };
+      const busy = res.status >= 500;
+      // chave inválida ou pedido malformado: não adianta trocar de modelo
+      if (!busy && res.status !== 429 && res.status !== 404) break;
+      if (busy && attempt === 0) {
+        await wait(1200, signal);
+        continue;
+      }
+      break;
     }
-    const msg =
-      /API key not valid|API_KEY_INVALID/i.test(detail) || res.status === 401 || res.status === 403
-        ? 'A chave do Gemini é inválida (ou a API não está liberada). Confira em Configurações → Rutte IA.'
-        : res.status === 429
-          ? 'Você atingiu o limite gratuito do Gemini por agora. Espere um pouco (o limite renova por minuto e por dia) ou troque para o modelo Flash-Lite.'
-          : res.status === 404
-            ? 'Esse modelo do Gemini não está disponível para a sua chave. Escolha outro em Configurações → Rutte IA.'
-            : `O Gemini respondeu com erro ${res.status}${detail ? `: ${detail}` : ''}.`;
-    throw new AiError(msg, res.status === 400 && /key/i.test(detail) ? 401 : res.status);
+    const { status } = last;
+    if (!(status >= 500 || status === 429 || status === 404)) break;
   }
-  return res;
+
+  const { status, detail } = last;
+  const msg =
+    /API key not valid|API_KEY_INVALID/i.test(detail) || status === 401 || status === 403
+      ? 'A chave do Gemini é inválida (ou a API não está liberada). Confira em Configurações → Rutte IA.'
+      : status >= 500
+        ? 'O Gemini está sobrecarregado agora (muita gente usando o plano grátis). Tentei outros modelos também — espere 1 ou 2 minutos e mande de novo.'
+        : status === 429
+          ? 'Você atingiu o limite gratuito do Gemini por agora (já tentei os outros modelos). O limite renova por minuto e por dia — tente daqui a pouco.'
+          : status === 404
+            ? 'Nenhum modelo do Gemini ficou disponível para a sua chave. Use “Testar chave” em Configurações → Rutte IA.'
+            : `O Gemini respondeu com erro ${status}${detail ? `: ${detail}` : ''}.`;
+  throw new AiError(msg, status === 400 && /key/i.test(detail) ? 401 : status);
 }
 
 /** Uma rodada com streaming; devolve as partes da resposta (texto + chamadas de função). */
