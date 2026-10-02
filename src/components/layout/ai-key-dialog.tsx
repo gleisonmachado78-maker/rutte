@@ -4,19 +4,21 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/form-controls';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
-import { AI_MODELS, getAiKey, getAiModel, looksLikeAnthropicKey, setAiKey, setAiModel } from '@/lib/ai';
+import { AI_MODELS, getAiKey, getAiModel, getAiWeb, looksLikeAnthropicKey, setAiKey, setAiModel, setAiWeb } from '@/lib/ai';
 import { cn } from '@/lib/utils';
 
 /** Onde a pessoa cola a própria chave da Claude (fica só neste navegador) e escolhe o modelo. */
 export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [value, setValue] = useState('');
   const [model, setModel] = useState(getAiModel());
+  const [web, setWeb] = useState(getAiWeb());
   const current = getAiKey();
 
   useEffect(() => {
     if (open) {
       setValue('');
       setModel(getAiModel());
+      setWeb(getAiWeb());
     }
   }, [open]);
 
@@ -32,6 +34,7 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
     }
     if (k) setAiKey(k);
     setAiModel(model);
+    setAiWeb(web);
     toast.success('Rutte IA pronta', { description: 'Abra “Rutte IA” no menu e comece a conversar.' });
     onOpenChange(false);
   };
@@ -90,6 +93,16 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             ))}
           </div>
         </fieldset>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-2.5 text-sm">
+          <input type="checkbox" checked={web} onChange={(e) => setWeb(e.target.checked)} className="mt-0.5 size-4 accent-[rgb(var(--primary))]" />
+          <span>
+            <span className="block font-medium">Permitir pesquisas na web</span>
+            <span className="block text-xs leading-snug text-foreground/60">
+              A Rutte pesquisa na internet quando precisar de informação atual (preços, notícias, lugares, estudos) e mostra as fontes. A Anthropic cobra à parte (cerca de US$ 10 a cada 1.000 pesquisas). Se der erro, ative “Web search” em Settings → Privacy no console da Anthropic.
+            </span>
+          </span>
+        </label>
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           {current && (

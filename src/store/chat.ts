@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ApiMessage, PersonaId } from '@/lib/ai';
+import type { ApiMessage, PersonaId, WebSource } from '@/lib/ai';
+import type { Report } from '@/lib/reports';
 
 /** Item mostrado na conversa (o histórico da API fica junto, para continuar o assunto). */
 export interface ChatItem {
   id: string;
-  kind: 'user' | 'assistant' | 'tool' | 'error';
+  kind: 'user' | 'assistant' | 'tool' | 'error' | 'search' | 'report';
   text: string;
   ok?: boolean;
+  /** fontes da pesquisa na web usadas nesta resposta */
+  sources?: WebSource[];
+  report?: Report;
   at: string;
 }
 
@@ -18,6 +22,7 @@ interface ChatState {
   setPersona: (p: PersonaId) => void;
   push: (item: Omit<ChatItem, 'id' | 'at'>) => string;
   patch: (id: string, text: string) => void;
+  update: (id: string, data: Partial<ChatItem>) => void;
   remove: (id: string) => void;
   addHistory: (msgs: ApiMessage[]) => void;
   clear: () => void;
@@ -38,6 +43,7 @@ export const useChat = create<ChatState>()(
         return id;
       },
       patch: (id, text) => set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, text } : i)) })),
+      update: (id, data) => set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...data } : i)) })),
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       addHistory: (msgs) =>
         set((s) => {

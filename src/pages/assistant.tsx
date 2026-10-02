@@ -1,12 +1,15 @@
-import { CheckCircle2, CircleAlert, KeyRound, SendHorizontal, Sparkles, Square, Trash2 } from 'lucide-react';
+import { BarChart3, CheckCircle2, CircleAlert, ExternalLink, Globe, KeyRound, SendHorizontal, Sparkles, Square, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RutteLogo } from '@/components/brand/rutte';
+import { ReportCard } from '@/components/assistant/report-card';
 import { AiKeyDialog } from '@/components/layout/ai-key-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { useUser } from '@/hooks/use-data';
-import { AI_MODELS, AiError, chat, getAiKey, getAiModel, PERSONAS, QUICK_PROMPTS, type ApiMessage } from '@/lib/ai';
+import { AI_MODELS, AiError, chat, getAiKey, getAiModel, getAiWeb, PERSONAS, QUICK_PROMPTS, type ApiMessage, type WebSource } from '@/lib/ai';
+import { buildReport, REPORT_TOPICS, type ReportTopic } from '@/lib/reports';
 import { firstName } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/store/chat';
@@ -62,19 +65,23 @@ function RichText({ text }: { text: string }) {
 /* -------------------------------------- Página -------------------------------------- */
 
 export function AssistantPage() {
-  const { items, history, persona, setPersona, push, patch, remove, addHistory, clear } = useChat();
+  const { items, history, persona, setPersona, push, patch, update, remove, addHistory, clear } = useChat();
   const { data: user } = useUser();
   const qc = useQueryClient();
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
   const [hasKey, setHasKey] = useState(() => !!getAiKey());
+  const [web, setWeb] = useState(getAiWeb);
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const model = AI_MODELS.find((m) => m.id === getAiModel());
 
   useEffect(() => {
-    const sync = () => setHasKey(!!getAiKey());
+    const sync = () => {
+      setHasKey(!!getAiKey());
+      setWeb(getAiWeb());
+    };
     window.addEventListener('rutte:ai-key', sync);
     return () => window.removeEventListener('rutte:ai-key', sync);
   }, []);
@@ -99,21 +106,36 @@ export function AssistantPage() {
     let bubble = push({ kind: 'assistant', text: '' });
     let acc = '';
     let touched = false;
+    let sources: WebSource[] = [];
     try {
       const added = await chat([...history, userMsg], persona, ctrl.signal, {
         onText: (t) => {
           acc += t;
           patch(bubble, acc);
         },
-        onTool: (summary, ok) => {
-          touched = true;
+        onTool: (summary, ok, report) => {
+          if (!report) touched = true;
           if (!acc) remove(bubble);
-          push({ kind: 'tool', text: summary, ok });
+          push(report ? { kind: 'report', text: summary, report } : { kind: 'tool', text: summary, ok });
         },
         onRound: () => {
           // nova rodada de resposta depois das ferramentas: novo balão
           acc = '';
+          sources = [];
           bubble = push({ kind: 'assistant', text: '' });
+        },
+        onSearch: (q) => {
+          push({ kind: 'search', text: q });
+          // mantém o balão da resposta depois do aviso de pesquisa
+          if (!acc) {
+            remove(bubble);
+            bubble = push({ kind: 'assistant', text: '' });
+          }
+        },
+        onSources: (list) => {
+          const seen = new Set(sources.map((x) => x.url));
+          sources = [...sources, ...list.filter((x) => !seen.has(x.url))].slice(0, 8);
+          update(bubble, { sources });
         },
       });
       addHistory([userMsg, ...added]);
@@ -131,6 +153,11 @@ export function AssistantPage() {
     }
   };
 
+  const quickReport = async (topic: ReportTopic, days: number) => {
+    const report = await buildReport(topic, days);
+    push({ kind: 'report', text: report.title, report });
+  };
+
   const nick = user ? firstName(user.name) : '';
 
   return (
@@ -140,7 +167,22 @@ export function AssistantPage() {
           <Sparkles className="size-6 text-primary" aria-hidden /> Rutte IA
         </h1>
         <div className="ml-auto flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)} title="Chave e modelo">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" title="Relatórios calculados no aparelho (não usam a IA)">
+                <BarChart3 /> Relatórios
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {REPORT_TOPICS.map((t) => (
+                <DropdownMenuItem key={t.id} onSelect={() => quickReport(t.id, t.id === 'academia' ? 60 : 30)}>
+                  <BarChart3 /> {t.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)} title="Chave, modelo e pesquisa na web">
+            {hasKey && web && <Globe className="text-emerald-600 dark:text-emerald-400" aria-label="Pesquisa na web ligada" />}
             <KeyRound /> {hasKey ? (model?.label.split(' (')[0] ?? 'Configurar') : 'Configurar'}
           </Button>
           {items.length > 0 && (
@@ -177,7 +219,7 @@ export function AssistantPage() {
             <div>
               <p className="text-lg font-bold">{nick ? `Oi, ${nick}! ` : 'Oi! '}Eu sou a Rutte.</p>
               <p className="mx-auto max-w-md text-sm text-foreground/65">
-                Conheço seus afazeres, metas, treinos e a sua Roda da Vida. Peça um resumo do dia, um plano para a semana ou diga “me lembra de pagar a conta amanhã” que eu crio o afazer.
+                Conheço seus afazeres, metas, treinos e a sua Roda da Vida. Peça um resumo do dia, um relatório do mês, uma pesquisa na web ou diga “me lembra de pagar a conta amanhã” que eu crio o afazer.
               </p>
             </div>
             {!hasKey && (
@@ -197,7 +239,13 @@ export function AssistantPage() {
           <ol className="space-y-3">
             {items.map((m) => (
               <li key={m.id} className={cn('flex', m.kind === 'user' ? 'justify-end' : 'justify-start')}>
-                {m.kind === 'tool' ? (
+                {m.kind === 'report' && m.report ? (
+                  <ReportCard report={m.report} />
+                ) : m.kind === 'search' ? (
+                  <span className="inline-flex max-w-[85%] items-center gap-1.5 rounded-full bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                    <Globe className="size-3.5 shrink-0" aria-hidden /> <span className="truncate">Pesquisando na web: {m.text}</span>
+                  </span>
+                ) : m.kind === 'tool' ? (
                   <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold', m.ok ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300')}>
                     {m.ok ? <CheckCircle2 className="size-3.5" aria-hidden /> : <CircleAlert className="size-3.5" aria-hidden />} {m.text}
                   </span>
@@ -214,7 +262,24 @@ export function AssistantPage() {
                   >
                     {m.kind === 'assistant' ? (
                       m.text ? (
-                        <RichText text={m.text} />
+                        <>
+                          <RichText text={m.text} />
+                          {m.sources && m.sources.length > 0 && (
+                            <div className="mt-2 border-t border-foreground/10 pt-2">
+                              <p className="text-[11px] font-semibold text-foreground/60">Fontes</p>
+                              <ul className="mt-1 flex flex-wrap gap-1.5">
+                                {m.sources.map((src) => (
+                                  <li key={src.url}>
+                                    <a href={src.url} target="_blank" rel="noreferrer" className="inline-flex max-w-[220px] items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:underline dark:text-neon" title={src.title}>
+                                      <ExternalLink className="size-3 shrink-0" aria-hidden />
+                                      <span className="truncate">{src.title || new URL(src.url).hostname}</span>
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <span className="inline-flex gap-1" aria-label="A Rutte está pensando">
                           {[0, 1, 2].map((i) => (

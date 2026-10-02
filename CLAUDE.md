@@ -157,3 +157,7 @@ Casal: `LIFE_TIPS.relacionamentos`. Solteiro: etapas `SINGLE_STEPS` (começar, o
 navegador (header `anthropic-dangerous-direct-browser-access`), streaming SSE e ferramentas `criar_afazer`, `concluir_afazer`,
 `adiar_afazer` (loop de até 5 rodadas). Chave da pessoa em localStorage `rutte:ai-key` (nunca no código), modelo em `rutte:ai-model`.
 `buildContext` resume afazeres, perfil, Roda da Vida, academia, foco e gratidão a cada envio. Personalidades em `PERSONAS`.
+Pesquisa na web: ferramenta oficial `web_search_20250305` (liga/desliga em `rutte:ai-web`); blocos `server_tool_use` /
+`web_search_tool_result` e citações vão inteiros dentro da rodada e são removidos ao guardar o histórico (`compact`). Fontes
+aparecem sob a resposta. Relatórios: `src/lib/reports.ts` (`buildReport` por tema/período, calculado no aparelho) +
+`components/assistant/report-card.tsx`; a IA chama `gerar_relatorio`; o menu “Relatórios” gera sem usar a IA.

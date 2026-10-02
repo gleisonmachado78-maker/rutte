@@ -1,12 +1,14 @@
 /**
  * Rutte IA: conversa com o Claude (API da Anthropic) direto do navegador, com a chave da própria pessoa.
  * A cada mensagem, a Rutte manda um resumo dos dados do app (afazeres, metas, treinos, Roda da Vida)
- * e oferece ferramentas para criar, concluir e adiar afazeres.
+ * e oferece ferramentas para criar, concluir e adiar afazeres, gerar relatórios dos dados do app
+ * e (se ligado) pesquisar na web com a ferramenta oficial de busca da Anthropic.
  */
 import { differenceInCalendarDays, format, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LIFE_AREAS, LIFE_AREA_BY_ID } from './life-areas';
 import { GOALS, PEAKS, SITUATIONS, STRUGGLES } from './onboarding';
+import { buildReport, REPORT_TOPICS, type Report, type ReportTopic } from './reports';
 import { isClosed, todayISO } from './task-utils';
 import { api } from '@/services/api';
 import type { LifeAreaId, Priority, Task, TaskInput } from '@/types';
@@ -44,6 +46,11 @@ export const setAiKey = (k: string) => write(KEY_STORAGE, k.trim());
 export const getAiModel = () => read(MODEL_STORAGE) || AI_MODELS[0].id;
 export const setAiModel = (m: string) => write(MODEL_STORAGE, m);
 export const looksLikeAnthropicKey = (k: string) => /^sk-ant-[A-Za-z0-9_-]{20,}$/.test(k.trim());
+
+const WEB_STORAGE = 'rutte:ai-web';
+/** Pesquisa na web ligada (padrão: sim). */
+export const getAiWeb = () => read(WEB_STORAGE) !== 'off';
+export const setAiWeb = (on: boolean) => write(WEB_STORAGE, on ? '' : 'off');
 
 /* ---------------------------------- Personalidade ---------------------------------- */
 
@@ -95,6 +102,10 @@ export async function buildContext(persona: PersonaId): Promise<string> {
     'Responda sempre em português do Brasil, com mensagens curtas e práticas (no máximo ~180 palavras, salvo se pedirem mais). Use listas com "-" e **negrito** quando ajudar.',
     `Personalidade: ${persona_.prompt}`,
     'Você pode criar, concluir e adiar afazeres com as ferramentas. Só use quando a pessoa pedir ou concordar; ao criar vários, confirme o que foi criado. Datas no formato yyyy-MM-dd.',
+    'Para relatórios, análises ou números dos dados do app, use gerar_relatorio. O cartão com indicadores e gráficos já aparece para a pessoa: depois dele, comente em poucas linhas o que os números mostram e dê 2 ou 3 recomendações práticas (não repita a tabela).',
+    getAiWeb()
+      ? 'Você pode pesquisar na web (web_search) quando precisar de informação atual ou externa: preços, notícias, lugares, estudos, dados de mercado. Prefira fontes confiáveis em português e mencione as fontes; não pesquise o que já está nos dados abaixo.'
+      : 'A pesquisa na web está desligada: se precisarem de informação atual, avise que dá para ligar em Configurações → Rutte IA.',
     'Não invente dados que não estão abaixo. Para saúde, finanças ou emoções sérias, dê orientações gerais e sugira um profissional quando fizer sentido.',
     '',
     `Agora: ${format(now, "EEEE, d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })} (hoje = ${today}).`,
@@ -141,18 +152,45 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
   },
   {
+    name: 'gerar_relatorio',
+    description: 'Gera um relatório com indicadores e gráficos a partir dos dados do app (mostrado como cartão na conversa) e devolve os números para você comentar.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tema: { type: 'string', enum: REPORT_TOPICS.map((t) => t.id), description: 'produtividade = afazeres; geral = um pouco de tudo' },
+        dias: { type: 'number', description: 'Período em dias (7 a 180). Padrão 30.' },
+      },
+      required: ['tema'],
+    },
+  },
+  {
     name: 'adiar_afazer',
     description: 'Muda a data de vencimento de um afazer.',
     input_schema: { type: 'object', properties: { id: { type: 'string' }, nova_data: { type: 'string', description: 'yyyy-MM-dd' } }, required: ['id', 'nova_data'] },
   },
 ] as const;
 
+/** Ferramenta oficial de pesquisa na web da Anthropic (executada nos servidores da Anthropic). */
+const WEB_SEARCH_TOOL = {
+  type: 'web_search_20250305',
+  name: 'web_search',
+  max_uses: 4,
+  user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' },
+} as const;
+
+const toolsFor = () => (getAiWeb() ? [...TOOLS, WEB_SEARCH_TOOL] : [...TOOLS]);
+
 const RRULE = { DIARIA: 'FREQ=DAILY', SEMANAL: 'FREQ=WEEKLY', MENSAL: 'FREQ=MONTHLY' } as const;
 const isDate = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 /** Executa uma ferramenta pedida pela IA e devolve o resultado + um resumo para mostrar na conversa. */
-export async function runTool(name: string, input: Record<string, unknown>): Promise<{ result: string; summary: string; ok: boolean }> {
+export async function runTool(name: string, input: Record<string, unknown>): Promise<{ result: string; summary: string; ok: boolean; report?: Report }> {
   try {
+    if (name === 'gerar_relatorio') {
+      const topic = (REPORT_TOPICS.some((t) => t.id === input.tema) ? input.tema : 'geral') as ReportTopic;
+      const report = await buildReport(topic, Number(input.dias) || 30);
+      return { ok: true, report, summary: report.title, result: JSON.stringify({ titulo: report.title, periodo: report.period, indicadores: report.kpis, fatos: report.facts }) };
+    }
     if (name === 'criar_afazer') {
       const data: TaskInput = {
         title: String(input.titulo ?? '').slice(0, 140) || 'Novo afazer',
@@ -188,8 +226,23 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
 
 /* ------------------------------------ Conversa ------------------------------------ */
 
+export interface Citation {
+  type: string;
+  url?: string;
+  title?: string;
+  cited_text?: string;
+  encrypted_index?: string;
+}
+
+export interface WebSource {
+  url: string;
+  title: string;
+}
+
 export type Block =
-  | { type: 'text'; text: string }
+  | { type: 'text'; text: string; citations?: Citation[] }
+  | { type: 'server_tool_use'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'web_search_tool_result'; tool_use_id: string; content: unknown }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
 
@@ -206,8 +259,16 @@ export class AiError extends Error {
   }
 }
 
+export interface ChatHooks {
+  onText: (t: string) => void;
+  onTool: (summary: string, ok: boolean, report?: Report) => void;
+  onRound: () => void;
+  onSearch?: (query: string) => void;
+  onSources?: (sources: WebSource[]) => void;
+}
+
 /** Uma chamada à API com streaming. `onText` recebe o texto à medida que chega. */
-async function streamOnce(messages: ApiMessage[], system: string, signal: AbortSignal, onText: (t: string) => void): Promise<{ content: Block[]; stop: string }> {
+async function streamOnce(messages: ApiMessage[], system: string, signal: AbortSignal, hooks: ChatHooks): Promise<{ content: Block[]; stop: string }> {
   const key = getAiKey();
   if (!key) throw new AiError('Configure sua chave da Claude primeiro.');
   let res: Response;
@@ -221,7 +282,7 @@ async function streamOnce(messages: ApiMessage[], system: string, signal: AbortS
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({ model: getAiModel(), max_tokens: 1500, system, tools: TOOLS, messages, stream: true }),
+      body: JSON.stringify({ model: getAiModel(), max_tokens: 2000, system, tools: toolsFor(), messages, stream: true }),
     });
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
@@ -239,9 +300,11 @@ async function streamOnce(messages: ApiMessage[], system: string, signal: AbortS
         ? 'A chave da Claude é inválida. Confira em Configurações → Rutte IA.'
         : res.status === 429
           ? 'Muitas mensagens em pouco tempo (ou limite da conta). Tente de novo em instantes.'
-          : res.status === 400 && /credit|billing/i.test(detail)
-            ? 'Sua conta da Anthropic está sem créditos. Adicione créditos no console da Anthropic.'
-            : `A Claude respondeu com erro ${res.status}${detail ? `: ${detail}` : ''}.`;
+          : /web.?search/i.test(detail)
+            ? 'A pesquisa na web não está liberada na sua conta da Anthropic. Ative em console.anthropic.com (Settings → Privacy → Web search) ou desligue a pesquisa em Configurações → Rutte IA.'
+            : res.status === 400 && /credit|billing/i.test(detail)
+              ? 'Sua conta da Anthropic está sem créditos. Adicione créditos no console da Anthropic.'
+              : `A Claude respondeu com erro ${res.status}${detail ? `: ${detail}` : ''}.`;
     throw new AiError(msg, res.status);
   }
 
@@ -266,25 +329,38 @@ async function streamOnce(messages: ApiMessage[], system: string, signal: AbortS
         continue;
       }
       const type = ev.type as string;
+      const idx = ev.index as number;
       if (type === 'content_block_start') {
         const cb = ev.content_block as Record<string, unknown>;
-        blocks[ev.index as number] = cb.type === 'tool_use' ? { type: 'tool_use', id: cb.id as string, name: cb.name as string, input: {}, _json: '' } : { type: 'text', text: '' };
+        if (cb.type === 'tool_use' || cb.type === 'server_tool_use') {
+          blocks[idx] = { type: cb.type, id: cb.id as string, name: cb.name as string, input: {}, _json: '' } as Block & { _json?: string };
+        } else if (cb.type === 'web_search_tool_result') {
+          blocks[idx] = { type: 'web_search_tool_result', tool_use_id: cb.tool_use_id as string, content: cb.content };
+          const list = Array.isArray(cb.content) ? (cb.content as Record<string, string>[]) : [];
+          const sources = list.filter((r) => r.type === 'web_search_result' && r.url).map((r) => ({ url: r.url, title: r.title || r.url }));
+          if (sources.length) hooks.onSources?.(sources);
+        } else {
+          blocks[idx] = { type: 'text', text: '' };
+        }
       } else if (type === 'content_block_delta') {
-        const d = ev.delta as Record<string, string>;
-        const b = blocks[ev.index as number];
+        const d = ev.delta as Record<string, unknown>;
+        const b = blocks[idx];
         if (d.type === 'text_delta' && b?.type === 'text') {
-          b.text += d.text;
-          onText(d.text);
-        } else if (d.type === 'input_json_delta' && b?.type === 'tool_use') b._json += d.partial_json;
+          b.text += d.text as string;
+          hooks.onText(d.text as string);
+        } else if (d.type === 'citations_delta' && b?.type === 'text') {
+          (b.citations ??= []).push(d.citation as Citation);
+        } else if (d.type === 'input_json_delta' && (b?.type === 'tool_use' || b?.type === 'server_tool_use')) b._json += d.partial_json as string;
       } else if (type === 'content_block_stop') {
-        const b = blocks[ev.index as number];
-        if (b?.type === 'tool_use') {
+        const b = blocks[idx];
+        if (b?.type === 'tool_use' || b?.type === 'server_tool_use') {
           try {
             b.input = b._json ? JSON.parse(b._json) : {};
           } catch {
             b.input = {};
           }
           delete b._json;
+          if (b.type === 'server_tool_use' && typeof b.input.query === 'string') hooks.onSearch?.(b.input.query);
         }
       } else if (type === 'message_delta') {
         stop = ((ev.delta as Record<string, string>)?.stop_reason as string) ?? stop;
@@ -297,32 +373,52 @@ async function streamOnce(messages: ApiMessage[], system: string, signal: AbortS
 }
 
 /**
- * Envia a conversa e resolve as ferramentas pedidas (até 4 rodadas).
- * Devolve as novas mensagens (respostas da IA e resultados das ferramentas) para guardar no histórico.
+ * Para guardar no histórico: tira os blocos de pesquisa (grandes) e as citações,
+ * mantendo o texto e as ferramentas locais. Junta falas seguidas da IA.
  */
-export async function chat(
-  history: ApiMessage[],
-  persona: PersonaId,
-  signal: AbortSignal,
-  hooks: { onText: (t: string) => void; onTool: (summary: string, ok: boolean) => void; onRound: () => void },
-): Promise<ApiMessage[]> {
+function compact(msgs: ApiMessage[]): ApiMessage[] {
+  const out: ApiMessage[] = [];
+  for (const m of msgs) {
+    let content = m.content;
+    if (m.role === 'assistant') {
+      content = m.content
+        .filter((b) => b.type !== 'server_tool_use' && b.type !== 'web_search_tool_result')
+        .map((b) => (b.type === 'text' ? { type: 'text' as const, text: b.text } : b));
+      if (!content.length) content = [{ type: 'text', text: '(pesquisei na web)' }];
+    }
+    const last = out.at(-1);
+    if (last && last.role === 'assistant' && m.role === 'assistant') last.content = [...last.content, ...content];
+    else out.push({ role: m.role, content });
+  }
+  return out;
+}
+
+/**
+ * Envia a conversa e resolve as ferramentas pedidas (até 6 rodadas).
+ * Devolve as novas mensagens (já compactadas) para guardar no histórico.
+ */
+export async function chat(history: ApiMessage[], persona: PersonaId, signal: AbortSignal, hooks: ChatHooks): Promise<ApiMessage[]> {
   const system = await buildContext(persona);
   const added: ApiMessage[] = [];
-  for (let round = 0; round < 5; round++) {
-    const { content, stop } = await streamOnce([...history, ...added], system, signal, hooks.onText);
+  for (let round = 0; round < 6; round++) {
+    const { content, stop } = await streamOnce([...history, ...added], system, signal, hooks);
     added.push({ role: 'assistant', content });
+    if (stop === 'pause_turn') {
+      // pesquisa longa: a API pede para continuar de onde parou
+      continue;
+    }
     if (stop !== 'tool_use') break;
     const results: Block[] = [];
     for (const b of content) {
       if (b.type !== 'tool_use') continue;
       const r = await runTool(b.name, b.input);
-      hooks.onTool(r.summary, r.ok);
+      hooks.onTool(r.summary, r.ok, r.report);
       results.push({ type: 'tool_result', tool_use_id: b.id, content: r.result, is_error: !r.ok });
     }
     added.push({ role: 'user', content: results });
     hooks.onRound();
   }
-  return added;
+  return compact(added);
 }
 
 /** Atalhos de conversa. */
@@ -332,5 +428,8 @@ export const QUICK_PROMPTS = [
   { label: '🗓️ Planejar a semana', text: 'Me ajude a planejar a semana: distribua meus afazeres por dia de forma realista e diga o que posso adiar.' },
   { label: '🎯 Onde focar', text: 'Olhando minha Roda da Vida e meus afazeres, em quais áreas devo focar agora? Sugira 3 ações pequenas.' },
   { label: '💪 Treino de hoje', text: 'Com base no meu plano e nos últimos treinos, qual treino faço hoje e o que preciso lembrar?' },
+  { label: '📊 Relatório do mês', text: 'Gere meu relatório geral dos últimos 30 dias e me diga o que está indo bem e o que melhorar.' },
+  { label: '🏋️ Relatório de treinos', text: 'Gere o relatório da academia dos últimos 60 dias e analise minha evolução.' },
+  { label: '🔎 Pesquisar na web', text: 'Pesquise na web 3 técnicas de produtividade com evidência científica e me explique como aplicar na minha rotina, com as fontes.' },
   { label: '😮‍💨 Estou sobrecarregado(a)', text: 'Estou me sentindo sobrecarregado(a). Me ajude a escolher só o essencial de hoje.' },
 ] as const;
