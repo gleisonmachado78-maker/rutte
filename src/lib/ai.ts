@@ -8,6 +8,7 @@ import { differenceInCalendarDays, format, parseISO, startOfWeek } from 'date-fn
 import { ptBR } from 'date-fns/locale';
 import { LIFE_AREAS, LIFE_AREA_BY_ID } from './life-areas';
 import { GOALS, PEAKS, SITUATIONS, STRUGGLES } from './onboarding';
+import type { ChatImage, ImageStyle } from './ai-image';
 import { buildReport, REPORT_TOPICS, type Report, type ReportTopic } from './reports';
 import { isClosed, todayISO } from './task-utils';
 import { api } from '@/services/api';
@@ -114,6 +115,7 @@ export async function buildContext(persona: PersonaId): Promise<string> {
     'Responda sempre em português do Brasil, com mensagens curtas e práticas (no máximo ~180 palavras, salvo se pedirem mais). Use listas com "-" e **negrito** quando ajudar.',
     `Personalidade: ${persona_.prompt}`,
     'Você pode criar, concluir e adiar afazeres com as ferramentas. Só use quando a pessoa pedir ou concordar; ao criar vários, confirme o que foi criado. Datas no formato yyyy-MM-dd.',
+    'Você CONSEGUE criar imagens: quando pedirem foto, imagem, infográfico, esquema ou algo visual, use criar_imagem com uma descrição completa do conteúdo (inclua os dados e textos que devem aparecer). Depois, diga em uma frase o que a imagem mostra. Nunca diga que não pode gerar imagens.',
     'Para relatórios, análises ou números dos dados do app, use gerar_relatorio. O cartão com indicadores e gráficos já aparece para a pessoa: depois dele, comente em poucas linhas o que os números mostram e dê 2 ou 3 recomendações práticas (não repita a tabela).',
     getAiWeb()
       ? 'Você pode pesquisar na web (ferramenta de pesquisa) quando precisar de informação atual ou externa: preços, notícias, lugares, estudos, dados de mercado. Prefira fontes confiáveis em português e mencione as fontes; não pesquise o que já está nos dados abaixo.'
@@ -164,6 +166,18 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
   },
   {
+    name: 'criar_imagem',
+    description: 'Cria uma imagem explicativa e mostra na conversa: infográfico (com textos e dados, ex.: plano de treino, passo a passo, resumo), ilustração ou foto.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        descricao: { type: 'string', description: 'Tudo o que a imagem deve mostrar, incluindo títulos, itens, números e textos em português' },
+        estilo: { type: 'string', enum: ['infografico', 'ilustracao', 'foto'], description: 'infografico para conteúdo com texto/dados (padrão); ilustracao ou foto para cenas' },
+      },
+      required: ['descricao'],
+    },
+  },
+  {
     name: 'gerar_relatorio',
     description: 'Gera um relatório com indicadores e gráficos a partir dos dados do app (mostrado como cartão na conversa) e devolve os números para você comentar.',
     input_schema: {
@@ -196,8 +210,14 @@ const RRULE = { DIARIA: 'FREQ=DAILY', SEMANAL: 'FREQ=WEEKLY', MENSAL: 'FREQ=MONT
 const isDate = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 /** Executa uma ferramenta pedida pela IA e devolve o resultado + um resumo para mostrar na conversa. */
-export async function runTool(name: string, input: Record<string, unknown>): Promise<{ result: string; summary: string; ok: boolean; report?: Report }> {
+export async function runTool(name: string, input: Record<string, unknown>): Promise<{ result: string; summary: string; ok: boolean; report?: Report; image?: ChatImage }> {
   try {
+    if (name === 'criar_imagem') {
+      const style = (['infografico', 'ilustracao', 'foto'].includes(String(input.estilo)) ? input.estilo : 'infografico') as ImageStyle;
+      const { createImage } = await import('./ai-image');
+      const { image, note } = await createImage(String(input.descricao ?? ''), style);
+      return { ok: true, image, summary: note ?? 'Imagem criada', result: JSON.stringify({ ok: true, mostrada: true, tipo: image.engine === 'svg' ? 'infografico' : style, observacao: note }) };
+    }
     if (name === 'gerar_relatorio') {
       const topic = (REPORT_TOPICS.some((t) => t.id === input.tema) ? input.tema : 'geral') as ReportTopic;
       const report = await buildReport(topic, Number(input.dias) || 30);
@@ -273,7 +293,7 @@ export class AiError extends Error {
 
 export interface ChatHooks {
   onText: (t: string) => void;
-  onTool: (summary: string, ok: boolean, report?: Report) => void;
+  onTool: (summary: string, ok: boolean, report?: Report, image?: ChatImage) => void;
   onRound: () => void;
   onSearch?: (query: string) => void;
   onSources?: (sources: WebSource[]) => void;
@@ -424,7 +444,7 @@ export async function chat(history: ApiMessage[], persona: PersonaId, signal: Ab
     for (const b of content) {
       if (b.type !== 'tool_use') continue;
       const r = await runTool(b.name, b.input);
-      hooks.onTool(r.summary, r.ok, r.report);
+      hooks.onTool(r.summary, r.ok, r.report, r.image);
       results.push({ type: 'tool_result', tool_use_id: b.id, content: r.result, is_error: !r.ok });
     }
     added.push({ role: 'user', content: results });
@@ -440,6 +460,7 @@ export const QUICK_PROMPTS = [
   { label: '🗓️ Planejar a semana', text: 'Me ajude a planejar a semana: distribua meus afazeres por dia de forma realista e diga o que posso adiar.' },
   { label: '🎯 Onde focar', text: 'Olhando minha Roda da Vida e meus afazeres, em quais áreas devo focar agora? Sugira 3 ações pequenas.' },
   { label: '💪 Treino de hoje', text: 'Com base no meu plano e nos últimos treinos, qual treino faço hoje e o que preciso lembrar?' },
+  { label: '🖼️ Infográfico do meu treino', text: 'Crie um infográfico com o meu plano de treino da semana, com os exercícios de cada dia.' },
   { label: '📊 Relatório do mês', text: 'Gere meu relatório geral dos últimos 30 dias e me diga o que está indo bem e o que melhorar.' },
   { label: '🏋️ Relatório de treinos', text: 'Gere o relatório da academia dos últimos 60 dias e analise minha evolução.' },
   { label: '🔎 Pesquisar na web', text: 'Pesquise na web 3 técnicas de produtividade com evidência científica e me explique como aplicar na minha rotina, com as fontes.' },

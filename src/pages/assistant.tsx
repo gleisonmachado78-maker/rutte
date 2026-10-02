@@ -1,4 +1,4 @@
-import { BarChart3, CheckCircle2, CircleAlert, ExternalLink, Globe, KeyRound, SendHorizontal, Sparkles, Square, Trash2 } from 'lucide-react';
+import { BarChart3, CheckCircle2, CircleAlert, Download, ExternalLink, Globe, ImageIcon, KeyRound, SendHorizontal, Sparkles, Square, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RutteLogo } from '@/components/brand/rutte';
@@ -117,10 +117,13 @@ export function AssistantPage() {
           acc += t;
           patch(bubble, acc);
         },
-        onTool: (summary, ok, report) => {
-          if (!report) touched = true;
+        onTool: (summary, ok, report, image) => {
+          if (!report && !image) touched = true;
           if (!acc) remove(bubble);
-          push(report ? { kind: 'report', text: summary, report } : { kind: 'tool', text: summary, ok });
+          if (image) {
+            push({ kind: 'image', text: summary, image });
+            if (summary !== 'Imagem criada') push({ kind: 'tool', text: summary, ok: true });
+          } else push(report ? { kind: 'report', text: summary, report } : { kind: 'tool', text: summary, ok });
         },
         onRound: () => {
           // nova rodada depois das ferramentas: novo balão. Balão sem texto (só pesquisa) some e as fontes passam adiante
@@ -245,7 +248,21 @@ export function AssistantPage() {
           <ol className="space-y-3">
             {items.map((m) => (
               <li key={m.id} className={cn('flex', m.kind === 'user' ? 'justify-end' : 'justify-start')}>
-                {m.kind === 'report' && m.report ? (
+                {m.kind === 'image' && m.image ? (
+                  <figure className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-border bg-background">
+                    <img src={m.image.src} alt={m.image.alt} className="block h-auto max-h-[75vh] w-full object-contain" />
+                    <figcaption className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-xs text-foreground/60">
+                      <ImageIcon className="size-3.5" aria-hidden /> {m.image.engine === 'svg' ? 'Infográfico criado pela Rutte' : 'Imagem gerada pelo Gemini'}
+                      <a
+                        href={m.image.src}
+                        download={`rutte-${m.image.engine === 'svg' ? 'infografico.svg' : 'imagem.jpg'}`}
+                        className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 font-semibold text-white hover:brightness-110"
+                      >
+                        <Download className="size-3.5" aria-hidden /> Baixar
+                      </a>
+                    </figcaption>
+                  </figure>
+                ) : m.kind === 'report' && m.report ? (
                   <ReportCard report={m.report} />
                 ) : m.kind === 'search' ? (
                   <span className="inline-flex max-w-[85%] items-center gap-1.5 rounded-full bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">

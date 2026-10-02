@@ -165,3 +165,6 @@ Gemini (plano grátis): `src/lib/ai-gemini.ts` (`chatGemini`, mesma interface de
 `rutte:gemini-model`, provedor ativo em `rutte:ai-provider` (`getProvider`/`hasActiveKey`). Converte o histórico (formato Anthropic) para
 `contents` do Gemini; dentro da rodada guarda as partes cruas (assinaturas de pensamento). Pesquisa: função `pesquisar_web` resolvida
 numa chamada separada com `google_search` (fontes de `groundingMetadata`); não entra no histórico como ferramenta.
+Imagens: ferramenta `criar_imagem` (`src/lib/ai-image.ts`). Infográfico = SVG desenhado pela IA de texto (`geminiText` / Claude),
+sanitizado e mostrado como <img> data URL; foto/ilustração tenta `gemini-2.5-flash-image` e cai para infográfico. O persist do chat
+guarda só as 6 últimas imagens grandes.

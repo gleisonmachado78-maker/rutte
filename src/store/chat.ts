@@ -1,17 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ApiMessage, PersonaId, WebSource } from '@/lib/ai';
+import type { ChatImage } from '@/lib/ai-image';
 import type { Report } from '@/lib/reports';
 
 /** Item mostrado na conversa (o histórico da API fica junto, para continuar o assunto). */
 export interface ChatItem {
   id: string;
-  kind: 'user' | 'assistant' | 'tool' | 'error' | 'search' | 'report';
+  kind: 'user' | 'assistant' | 'tool' | 'error' | 'search' | 'report' | 'image';
   text: string;
   ok?: boolean;
   /** fontes da pesquisa na web usadas nesta resposta */
   sources?: WebSource[];
   report?: Report;
+  image?: ChatImage;
   at: string;
 }
 
@@ -57,6 +59,19 @@ export const useChat = create<ChatState>()(
         }),
       clear: () => set({ items: [], history: [] }),
     }),
-    { name: 'rutte:chat', version: 1 },
+    {
+      name: 'rutte:chat',
+      version: 1,
+      // fotos pesam: guarda só as 6 últimas imagens grandes (as outras ficam como aviso)
+      partialize: (s) => {
+        let big = 0;
+        const items = [...s.items].reverse().map((i) => {
+          if (!i.image || i.image.src.length < 250_000) return i;
+          big++;
+          return big <= 6 ? i : { ...i, image: undefined, text: 'Imagem antiga (não guardada no aparelho)' };
+        });
+        return { items: items.reverse(), history: s.history, persona: s.persona };
+      },
+    },
   ),
 );

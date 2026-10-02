@@ -294,6 +294,20 @@ async function streamRound(contents: GContent[], system: string, signal: AbortSi
   return parts;
 }
 
+/** Texto simples (sem ferramentas), com os mesmos modelos reserva. Usado para desenhar infográficos. */
+export async function geminiText(prompt: string, maxTokens: number, signal?: AbortSignal): Promise<string> {
+  const res = await call(
+    'generateContent',
+    (model, thinking) => ({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: maxTokens, temperature: 0.6, ...(thinking ? thinkingFor(model) : {}) },
+    }),
+    signal ?? new AbortController().signal,
+  );
+  const data = await res.json();
+  return (data?.candidates?.[0]?.content?.parts ?? []).map((p: GPart) => (p.thought ? '' : (p.text ?? ''))).join('');
+}
+
 /** Pesquisa na web com a busca do Google (chamada separada, sem ferramentas próprias). */
 async function webSearch(query: string, signal: AbortSignal): Promise<{ text: string; sources: WebSource[] }> {
   const res = await call(
@@ -363,7 +377,7 @@ export async function chatGemini(history: ApiMessage[], persona: PersonaId, sign
         }
       } else {
         const r = await runTool(fc.name, fc.args ?? {});
-        hooks.onTool(r.summary, r.ok, r.report);
+        hooks.onTool(r.summary, r.ok, r.report, r.image);
         result = r.result;
         ok = r.ok;
       }
