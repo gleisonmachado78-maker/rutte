@@ -11,9 +11,9 @@ const MODEL_STORAGE = 'rutte:gemini-model';
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-flash-latest', label: 'Gemini Flash', hint: 'Recomendado: rápido, bom e com cota grátis' },
-  { id: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite', hint: 'Mais rápido, com a maior cota grátis' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', hint: 'Versão fixa, caso as outras deem erro' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', hint: 'Recomendado: rápido, estável e com pesquisa no Google no plano grátis' },
+  { id: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite', hint: 'O mais rápido, com a maior cota grátis (respostas mais simples)' },
+  { id: 'gemini-flash-latest', label: 'Gemini Flash (mais novo)', hint: 'Mais esperto, mas costuma ficar ocupado e ser mais lento no plano grátis' },
 ] as const;
 
 const read = (k: string) => {
@@ -38,7 +38,18 @@ export const cleanKey = (k: string) => k.replace(/^\s*(?:GEMINI_API_KEY|GOOGLE_A
 
 export const getGeminiKey = () => read(KEY_STORAGE);
 export const setGeminiKey = (k: string) => write(KEY_STORAGE, cleanKey(k));
-export const getGeminiModel = () => read(MODEL_STORAGE) || GEMINI_MODELS[0].id;
+export const getGeminiModel = () => {
+  // quem ficou com o antigo padrão ("mais novo", lento no grátis) passa uma vez para o 2.5 Flash
+  if (read(MODEL_STORAGE) === 'gemini-flash-latest' && !read('rutte:gemini-mig1')) {
+    try {
+      localStorage.setItem('rutte:gemini-mig1', '1');
+      localStorage.setItem(MODEL_STORAGE, GEMINI_MODELS[0].id);
+    } catch {
+      /* sem armazenamento */
+    }
+  }
+  return read(MODEL_STORAGE) || GEMINI_MODELS[0].id;
+};
 export const setGeminiModel = (m: string) => write(MODEL_STORAGE, m);
 /** Aceita o formato clássico ("AIza…") e formatos novos; quem decide de verdade é o teste com o Google. */
 export const looksLikeGeminiKey = (k: string) => /^[A-Za-z0-9._-]{20,}$/.test(cleanKey(k));
@@ -138,7 +149,17 @@ function toGemini(history: ApiMessage[]): GContent[] {
 }
 
 /** Modelos reserva, na ordem em que a Rutte tenta quando o escolhido está ocupado ou sem cota. */
-const FALLBACKS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+const FALLBACKS = ['gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-flash-latest', 'gemini-2.0-flash'];
+
+/**
+ * Desliga (ou reduz) o "raciocínio" dos modelos novos: no plano grátis ele deixa tudo lento
+ * e consome o limite de tamanho da resposta (o texto saía cortado).
+ */
+function thinkingFor(model: string): Record<string, unknown> {
+  if (model.includes('2.0')) return {};
+  if (model.includes('2.5')) return /pro/.test(model) ? { thinkingConfig: { thinkingBudget: 128 } } : { thinkingConfig: { thinkingBudget: 0 } };
+  return { thinkingConfig: { thinkingLevel: 'low' } };
+}
 
 const wait = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -157,7 +178,7 @@ export const lastGeminiModel = () => activeModel || getGeminiModel();
  * Chama o Gemini. Se o modelo estiver sobrecarregado (500/503) tenta de novo com espera;
  * se continuar, ou se faltar cota (429) ou o modelo não existir (404), passa para um modelo reserva.
  */
-async function call(path: string, body: unknown, signal: AbortSignal) {
+async function call(path: string, makeBody: (model: string, thinking: boolean) => unknown, signal: AbortSignal, opts: { anyError?: boolean } = {}) {
   const key = getGeminiKey();
   if (!key) throw new AiError('Configure sua chave do Gemini primeiro.');
   const chosen = getGeminiModel();
@@ -165,14 +186,15 @@ async function call(path: string, body: unknown, signal: AbortSignal) {
   let last: { status: number; detail: string } = { status: 0, detail: '' };
 
   for (const model of order) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let thinking = true;
+    for (let attempt = 0; attempt < 3; attempt++) {
       let res: Response;
       try {
         res = await fetch(`${BASE}/${model}:${path}`, {
           method: 'POST',
           signal,
           headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify(body),
+          body: JSON.stringify(makeBody(model, thinking)),
         });
       } catch (e) {
         if ((e as Error).name === 'AbortError') throw e;
@@ -189,7 +211,13 @@ async function call(path: string, body: unknown, signal: AbortSignal) {
         /* sem corpo */
       }
       last = { status: res.status, detail };
+      // modelo que não aceita a configuração de raciocínio: tenta sem ela
+      if (res.status === 400 && thinking && /thinking/i.test(detail)) {
+        thinking = false;
+        continue;
+      }
       const busy = res.status >= 500;
+      if (opts.anyError && res.status === 400) break;
       // chave inválida ou pedido malformado: não adianta trocar de modelo
       if (!busy && res.status !== 429 && res.status !== 404) break;
       if (busy && attempt === 0) {
@@ -199,7 +227,7 @@ async function call(path: string, body: unknown, signal: AbortSignal) {
       break;
     }
     const { status } = last;
-    if (!(status >= 500 || status === 429 || status === 404)) break;
+    if (!(status >= 500 || status === 429 || status === 404 || (opts.anyError && status === 400))) break;
   }
 
   const { status, detail } = last;
@@ -220,12 +248,12 @@ async function call(path: string, body: unknown, signal: AbortSignal) {
 async function streamRound(contents: GContent[], system: string, signal: AbortSignal, onText: (t: string) => void) {
   const res = await call(
     'streamGenerateContent?alt=sse',
-    {
+    (model, thinking) => ({
       systemInstruction: { parts: [{ text: system }] },
       contents,
       tools: [{ functionDeclarations: declarations() }],
-      generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
-    },
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.7, ...(thinking ? thinkingFor(model) : {}) },
+    }),
     signal,
   );
   const reader = res.body!.getReader();
@@ -255,6 +283,11 @@ async function streamRound(contents: GContent[], system: string, signal: AbortSi
         parts.push(p);
       }
       if (cand?.finishReason === 'SAFETY') blocked = 'SAFETY';
+      if (cand?.finishReason === 'MAX_TOKENS') {
+        const cut = '\n\n(A resposta ficou longa e foi cortada — peça “continue” para eu terminar.)';
+        onText(cut);
+        parts.push({ text: cut });
+      }
     }
   }
   if (blocked && !parts.length) throw new AiError('O Gemini bloqueou essa resposta pelos filtros de segurança. Tente reformular.');
@@ -265,11 +298,14 @@ async function streamRound(contents: GContent[], system: string, signal: AbortSi
 async function webSearch(query: string, signal: AbortSignal): Promise<{ text: string; sources: WebSource[] }> {
   const res = await call(
     'generateContent',
-    {
+    (model, thinking) => ({
       contents: [{ role: 'user', parts: [{ text: `Pesquise na web e resuma em português do Brasil, com dados concretos e atuais (cerca de 150 palavras): ${query}` }] }],
       tools: [{ google_search: {} }],
-    },
+      generationConfig: { maxOutputTokens: 1500, ...(thinking ? thinkingFor(model) : {}) },
+    }),
     signal,
+    // se um modelo não tiver a busca liberada no plano grátis, tenta o próximo
+    { anyError: true },
   );
   const data = await res.json();
   const cand = data?.candidates?.[0];
@@ -322,7 +358,8 @@ export async function chatGemini(history: ApiMessage[], persona: PersonaId, sign
           if ((e as Error).name === 'AbortError') throw e;
           ok = false;
           result = JSON.stringify({ ok: false, erro: e instanceof Error ? e.message : 'falha na pesquisa' });
-          hooks.onTool('Não consegui pesquisar na web agora', false);
+          const why = e instanceof Error ? e.message.replace(/^O Gemini respondeu com erro /, 'erro ') : '';
+          hooks.onTool(`Não consegui pesquisar na web agora${why ? ` (${why.slice(0, 110)})` : ''}`, false);
         }
       } else {
         const r = await runTool(fc.name, fc.args ?? {});
