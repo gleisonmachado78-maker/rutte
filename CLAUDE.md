@@ -150,3 +150,10 @@ Miniaturas continuam em 2D (limite de contextos WebGL). Sem WebGL, cai para o 2D
 Na área `relacionamentos` da Roda da Vida, `LoveTips` pergunta a situação (`relationship: casal | solteiro` no banco).
 Casal: `LIFE_TIPS.relacionamentos`. Solteiro: etapas `SINGLE_STEPS` (começar, onde conhecer, ações, cuidados) com `SINGLE_TIPS`;
 `how` de cada dica vira o “o que fazer” do afazer.
+
+## Rutte IA
+
+`/assistant` (`src/pages/assistant.tsx`, `src/lib/ai.ts`, `src/store/chat.ts` persist `rutte:chat`): conversa com a API da Anthropic direto do
+navegador (header `anthropic-dangerous-direct-browser-access`), streaming SSE e ferramentas `criar_afazer`, `concluir_afazer`,
+`adiar_afazer` (loop de até 5 rodadas). Chave da pessoa em localStorage `rutte:ai-key` (nunca no código), modelo em `rutte:ai-model`.
+`buildContext` resume afazeres, perfil, Roda da Vida, academia, foco e gratidão a cada envio. Personalidades em `PERSONAS`.

@@ -5,6 +5,7 @@ import { ConfirmHost } from '@/components/ui/confirm';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
+import { AssistantPage } from '@/pages/assistant';
 import { CalendarPage } from '@/pages/calendar';
 import { DashboardPage } from '@/pages/dashboard';
 import { FocusPage } from '@/pages/focus';
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="life" element={<LifePage />} />
           <Route path="gym" element={<GymPage />} />
           <Route path="focus" element={<FocusPage />} />
+          <Route path="assistant" element={<AssistantPage />} />
           <Route path="library" element={<LibraryPage />} />
           <Route path="gratitude" element={<GratitudePage />} />
           <Route path="*" element={<NotFound />} />

@@ -17,6 +17,7 @@ import {
   Plus,
   RotateCcw,
   Settings,
+  Sparkles,
   Sun,
   Timer,
   UserRound,
@@ -40,6 +41,7 @@ import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 import { BackupDialog } from './backup-dialog';
 import { MapsKeyDialog } from './maps-key-dialog';
+import { AiKeyDialog } from './ai-key-dialog';
 
 interface NavEntry {
   to: string;
@@ -59,6 +61,7 @@ const NAV: NavEntry[] = [
   { to: '/tasks', label: 'Afazeres', icon: ListTodo, group: 'organizar', primary: true },
   { to: '/calendar', label: 'Calendário', short: 'Agenda', icon: CalendarDays, group: 'organizar', primary: true },
   { to: '/focus', label: 'Foco', icon: Timer, group: 'organizar', primary: true },
+  { to: '/assistant', label: 'Rutte IA', short: 'IA', icon: Sparkles, group: 'organizar' },
   { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life', group: 'evoluir' },
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
   { to: '/gratitude', label: 'Gratidão', icon: HandHeart, group: 'evoluir' },
@@ -178,6 +181,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const reset = useResetData();
   const [backupOpen, setBackupOpen] = useState(false);
   const [mapsOpen, setMapsOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const name = user?.name && user.name !== 'Você' ? user.name : 'Você';
 
   return (
@@ -219,6 +223,9 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           <DropdownMenuItem onSelect={() => setMapsOpen(true)}>
             <MapPin /> Google Maps (endereços)
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setAiOpen(true)}>
+            <Sparkles /> Rutte IA (chave da Claude)
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-brand"
@@ -237,6 +244,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
       </DropdownMenu>
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
       <MapsKeyDialog open={mapsOpen} onOpenChange={setMapsOpen} />
+      <AiKeyDialog open={aiOpen} onOpenChange={setAiOpen} />
     </>
   );
 }
