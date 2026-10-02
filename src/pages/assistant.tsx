@@ -8,7 +8,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { useUser } from '@/hooks/use-data';
-import { AI_MODELS, AiError, chat, getAiKey, getAiModel, getAiWeb, PERSONAS, QUICK_PROMPTS, type ApiMessage, type WebSource } from '@/lib/ai';
+import { AI_MODELS, AiError, chat, getAiModel, getAiWeb, getProvider, hasActiveKey, PERSONAS, QUICK_PROMPTS, type ApiMessage, type WebSource } from '@/lib/ai';
+import { chatGemini, GEMINI_MODELS, getGeminiModel } from '@/lib/ai-gemini';
 import { buildReport, REPORT_TOPICS, type ReportTopic } from '@/lib/reports';
 import { firstName } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
@@ -71,15 +72,17 @@ export function AssistantPage() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
-  const [hasKey, setHasKey] = useState(() => !!getAiKey());
+  const [hasKey, setHasKey] = useState(hasActiveKey);
+  const [provider, setProviderState] = useState(getProvider);
   const [web, setWeb] = useState(getAiWeb);
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const model = AI_MODELS.find((m) => m.id === getAiModel());
+  const model = provider === 'gemini' ? GEMINI_MODELS.find((m) => m.id === getGeminiModel()) : AI_MODELS.find((m) => m.id === getAiModel());
 
   useEffect(() => {
     const sync = () => {
-      setHasKey(!!getAiKey());
+      setHasKey(hasActiveKey());
+      setProviderState(getProvider());
       setWeb(getAiWeb());
     };
     window.addEventListener('rutte:ai-key', sync);
@@ -93,7 +96,7 @@ export function AssistantPage() {
   const send = async (text: string) => {
     const msg = text.trim();
     if (!msg || busy) return;
-    if (!getAiKey()) {
+    if (!hasActiveKey()) {
       setKeyOpen(true);
       return;
     }
@@ -108,7 +111,8 @@ export function AssistantPage() {
     let touched = false;
     let sources: WebSource[] = [];
     try {
-      const added = await chat([...history, userMsg], persona, ctrl.signal, {
+      const run = getProvider() === 'gemini' ? chatGemini : chat;
+      const added = await run([...history, userMsg], persona, ctrl.signal, {
         onText: (t) => {
           acc += t;
           patch(bubble, acc);
@@ -119,10 +123,12 @@ export function AssistantPage() {
           push(report ? { kind: 'report', text: summary, report } : { kind: 'tool', text: summary, ok });
         },
         onRound: () => {
-          // nova rodada de resposta depois das ferramentas: novo balão
+          // nova rodada depois das ferramentas: novo balão. Balão sem texto (só pesquisa) some e as fontes passam adiante
+          if (!acc) remove(bubble);
+          else sources = [];
           acc = '';
-          sources = [];
           bubble = push({ kind: 'assistant', text: '' });
+          if (sources.length) update(bubble, { sources });
         },
         onSearch: (q) => {
           push({ kind: 'search', text: q });
@@ -183,7 +189,7 @@ export function AssistantPage() {
           </DropdownMenu>
           <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)} title="Chave, modelo e pesquisa na web">
             {hasKey && web && <Globe className="text-emerald-600 dark:text-emerald-400" aria-label="Pesquisa na web ligada" />}
-            <KeyRound /> {hasKey ? (model?.label.split(' (')[0] ?? 'Configurar') : 'Configurar'}
+            <KeyRound /> {hasKey ? `${provider === 'gemini' ? 'Gemini' : 'Claude'} · ${model?.label.replace('Gemini ', '').split(' (')[0] ?? ''}` : 'Configurar'}
           </Button>
           {items.length > 0 && (
             <Button
@@ -224,7 +230,7 @@ export function AssistantPage() {
             </div>
             {!hasKey && (
               <Button onClick={() => setKeyOpen(true)}>
-                <KeyRound /> Ativar com minha chave da Claude
+                <KeyRound /> Ativar a Rutte IA (Gemini grátis ou Claude)
               </Button>
             )}
             <div className="flex max-w-xl flex-wrap justify-center gap-1.5">
@@ -330,7 +336,7 @@ export function AssistantPage() {
               send(input);
             }
           }}
-          placeholder={hasKey ? 'Escreva para a Rutte… (ex.: crie um afazer para ligar pro dentista amanhã às 10h)' : 'Configure sua chave da Claude para conversar'}
+          placeholder={hasKey ? 'Escreva para a Rutte… (ex.: crie um afazer para ligar pro dentista amanhã às 10h)' : 'Configure a Rutte IA para conversar (tem opção grátis)'}
           className="max-h-40 min-h-[44px] flex-1 resize-none rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary"
         />
         {busy ? (

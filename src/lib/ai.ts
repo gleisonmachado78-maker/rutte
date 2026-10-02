@@ -47,6 +47,18 @@ export const getAiModel = () => read(MODEL_STORAGE) || AI_MODELS[0].id;
 export const setAiModel = (m: string) => write(MODEL_STORAGE, m);
 export const looksLikeAnthropicKey = (k: string) => /^sk-ant-[A-Za-z0-9_-]{20,}$/.test(k.trim());
 
+const PROVIDER_STORAGE = 'rutte:ai-provider';
+export type AiProvider = 'gemini' | 'claude';
+/** Provedor escolhido (padrão: Claude se já houver chave dela; senão Gemini, que é grátis). */
+export const getProvider = (): AiProvider => {
+  const p = read(PROVIDER_STORAGE);
+  if (p === 'gemini' || p === 'claude') return p;
+  return getAiKey() ? 'claude' : 'gemini';
+};
+export const setProvider = (p: AiProvider) => write(PROVIDER_STORAGE, p);
+/** Há chave para o provedor ativo? (lê direto do armazenamento para não depender do módulo do Gemini) */
+export const hasActiveKey = () => (getProvider() === 'claude' ? !!getAiKey() : !!read('rutte:gemini-key'));
+
 const WEB_STORAGE = 'rutte:ai-web';
 /** Pesquisa na web ligada (padrão: sim). */
 export const getAiWeb = () => read(WEB_STORAGE) !== 'off';
@@ -104,7 +116,7 @@ export async function buildContext(persona: PersonaId): Promise<string> {
     'Você pode criar, concluir e adiar afazeres com as ferramentas. Só use quando a pessoa pedir ou concordar; ao criar vários, confirme o que foi criado. Datas no formato yyyy-MM-dd.',
     'Para relatórios, análises ou números dos dados do app, use gerar_relatorio. O cartão com indicadores e gráficos já aparece para a pessoa: depois dele, comente em poucas linhas o que os números mostram e dê 2 ou 3 recomendações práticas (não repita a tabela).',
     getAiWeb()
-      ? 'Você pode pesquisar na web (web_search) quando precisar de informação atual ou externa: preços, notícias, lugares, estudos, dados de mercado. Prefira fontes confiáveis em português e mencione as fontes; não pesquise o que já está nos dados abaixo.'
+      ? 'Você pode pesquisar na web (ferramenta de pesquisa) quando precisar de informação atual ou externa: preços, notícias, lugares, estudos, dados de mercado. Prefira fontes confiáveis em português e mencione as fontes; não pesquise o que já está nos dados abaixo.'
       : 'A pesquisa na web está desligada: se precisarem de informação atual, avise que dá para ligar em Configurações → Rutte IA.',
     'Não invente dados que não estão abaixo. Para saúde, finanças ou emoções sérias, dê orientações gerais e sugira um profissional quando fizer sentido.',
     '',

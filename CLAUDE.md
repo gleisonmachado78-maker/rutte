@@ -161,3 +161,7 @@ Pesquisa na web: ferramenta oficial `web_search_20250305` (liga/desliga em `rutt
 `web_search_tool_result` e citações vão inteiros dentro da rodada e são removidos ao guardar o histórico (`compact`). Fontes
 aparecem sob a resposta. Relatórios: `src/lib/reports.ts` (`buildReport` por tema/período, calculado no aparelho) +
 `components/assistant/report-card.tsx`; a IA chama `gerar_relatorio`; o menu “Relatórios” gera sem usar a IA.
+Gemini (plano grátis): `src/lib/ai-gemini.ts` (`chatGemini`, mesma interface de `chat`); chave em `rutte:gemini-key`, modelo em
+`rutte:gemini-model`, provedor ativo em `rutte:ai-provider` (`getProvider`/`hasActiveKey`). Converte o histórico (formato Anthropic) para
+`contents` do Gemini; dentro da rodada guarda as partes cruas (assinaturas de pensamento). Pesquisa: função `pesquisar_web` resolvida
+numa chamada separada com `google_search` (fontes de `groundingMetadata`); não entra no histórico como ferramenta.

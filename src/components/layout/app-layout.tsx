@@ -224,7 +224,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
             <MapPin /> Google Maps (endereços)
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setAiOpen(true)}>
-            <Sparkles /> Rutte IA (chave da Claude)
+            <Sparkles /> Rutte IA (Gemini ou Claude)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
