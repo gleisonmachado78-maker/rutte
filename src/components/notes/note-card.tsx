@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Check, ClipboardCopy, Copy, GripVertical, ListChecks, ListTodo, MoreHorizontal, Pin, PinOff, Plus, Trash2, Type, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ClipboardCopy, Copy, GripVertical, ListChecks, ListTodo, Maximize2, MoreHorizontal, Pin, PinOff, Plus, Trash2, Type, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
@@ -15,34 +15,45 @@ function AutoText({ value, onChange, className, ...rest }: { value: string; onCh
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
-  return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} className={cn('block w-full resize-none overflow-hidden bg-transparent outline-none placeholder:text-foreground/35', className)} {...rest} />;
+  return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} className={cn('block w-full resize-none overflow-hidden bg-transparent outline-none placeholder:text-foreground/35 focus-visible:ring-0 focus-visible:ring-offset-0', className)} {...rest} />;
 }
+
+const cursorToEnd = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+  const n = e.currentTarget.value.length;
+  e.currentTarget.setSelectionRange(n, n);
+};
 
 export interface NoteCardProps {
   note: NoteBox;
   notebooks: Notebook[];
+  /** "preview" = caixa compacta na grade; "editor" = caixa ampliada para escrever */
+  mode?: 'preview' | 'editor';
   /** mostra de qual bloco é (na busca) */
   showNotebook?: boolean;
   dragging?: boolean;
-  autoFocus?: boolean;
+  /** caixa recém-criada: começa pelo título */
+  isNew?: boolean;
   onSave: (note: NoteBox) => void;
   onDelete: (note: NoteBox) => void;
   onDuplicate: (note: NoteBox) => void;
   onToTask: (note: NoteBox) => void;
+  onOpen?: (id: string) => void;
+  onClose?: () => void;
   onDragStart?: (e: ReactPointerEvent, id: string) => void;
 }
 
-/** Caixa de nota: edita no lugar e salva sozinha (pequena pausa depois de digitar). */
-export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, onSave, onDelete, onDuplicate, onToTask, onDragStart }: NoteCardProps) {
+/** Caixa de nota. Na grade é uma prévia; ao editar, abre ampliada e salva sozinha. */
+export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, dragging, isNew, onSave, onDelete, onDuplicate, onToTask, onOpen, onClose, onDragStart }: NoteCardProps) {
+  const editor = mode === 'editor';
   const [draft, setDraft] = useState(note);
   const [focusItem, setFocusItem] = useState<string | null>(null);
   const timer = useRef<number>(0);
   const latest = useRef(note);
   const color = NOTE_COLOR_BY_ID[draft.color] ?? NOTE_COLOR_BY_ID.padrao;
 
-  // Mudanças vindas de fora (fixar, mover, reordenar) atualizam o rascunho sem perder o texto em edição
+  // Mudanças vindas de fora atualizam o rascunho sem atropelar o que está sendo digitado
   useEffect(() => {
-    setDraft((d) => ({ ...note, title: d.id === note.id && timer.current ? d.title : note.title, text: d.id === note.id && timer.current ? d.text : note.text, items: d.id === note.id && timer.current ? d.items : note.items }));
+    setDraft((d) => (timer.current && d.id === note.id ? { ...note, title: d.title, text: d.text, items: d.items } : note));
   }, [note]);
 
   const commit = (next: NoteBox, immediate = false) => {
@@ -60,7 +71,7 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
       onSave(latest.current);
     }, 450);
   };
-  // salva o que faltar ao sair da tela
+  // salva o que faltar ao fechar
   useEffect(
     () => () => {
       if (timer.current) {
@@ -74,6 +85,7 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
 
   const setItems = (items: NoteItem[], immediate = false) => commit({ ...draft, items }, immediate);
   const done = draft.items.filter((i) => i.done).length;
+  const open = () => onOpen?.(note.id);
 
   const toggleKind = () => {
     if (draft.kind === 'texto') {
@@ -94,19 +106,48 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
   };
 
   const nb = notebooks.find((n) => n.id === draft.notebookId);
+  const empty = !draft.title.trim() && !draft.text.trim() && !draft.items.some((i) => i.text.trim());
+
+  const checkbox = (it: NoteItem) => (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={it.done}
+      aria-label={it.done ? `Desmarcar: ${it.text}` : `Marcar: ${it.text}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setItems(draft.items.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)), true);
+      }}
+      className={cn('mt-[3px] grid size-[18px] shrink-0 place-items-center rounded-md border-2 transition-colors', it.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-foreground/30 hover:border-primary')}
+    >
+      {it.done && <Check className="size-3" strokeWidth={3} aria-hidden />}
+    </button>
+  );
+
+  const progress = draft.kind === 'lista' && draft.items.length > 0 && (
+    <div className="mb-1.5 flex items-center gap-2">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
+        <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-300" style={{ width: `${(done / draft.items.length) * 100}%` }} />
+      </div>
+      <span className="text-[11px] font-semibold tabular-nums text-foreground/55">
+        {done}/{draft.items.length}
+      </span>
+    </div>
+  );
 
   return (
     <article
-      data-note-id={note.id}
+      data-note-id={editor ? undefined : note.id}
       data-pinned={note.pinned ? '1' : '0'}
       className={cn(
-        'group relative flex flex-col rounded-2xl border p-3 shadow-sm transition-[box-shadow,transform,opacity] duration-150 focus-within:shadow-md',
+        'group relative flex flex-col border transition-[box-shadow,transform,opacity] duration-150',
         color.card,
+        editor ? 'min-h-[55dvh] rounded-2xl p-4 sm:p-6' : 'rounded-2xl p-3 shadow-sm hover:shadow-md',
         dragging && 'z-10 scale-[1.02] opacity-80 shadow-xl ring-2 ring-primary',
       )}
     >
       <header className="flex items-start gap-1">
-        {onDragStart && (
+        {!editor && onDragStart && (
           <button
             type="button"
             onPointerDown={(e) => onDragStart(e, note.id)}
@@ -117,109 +158,152 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
             <GripVertical className="size-4" aria-hidden />
           </button>
         )}
-        <AutoText
-          value={draft.title}
-          onChange={(title) => commit({ ...draft, title })}
-          placeholder="Título"
-          aria-label="Título da nota"
-          autoFocus={autoFocus}
-          className="min-w-0 flex-1 py-1 text-[15px] font-bold leading-snug"
-        />
+        {editor ? (
+          <AutoText
+            value={draft.title}
+            onChange={(title) => commit({ ...draft, title })}
+            placeholder="Título"
+            aria-label="Título da nota"
+            data-autofocus={isNew ? '' : undefined}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
+            className="min-w-0 flex-1 py-1 text-xl font-bold leading-snug sm:text-2xl"
+          />
+        ) : (
+          <button type="button" onClick={open} className="min-w-0 flex-1 py-1 text-left text-[15px] font-bold leading-snug">
+            {draft.title ? <span className="line-clamp-2">{draft.title}</span> : <span className="sr-only">Abrir nota</span>}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => commit({ ...draft, pinned: !draft.pinned }, true)}
-          className={cn('grid size-7 shrink-0 place-items-center rounded-md transition-colors hover:bg-foreground/5', draft.pinned ? 'text-primary dark:text-neon' : 'text-foreground/30 opacity-100 hover:text-foreground/70 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}
+          className={cn('grid size-7 shrink-0 place-items-center rounded-md transition-colors hover:bg-foreground/5', draft.pinned ? 'text-primary dark:text-neon' : 'text-foreground/30 opacity-100 hover:text-foreground/70 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100', editor && 'sm:opacity-100')}
           aria-label={draft.pinned ? 'Desafixar' : 'Fixar no topo'}
           aria-pressed={draft.pinned}
           title={draft.pinned ? 'Desafixar' : 'Fixar no topo'}
         >
           <Pin className={cn('size-4', draft.pinned && 'fill-current')} aria-hidden />
         </button>
+        {editor && onClose && (
+          <button type="button" onClick={onClose} className="grid size-7 shrink-0 place-items-center rounded-md text-foreground/45 hover:bg-foreground/5 hover:text-foreground" aria-label="Fechar e voltar ao tamanho normal">
+            <X className="size-4" aria-hidden />
+          </button>
+        )}
       </header>
 
       {showNotebook && nb && <p className="mb-1 text-[11px] font-medium text-foreground/50">{nb.emoji} {nb.name}</p>}
 
-      {draft.kind === 'texto' ? (
-        <AutoText value={draft.text} onChange={(text) => commit({ ...draft, text })} placeholder="Escreva aqui…" aria-label="Texto da nota" className="min-h-[3rem] py-1 text-sm leading-relaxed" />
+      {/* ------------------------------ corpo ------------------------------ */}
+      {editor ? (
+        draft.kind === 'texto' ? (
+          <AutoText
+            value={draft.text}
+            onChange={(text) => commit({ ...draft, text })}
+            placeholder="Escreva à vontade…"
+            aria-label="Texto da nota"
+            data-autofocus={!isNew ? '' : undefined}
+            onFocus={cursorToEnd}
+            className="min-h-[40dvh] flex-1 py-2 text-base leading-relaxed"
+          />
+        ) : (
+          <div className="flex-1 py-2">
+            {progress}
+            <ul className="space-y-1">
+              {draft.items.map((it, idx) => (
+                <li key={it.id} className="group/item flex items-start gap-2.5">
+                  {checkbox(it)}
+                  <input
+                    value={it.text}
+                    data-autofocus={!isNew && idx === draft.items.length - 1 ? '' : undefined}
+                    ref={(el) => {
+                      if (el && focusItem === it.id) {
+                        el.focus();
+                        setFocusItem(null);
+                      }
+                    }}
+                    onChange={(e) => setItems(draft.items.map((x) => (x.id === it.id ? { ...x, text: e.target.value } : x)))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const n = newItem();
+                        const items = [...draft.items];
+                        items.splice(idx + 1, 0, n);
+                        setItems(items);
+                        setFocusItem(n.id);
+                      } else if (e.key === 'Backspace' && !it.text && draft.items.length > 1) {
+                        e.preventDefault();
+                        setItems(draft.items.filter((x) => x.id !== it.id));
+                        setFocusItem(draft.items[Math.max(0, idx - 1)].id);
+                      }
+                    }}
+                    placeholder="Item da lista"
+                    aria-label={`Item ${idx + 1}`}
+                    className={cn('min-w-0 flex-1 bg-transparent py-0.5 text-base outline-none placeholder:text-foreground/35 focus-visible:ring-0 focus-visible:ring-offset-0', it.done && 'text-foreground/45 line-through')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setItems(draft.items.filter((x) => x.id !== it.id), true)}
+                    className="grid size-7 shrink-0 place-items-center rounded text-foreground/30 hover:text-red-500 sm:opacity-0 sm:group-hover/item:opacity-100"
+                    aria-label={`Remover item: ${it.text}`}
+                  >
+                    <X className="size-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => {
+                const n = newItem();
+                setItems([...draft.items, n]);
+                setFocusItem(n.id);
+              }}
+              className="mt-2 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-foreground/55 hover:text-primary"
+            >
+              <Plus className="size-4" aria-hidden /> Adicionar item
+            </button>
+          </div>
+        )
       ) : (
-        <div className="py-1">
-          {draft.items.length > 0 && (
-            <div className="mb-1.5 flex items-center gap-2">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
-                <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-300" style={{ width: `${(done / draft.items.length) * 100}%` }} />
-              </div>
-              <span className="text-[11px] font-semibold tabular-nums text-foreground/55">
-                {done}/{draft.items.length}
-              </span>
-            </div>
+        /* prévia: clicar abre a caixa ampliada */
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={open}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              open();
+            }
+          }}
+          className="-mx-1 cursor-text rounded-lg px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`Editar nota${draft.title ? `: ${draft.title}` : ''}`}
+        >
+          {empty ? (
+            <p className="text-sm text-foreground/40">Toque para escrever…</p>
+          ) : draft.kind === 'texto' ? (
+            <p className="line-clamp-[10] whitespace-pre-wrap break-words text-sm leading-relaxed">{draft.text}</p>
+          ) : (
+            <>
+              {progress}
+              <ul className="space-y-0.5">
+                {draft.items.slice(0, 7).map((it) => (
+                  <li key={it.id} className="flex items-start gap-2">
+                    {checkbox(it)}
+                    <span className={cn('min-w-0 flex-1 break-words py-0.5 text-sm', it.done && 'text-foreground/45 line-through', !it.text && 'text-foreground/35')}>{it.text || 'Item vazio'}</span>
+                  </li>
+                ))}
+              </ul>
+              {draft.items.length > 7 && <p className="mt-1 text-xs font-medium text-foreground/50">+ {draft.items.length - 7} itens</p>}
+            </>
           )}
-          <ul className="space-y-0.5">
-            {draft.items.map((it, idx) => (
-              <li key={it.id} className="group/item flex items-start gap-2">
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={it.done}
-                  aria-label={it.done ? `Desmarcar: ${it.text}` : `Marcar: ${it.text}`}
-                  onClick={() => setItems(draft.items.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)), true)}
-                  className={cn('mt-[3px] grid size-[18px] shrink-0 place-items-center rounded-md border-2 transition-colors', it.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-foreground/30 hover:border-primary')}
-                >
-                  {it.done && <Check className="size-3" strokeWidth={3} aria-hidden />}
-                </button>
-                <input
-                  value={it.text}
-                  ref={(el) => {
-                    if (el && focusItem === it.id) {
-                      el.focus();
-                      setFocusItem(null);
-                    }
-                  }}
-                  onChange={(e) => setItems(draft.items.map((x) => (x.id === it.id ? { ...x, text: e.target.value } : x)))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const n = newItem();
-                      const items = [...draft.items];
-                      items.splice(idx + 1, 0, n);
-                      setItems(items);
-                      setFocusItem(n.id);
-                    } else if (e.key === 'Backspace' && !it.text && draft.items.length > 1) {
-                      e.preventDefault();
-                      setItems(draft.items.filter((x) => x.id !== it.id));
-                      setFocusItem(draft.items[Math.max(0, idx - 1)].id);
-                    }
-                  }}
-                  placeholder="Item da lista"
-                  aria-label={`Item ${idx + 1}`}
-                  className={cn('min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-foreground/35', it.done && 'text-foreground/45 line-through')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setItems(draft.items.filter((x) => x.id !== it.id), true)}
-                  className="grid size-6 shrink-0 place-items-center rounded text-foreground/30 opacity-100 hover:text-red-500 sm:opacity-0 sm:group-hover/item:opacity-100"
-                  aria-label={`Remover item: ${it.text}`}
-                >
-                  <X className="size-3.5" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => {
-              const n = newItem();
-              setItems([...draft.items, n]);
-              setFocusItem(n.id);
-            }}
-            className="mt-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium text-foreground/55 hover:text-primary"
-          >
-            <Plus className="size-3.5" aria-hidden /> Adicionar item
-          </button>
         </div>
       )}
 
-      <footer className="mt-auto flex items-center gap-1 pt-2">
-        <div role="radiogroup" aria-label="Cor da nota" className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+      {/* ------------------------------ rodapé ------------------------------ */}
+      <footer className={cn('mt-auto flex flex-wrap items-center gap-1 pt-2', editor && 'border-t border-foreground/10 pt-3')}>
+        <div role="radiogroup" aria-label="Cor da nota" className={cn('flex items-center gap-1 transition-opacity', editor ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}>
           {NOTE_COLORS.map((c) => (
             <button
               key={c.id}
@@ -229,13 +313,18 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
               aria-label={`Cor ${c.label}`}
               title={c.label}
               onClick={() => commit({ ...draft, color: c.id }, true)}
-              className={cn('size-4 rounded-full ring-offset-1 ring-offset-transparent transition-transform hover:scale-125', c.dot, draft.color === c.id && 'ring-2 ring-foreground/60')}
+              className={cn('rounded-full transition-transform hover:scale-125', editor ? 'size-5' : 'size-4', c.dot, draft.color === c.id && 'ring-2 ring-foreground/60')}
             />
           ))}
         </div>
         <span className="ml-auto text-[10px] tabular-nums text-foreground/40" title={`Editada em ${new Date(draft.updatedAt).toLocaleString('pt-BR')}`}>
-          {new Date(draft.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+          {editor ? `Editada ${new Date(draft.updatedAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : new Date(draft.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
         </span>
+        {!editor && (
+          <button type="button" onClick={open} className="grid size-7 place-items-center rounded-md text-foreground/40 hover:bg-foreground/5 hover:text-foreground" aria-label="Abrir em tamanho grande" title="Abrir em tamanho grande">
+            <Maximize2 className="size-4" aria-hidden />
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleKind}
@@ -251,7 +340,7 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
               <MoreHorizontal className="size-4" aria-hidden />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="z-[80] w-56">
             <DropdownMenuItem onSelect={() => commit({ ...draft, pinned: !draft.pinned }, true)}>
               {draft.pinned ? <PinOff /> : <Pin />} {draft.pinned ? 'Desafixar' : 'Fixar no topo'}
             </DropdownMenuItem>
@@ -283,6 +372,11 @@ export function NoteCard({ note, notebooks, showNotebook, dragging, autoFocus, o
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {editor && onClose && (
+          <button type="button" onClick={onClose} className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:brightness-110">
+            <Check className="size-4" aria-hidden /> Concluir
+          </button>
+        )}
       </footer>
     </article>
   );

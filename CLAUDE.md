@@ -174,3 +174,5 @@ guarda só as 6 últimas imagens grandes.
 `/notes` (`src/pages/notes.tsx`, `components/notes/note-card.tsx`, `src/lib/notes.ts`): blocos (`notebooks`) com caixas (`notes`) no banco —
 texto ou lista marcável, 8 cores, fixar, duplicar, mover de bloco, virar afazer, excluir com desfazer. Salva sozinho (debounce 450 ms).
 Arrastar pela alça usa pointer events (mouse e toque; só troca dentro do mesmo grupo fixadas/outras). Busca em todos os blocos.
+Na grade a caixa é prévia (`mode="preview"`); clicar ou criar abre `mode="editor"` ampliado num Dialog (foco por `data-autofocus`);
+ao fechar volta ao tamanho normal e caixa nova vazia é descartada.

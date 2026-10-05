@@ -1,9 +1,11 @@
 import { Check, ChevronDown, ListChecks, Pencil, Plus, Search, StickyNote, Trash2, Type, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { NoteCard } from '@/components/notes/note-card';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { useCreateTask, useDeleteNote, useDeleteNotebook, useNotebooks, useNotes, useReorderNotes, useSaveNote, useSaveNotebook } from '@/hooks/use-data';
 import { newItem, newNote, NOTEBOOK_EMOJIS, noteToText } from '@/lib/notes';
@@ -23,6 +25,7 @@ export function NotesPage() {
   const delNb = useDeleteNotebook();
   const reorder = useReorderNotes();
   const createTask = useCreateTask();
+  const qc = useQueryClient();
 
   const [active, setActive] = useState<string>(() => {
     try {
@@ -33,7 +36,9 @@ export function NotesPage() {
   });
   const [q, setQ] = useState('');
   const [quick, setQuick] = useState('');
-  const [focusId, setFocusId] = useState<string | null>(null);
+  /** caixa aberta em tamanho grande para editar */
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [newId, setNewId] = useState<string | null>(null);
   const [newNbOpen, setNewNbOpen] = useState(false);
   const [nbName, setNbName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -109,11 +114,33 @@ export function NotesPage() {
     if (!current) return;
     const n = newNote(current.id, kind === 'lista' ? { kind, items: [newItem()] } : { text }, firstOrder());
     saveNote.mutate(n);
-    if (!text) setFocusId(n.id);
     setQ('');
+    if (!text) {
+      // caixa nova já abre grande, pronta para escrever
+      setNewId(n.id);
+      setOpenId(n.id);
+    }
+  };
+
+  /** Fecha a caixa grande; se era nova e ficou vazia, descarta. */
+  const closeEditor = () => {
+    const id = openId;
+    const wasNew = id && id === newId;
+    setOpenId(null);
+    setNewId(null);
+    if (!wasNew) return;
+    // espera o último salvamento da caixa (feito ao fechar) e confere se ficou vazia
+    window.setTimeout(() => {
+      const n = qc.getQueryData<NoteBox[]>(['notes'])?.find((x) => x.id === id);
+      if (n && !n.title.trim() && !n.text.trim() && !n.items.some((i) => i.text.trim())) delNote.mutate(n.id);
+    }, 50);
   };
 
   const removeNote = (n: NoteBox) => {
+    if (openId === n.id) {
+      setOpenId(null);
+      setNewId(null);
+    }
     delNote.mutate(n.id);
     toast('Nota excluída', { description: n.title || noteToText(n).slice(0, 60) || 'Sem título', action: { label: 'Desfazer', onClick: () => saveNote.mutate(n) } });
   };
@@ -159,6 +186,7 @@ export function NotesPage() {
     }
   };
 
+  const openNote = openId ? notes.find((n) => n.id === openId) : undefined;
   const pinned = visible.filter((n) => n.pinned);
   const others = visible.filter((n) => !n.pinned);
   const countOf = (id: string) => notes.filter((n) => n.notebookId === id).length;
@@ -172,7 +200,10 @@ export function NotesPage() {
           notebooks={notebooks}
           showNotebook={!!query}
           dragging={dragId === n.id}
-          autoFocus={focusId === n.id}
+          onOpen={(id) => {
+            setNewId(null);
+            setOpenId(id);
+          }}
           onSave={(x) => saveNote.mutate(x)}
           onDelete={removeNote}
           onDuplicate={duplicate}
@@ -214,7 +245,7 @@ export function NotesPage() {
               <Plus /> Nova caixa <ChevronDown className="opacity-70" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
             <DropdownMenuItem onSelect={() => addBox('texto')}>
               <Type /> Caixa de texto
             </DropdownMenuItem>
@@ -354,6 +385,33 @@ export function NotesPage() {
           {grid(others)}
         </section>
       )}
+      {/* Caixa aberta em tamanho grande */}
+      <Dialog open={!!openNote} onOpenChange={(o) => !o && closeEditor()}>
+        <DialogContent
+          aria-describedby={undefined}
+          onOpenAutoFocus={(e) => {
+            // foca o título (caixa nova) ou o fim do texto (caixa existente)
+            e.preventDefault();
+            window.setTimeout(() => document.querySelector<HTMLElement>('[role=dialog] [data-autofocus]')?.focus(), 60);
+          }}
+          className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border-0 bg-background p-0 shadow-2xl">
+          <DialogTitle className="sr-only">{openNote?.title || 'Editar nota'}</DialogTitle>
+          {openNote && (
+            <NoteCard
+              key={openNote.id}
+              mode="editor"
+              isNew={openNote.id === newId}
+              note={openNote}
+              notebooks={notebooks}
+              onSave={(x) => saveNote.mutate(x)}
+              onDelete={removeNote}
+              onDuplicate={duplicate}
+              onToTask={toTask}
+              onClose={closeEditor}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
