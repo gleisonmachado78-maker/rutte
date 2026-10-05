@@ -2,6 +2,7 @@ import { BookOpen, ChevronRight, CirclePlay, Crown, Headphones, Play, X } from '
 import { useMemo, useState } from 'react';
 import { SpotifyMark } from '@/components/library/podcast-card';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
+import { ratingKey, StarRating } from '@/components/ui/star-rating';
 import { BOOKS } from '@/lib/books';
 import { useMentorPhotos } from '@/lib/mentor-photos';
 import { MENTOR_AREAS, MENTORS, type Mentor, type MentorArea } from '@/lib/mentors';
@@ -78,34 +79,79 @@ function TopBadge() {
   );
 }
 
-/** Cartão compacto do quadro: foto, nome, quem é e um trecho da biografia. */
-function MentorCard({ m, photos, onOpen }: { m: Mentor; photos: Photos; onOpen: () => void }) {
+/** Retrato no formato de capa de livro (como os cartões da aba Livros), com o selo "Top" no canto. */
+function Portrait({ m, photos }: { m: Mentor; photos: Photos }) {
+  const [failed, setFailed] = useState<string[]>([]);
+  const src = [photos[m.id]?.src, POD.get(m.podcasts[0])?.thumb].find((s): s is string => !!s && !failed.includes(s));
+  const area = MENTOR_AREAS.find((a) => a.id === m.areas[0])!;
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group flex w-full flex-col gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    >
-      <span className="flex items-center gap-3">
-        <Avatar m={m} photos={photos} />
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-1.5 font-bold leading-snug">
-            {m.name}
-            {m.top && <TopBadge />}
-          </span>
-          <span className="mt-0.5 block text-xs leading-snug text-foreground/60">{m.role}</span>
-        </span>
-      </span>
-      {m.bio && <span className="line-clamp-3 text-[13px] leading-relaxed text-foreground/75">{m.bio}</span>}
-      <span className="flex items-center justify-between border-t border-border pt-2 text-xs font-medium text-foreground/55">
-        <span className="inline-flex items-center gap-1">
-          <Headphones className="size-3.5" aria-hidden /> {m.podcasts.length === 1 ? '1 podcast' : `${m.podcasts.length} podcasts`}
-        </span>
-        <span className="inline-flex items-center gap-0.5 text-primary opacity-80 transition-opacity group-hover:opacity-100">
-          Ver perfil <ChevronRight className="size-3.5" aria-hidden />
-        </span>
-      </span>
-    </button>
+    <div className="relative">
+      {src ? (
+        <img src={src} alt={`Foto de ${m.name}`} loading="lazy" onError={() => setFailed((f) => [...f, src])} className="aspect-[3/4] w-full rounded-md bg-muted object-cover object-top shadow-md" />
+      ) : (
+        <div className="flex aspect-[3/4] w-full flex-col justify-between rounded-md bg-gradient-to-br from-primary to-navy p-2.5 text-white shadow-md">
+          <span aria-hidden>{area.emoji}</span>
+          <span className="font-brand text-2xl font-bold">{initials(m.name)}</span>
+        </div>
+      )}
+      {m.top && <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-950 shadow">Top</span>}
+    </div>
+  );
+}
+
+/** Cartão no mesmo estilo dos livros: retrato à esquerda; nome, bio, áreas, nota e ações à direita. */
+function MentorCard({ m, photos, onOpen }: { m: Mentor; photos: Photos; onOpen: () => void }) {
+  const first = POD.get(m.podcasts[0]);
+  const photo = photos[m.id];
+  return (
+    <article className="flex gap-3 rounded-xl border border-border bg-card p-3">
+      <button type="button" onClick={onOpen} className="w-[84px] shrink-0 self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:w-24" aria-label={`Ver perfil de ${m.name}`}>
+        <Portrait m={m} photos={photos} />
+      </button>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div>
+          <h4 className="font-semibold leading-snug">{m.name}</h4>
+          <p className="text-xs text-foreground/60">
+            {m.role} · {m.podcasts.length === 1 ? '1 podcast' : `${m.podcasts.length} podcasts`}
+          </p>
+          {m.bio && <p className="mt-1.5 text-sm leading-snug text-foreground/80">{m.bio}</p>}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          {m.top && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300">
+              <Crown className="size-3" aria-hidden /> Mais ouvidos
+            </span>
+          )}
+          {m.areas.map((a) => {
+            const area = MENTOR_AREAS.find((x) => x.id === a)!;
+            return (
+              <span key={a} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium text-foreground/70">
+                <span aria-hidden>{area.emoji}</span> {area.label}
+              </span>
+            );
+          })}
+          {photo && <span className="text-foreground/55">Foto: Wikipédia</span>}
+        </div>
+        <StarRating itemKey={ratingKey('mentor', m.id)} label={m.name} />
+        <div className="mt-auto flex flex-wrap gap-2">
+          {first && (
+            <a
+              href={spotifyWebUrl('show', first.spotifyId)}
+              onClick={(e) => {
+                e.preventDefault();
+                openSpotify('show', first.spotifyId);
+              }}
+              className="inline-flex h-9 w-fit items-center gap-1.5 rounded-lg bg-[#1DB954] px-3 text-sm font-semibold text-black transition-colors hover:bg-[#1ed760]"
+            >
+              <SpotifyMark className="size-4" /> Ouvir no Spotify
+            </a>
+          )}
+          <button type="button" onClick={onOpen} className="inline-flex h-9 w-fit items-center gap-1 rounded-lg border border-border px-3 text-sm font-semibold transition-colors hover:bg-muted">
+            Ver perfil <ChevronRight className="size-4" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -179,7 +225,7 @@ function MentorProfile({ m, photos }: { m: Mentor; photos: Photos }) {
   );
 }
 
-/** Aba "Grandes nomes": quadro (kanban) com uma coluna por área; cada pessoa abre o próprio perfil. */
+/** Aba "Grandes nomes": uma seção por área (como os livros); cada pessoa abre o próprio perfil. */
 export function MentorsTab({ query }: { query: string }) {
   const photos = useMentorPhotos();
   const [area, setArea] = useState<MentorArea | 'ALL'>('ALL');
@@ -243,43 +289,25 @@ export function MentorsTab({ query }: { query: string }) {
 
       {columns.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">Ninguém encontrado com esse filtro.</p>
-      ) : columns.length === 1 ? (
-        <section className="rounded-2xl border border-border bg-muted/40 p-3">
-          <ColumnHeader emoji={columns[0].emoji} label={columns[0].label} count={columns[0].people.length} />
-          <div className="stagger grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {columns[0].people.map((m) => (
-              <MentorCard key={m.id} m={m} photos={photos} onOpen={() => setOpenId(m.id)} />
-            ))}
-          </div>
-        </section>
       ) : (
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0" role="list" aria-label="Quadro por área">
-          {columns.map((c) => (
-            <section key={c.id} role="listitem" className="flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-2xl border border-border bg-muted/40 p-3 sm:w-[300px]">
-              <ColumnHeader emoji={c.emoji} label={c.label} count={c.people.length} />
-              <div className="stagger flex flex-col gap-2.5">
-                {c.people.map((m) => (
-                  <MentorCard key={m.id} m={m} photos={photos} onOpen={() => setOpenId(m.id)} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        columns.map((c) => (
+          <section key={c.id} aria-labelledby={`mt-${c.id}`} className="space-y-2">
+            <h2 id={`mt-${c.id}`} className="flex items-center gap-2 font-bold">
+              <span aria-hidden>{c.emoji}</span> {c.label}
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground/60">{c.people.length}</span>
+            </h2>
+            <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
+              {c.people.map((m) => (
+                <MentorCard key={m.id} m={m} photos={photos} onOpen={() => setOpenId(m.id)} />
+              ))}
+            </div>
+          </section>
+        ))
       )}
 
       <Dialog open={!!opened} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-xl overflow-y-auto p-0">{opened && <MentorProfile m={opened} photos={photos} />}</DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function ColumnHeader({ emoji, label, count }: { emoji: string; label: string; count: number }) {
-  return (
-    <h3 className="mb-3 flex items-center gap-2 px-1 text-sm font-bold">
-      <span aria-hidden>{emoji}</span>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <span className="rounded-full bg-background px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground/60">{count}</span>
-    </h3>
   );
 }

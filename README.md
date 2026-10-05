@@ -54,7 +54,7 @@ src/
 - **Meditação do dia:** um roteiro guiado diferente a cada dia (passo a passo, com tempo e avanço automático) e um vídeo do dia, na página Gratidão. Orações mais profundas organizadas por tema, com oração e reflexão do dia.
 - **Login e nuvem:** com o Supabase configurado, a Rutte abre no login (e-mail/senha, Google opcional) e salva os dados de cada conta na nuvem, sincronizando entre aparelhos. Veja [PUBLICAR.md](PUBLICAR.md) para publicar no Vercel.
 - **Tutorial:** tour guiado na primeira entrada, destacando cada parte do app (dá para rever pelo menu).
-- **Grandes nomes:** 40 empreendedores, investidores, mentores, pensadores e líderes de fé, em quadro por área, com foto, breve biografia, filtro por nome, os podcasts de cada um e seus livros na Biblioteca.
+- **Grandes nomes:** 40 empreendedores, investidores, mentores, pensadores e líderes de fé, organizados por área no estilo dos livros, com foto, breve biografia, filtro por nome, os podcasts de cada um e seus livros na Biblioteca.
 - **Notas:** blocos de notas com várias caixas (texto ou lista), cores, fixar, arrastar para reorganizar, busca e transformar em afazer.
 - **Rutte IA:** conversa com o Gemini (plano grátis do Google AI Studio) ou com a Claude (com a sua chave) que conhece seus afazeres, metas, treinos e Roda da Vida, cria/conclui/adia afazeres, pesquisa na web (com fontes), cria infográficos e imagens, gera relatórios com gráficos dos seus dados, tem 4 personalidades e atalhos como "Resumo da manhã" e "Revisão da noite".
 - **Relacionamento amoroso:** a Roda da Vida pergunta se você tem um par; para quem está solteiro(a), traz um passo a passo (por onde começar, onde conhecer pessoas, ações da semana e cuidados).

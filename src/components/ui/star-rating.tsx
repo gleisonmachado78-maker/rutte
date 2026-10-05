@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 const LABELS = ['', 'Não gostei', 'Mais ou menos', 'Bom', 'Muito bom', 'Excelente'];
 
 /** Chave da avaliação: tipo + id do item ("book:abc", "video:xyz", "prayer:salmo-23"). */
-export type RatingKind = 'book' | 'free' | 'video' | 'prayer' | 'meditation' | 'podcast';
+export type RatingKind = 'book' | 'free' | 'video' | 'prayer' | 'meditation' | 'podcast' | 'mentor';
 export const ratingKey = (kind: RatingKind, id: string) => `${kind}:${id}`;
 
 /** Lê a nota (0 = sem avaliação) de um item. */
