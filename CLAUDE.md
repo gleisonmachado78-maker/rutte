@@ -191,11 +191,15 @@ Publicação: `PUBLICAR.md` e `vercel.json`.
 
 Aba "Grandes nomes" na Biblioteca (`components/library/mentors-tab.tsx`, dados em `src/lib/mentors.ts`): pessoas por área
 (`MENTOR_AREAS`), cada uma com os podcasts dela (ids de `podcasts.ts` — só cite ids que existam lá) e livros/vídeos achados por
-`match` (autor/canal). Filtros por área e por nome; `top` aparece primeiro, na ordem do array.
+`match` (autor/canal) e uma `bio` curta. Layout em quadro (kanban): uma coluna por área principal (`areas[0]`); ao filtrar uma área
+entram todos que atuam nela, em grade. O cartão abre o perfil (Dialog). Filtro por nome; `top` aparece primeiro.
+Fotos (`lib/mentor-photos.ts`): uma consulta à API da Wikipédia pt (`wiki`, `pilicense=free`, ignora desambiguação) + arquivos
+avulsos do Commons (`commons`), cache 30 dias em localStorage; sem foto → capa do podcast. Só ponha `wiki`/`commons` conferidos
+(há homônimos: Leandro Vieira carnavalesco, Paulo Vieira humorista).
 
 ## Microanimações
 
 `src/lib/fx.ts`: `celebrate()` (confete DOM + Web Animations, sai do último toque) e `markFresh/isFresh` (brilho do item recém-criado).
 CSS em `index.css` (camada utilities): `.stagger` (cascata dos filhos), `.strike/.strike-on` (risco animado), check-pop e `scale` ao
-tocar em botões; keyframes `page-in`, `item-in`, `pop-in`, `fresh-glow` no tailwind.config. Tudo respeita `prefers-reduced-motion`.
+tocar em botões; keyframes `page-in`, `item-in`, `pop-in`, `fresh-glow` no tailwind.config. Preferência `useUI.motion` (auto/on/off) vira `html[data-motion]`: "on" ignora `prefers-reduced-motion`, "off" desliga tudo.
 Não usar `.stagger` em listas reordenáveis por arrastar (Notas): reinserir o nó reinicia a animação.
