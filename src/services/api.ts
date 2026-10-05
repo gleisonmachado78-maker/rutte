@@ -3,6 +3,8 @@
  * por um backend real (REST/Supabase) mantenha o mesmo contrato usado pelo React Query.
  */
 import type {
+  NoteBox,
+  Notebook,
   Category,
   Contact,
   Exercise,
@@ -388,6 +390,66 @@ export const api = {
     const db = load();
     if (status) db.relationship = status;
     else delete db.relationship;
+    persist();
+    return delay(undefined);
+  },
+
+  /* -------------------------------- Notas -------------------------------- */
+  async listNotebooks(): Promise<Notebook[]> {
+    const db = load();
+    if (!db.notebooks?.length) {
+      // primeiro acesso: cria um bloco com caixas de exemplo
+      const now = new Date().toISOString();
+      const nb: Notebook = { id: uid('nb'), name: 'Geral', emoji: '🗒️', order: 0, createdAt: now };
+      db.notebooks = [nb];
+      const box = (title: string, data: Partial<NoteBox>, order: number): NoteBox => ({
+        id: uid('nt'), notebookId: nb.id, title, kind: 'texto', text: '', items: [], color: 'padrao', pinned: false, order, createdAt: now, updatedAt: now, ...data,
+      });
+      db.notes = [
+        box('Bem-vindo às Notas ✨', { text: 'Crie quantas caixas quiser: ideias, resumos, rascunhos.\nArraste pela alça ⠿ para reorganizar, mude a cor e fixe as importantes no topo.', color: 'amarelo', pinned: true }, 0),
+        box('Lista de compras', { kind: 'lista', color: 'verde', items: [{ id: uid('it'), text: 'Café', done: false }, { id: uid('it'), text: 'Frutas', done: true }, { id: uid('it'), text: 'Pão integral', done: false }] }, 1),
+        box('Ideias', { text: 'Anote aqui o que vier à cabeça 💡', color: 'azul' }, 2),
+      ];
+      persist();
+    }
+    return delay([...db.notebooks].sort((a, b) => a.order - b.order));
+  },
+  async saveNotebook(nb: Notebook): Promise<Notebook> {
+    const db = load();
+    const list = db.notebooks ?? [];
+    db.notebooks = list.some((n) => n.id === nb.id) ? list.map((n) => (n.id === nb.id ? nb : n)) : [...list, nb];
+    persist();
+    return delay(nb);
+  },
+  async deleteNotebook(id: string): Promise<void> {
+    const db = load();
+    db.notebooks = (db.notebooks ?? []).filter((n) => n.id !== id);
+    db.notes = (db.notes ?? []).filter((n) => n.notebookId !== id);
+    persist();
+    return delay(undefined);
+  },
+  async listNotes(): Promise<NoteBox[]> {
+    return delay([...(load().notes ?? [])].sort((a, b) => a.order - b.order));
+  },
+  /** Cria ou atualiza uma caixa. */
+  async saveNote(note: NoteBox): Promise<NoteBox> {
+    const db = load();
+    const list = db.notes ?? [];
+    db.notes = list.some((n) => n.id === note.id) ? list.map((n) => (n.id === note.id ? note : n)) : [...list, note];
+    persist();
+    return delay(note);
+  },
+  async deleteNote(id: string): Promise<void> {
+    const db = load();
+    db.notes = (db.notes ?? []).filter((n) => n.id !== id);
+    persist();
+    return delay(undefined);
+  },
+  /** Nova ordem das caixas (ids na ordem desejada). */
+  async reorderNotes(ids: string[]): Promise<void> {
+    const db = load();
+    const pos = new Map(ids.map((id, i) => [id, i]));
+    db.notes = (db.notes ?? []).map((n) => (pos.has(n.id) ? { ...n, order: pos.get(n.id)! } : n));
     persist();
     return delay(undefined);
   },

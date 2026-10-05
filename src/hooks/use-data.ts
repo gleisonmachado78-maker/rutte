@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import type { Rating, RelationshipStatus } from '@/services/seed';
+import type { NoteBox, Notebook } from '@/types';
 import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
 import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
@@ -20,6 +21,8 @@ export const qk = {
   gratitude: ['gratitude'] as const,
   ratings: ['ratings'] as const,
   relationship: ['relationship'] as const,
+  notebooks: ['notebooks'] as const,
+  notes: ['notes'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -462,5 +465,79 @@ export function useSetRelationship() {
     onMutate: (s) => qc.setQueryData(qk.relationship, s),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.relationship }),
     onError: errorToast,
+  });
+}
+
+/* -------------------------------------- Notas -------------------------------------- */
+
+export const useNotebooks = () => useQuery({ queryKey: qk.notebooks, queryFn: api.listNotebooks });
+export const useNotes = () => useQuery({ queryKey: qk.notes, queryFn: api.listNotes });
+
+/** Atualização otimista de uma lista no cache (a tela muda na hora). */
+function optimistic<T extends { id: string }>(qc: ReturnType<typeof useQueryClient>, key: readonly string[], change: (list: T[]) => T[]) {
+  const prev = qc.getQueryData<T[]>(key);
+  qc.setQueryData<T[]>(key, (old = []) => change(old));
+  return prev;
+}
+
+export function useSaveNotebook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveNotebook,
+    onMutate: (nb: Notebook) => ({ prev: optimistic<Notebook>(qc, qk.notebooks, (l) => (l.some((n) => n.id === nb.id) ? l.map((n) => (n.id === nb.id ? nb : n)) : [...l, nb])) }),
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qk.notebooks, ctx.prev);
+      errorToast(err);
+    },
+  });
+}
+
+export function useDeleteNotebook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteNotebook,
+    onMutate: (id: string) => {
+      optimistic<Notebook>(qc, qk.notebooks, (l) => l.filter((n) => n.id !== id));
+      optimistic<NoteBox>(qc, qk.notes, (l) => l.filter((n) => n.notebookId !== id));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: qk.notebooks });
+      qc.invalidateQueries({ queryKey: qk.notes });
+    },
+  });
+}
+
+export function useSaveNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveNote,
+    onMutate: (note: NoteBox) => ({ prev: optimistic<NoteBox>(qc, qk.notes, (l) => (l.some((n) => n.id === note.id) ? l.map((n) => (n.id === note.id ? note : n)) : [...l, note])) }),
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qk.notes, ctx.prev);
+      errorToast(err);
+    },
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteNote,
+    onMutate: (id: string) => ({ prev: optimistic<NoteBox>(qc, qk.notes, (l) => l.filter((n) => n.id !== id)) }),
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qk.notes, ctx.prev);
+      errorToast(err);
+    },
+  });
+}
+
+export function useReorderNotes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.reorderNotes,
+    onMutate: (ids: string[]) => {
+      const pos = new Map(ids.map((id, i) => [id, i]));
+      optimistic<NoteBox>(qc, qk.notes, (l) => l.map((n) => (pos.has(n.id) ? { ...n, order: pos.get(n.id)! } : n)).sort((a, b) => a.order - b.order));
+    },
   });
 }

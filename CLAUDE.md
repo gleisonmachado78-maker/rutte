@@ -168,3 +168,9 @@ numa chamada separada com `google_search` (fontes de `groundingMetadata`); não 
 Imagens: ferramenta `criar_imagem` (`src/lib/ai-image.ts`). Infográfico = SVG desenhado pela IA de texto (`geminiText` / Claude),
 sanitizado e mostrado como <img> data URL; foto/ilustração tenta `gemini-2.5-flash-image` e cai para infográfico. O persist do chat
 guarda só as 6 últimas imagens grandes.
+
+## Notas
+
+`/notes` (`src/pages/notes.tsx`, `components/notes/note-card.tsx`, `src/lib/notes.ts`): blocos (`notebooks`) com caixas (`notes`) no banco —
+texto ou lista marcável, 8 cores, fixar, duplicar, mover de bloco, virar afazer, excluir com desfazer. Salva sozinho (debounce 450 ms).
+Arrastar pela alça usa pointer events (mouse e toque; só troca dentro do mesmo grupo fixadas/outras). Busca em todos os blocos.

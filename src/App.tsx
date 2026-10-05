@@ -13,6 +13,7 @@ import { GymPage } from '@/pages/gym';
 import { LibraryPage } from '@/pages/library';
 import { GratitudePage } from '@/pages/gratitude';
 import { LifePage } from '@/pages/life';
+import { NotesPage } from '@/pages/notes';
 import { TasksPage } from '@/pages/tasks';
 import { useUI } from '@/store/ui';
 
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="gym" element={<GymPage />} />
           <Route path="focus" element={<FocusPage />} />
           <Route path="assistant" element={<AssistantPage />} />
+          <Route path="notes" element={<NotesPage />} />
           <Route path="library" element={<LibraryPage />} />
           <Route path="gratitude" element={<GratitudePage />} />
           <Route path="*" element={<NotFound />} />

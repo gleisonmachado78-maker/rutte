@@ -274,3 +274,37 @@ export interface GratitudeEntry {
   future: string;
   createdAt: string;
 }
+
+/* ------------------------------------ Notas ------------------------------------ */
+
+export type NoteColor = 'padrao' | 'vermelho' | 'laranja' | 'amarelo' | 'verde' | 'azul' | 'roxo' | 'rosa';
+
+/** Um bloco de notas (ex.: "Ideias", "Trabalho"), com várias caixas dentro. */
+export interface Notebook {
+  id: string;
+  name: string;
+  emoji: string;
+  order: number;
+  createdAt: string;
+}
+
+export interface NoteItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** Uma caixa dentro do bloco: texto livre ou lista de itens marcáveis. */
+export interface NoteBox {
+  id: string;
+  notebookId: string;
+  title: string;
+  kind: 'texto' | 'lista';
+  text: string;
+  items: NoteItem[];
+  color: NoteColor;
+  pinned: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}

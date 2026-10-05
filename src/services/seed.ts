@@ -1,5 +1,5 @@
 import { addDays, format, subDays } from 'date-fns';
-import type { Category, Contact, FocusSession, GratitudeEntry, GymData, Project, Task, UserProfile, WheelAssessment } from '@/types';
+import type { Category, Contact, FocusSession, GratitudeEntry, GymData, NoteBox, Notebook, Project, Task, UserProfile, WheelAssessment } from '@/types';
 import { createGymSeed } from '@/lib/gym';
 
 export const USER_ID = 'user_1';
@@ -21,6 +21,9 @@ export interface Database {
   bookShelf?: Record<string, 'quero' | 'lendo' | 'lido'>;
   /** diário de gratidão */
   gratitude?: GratitudeEntry[];
+  /** blocos de notas e suas caixas */
+  notebooks?: Notebook[];
+  notes?: NoteBox[];
   /** avaliações do usuário: "book:ID", "video:ID", "prayer:ID"… → nota */
   ratings?: Record<string, Rating>;
   /** situação amorosa (muda as sugestões da área Relacionamento) */
