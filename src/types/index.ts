@@ -232,6 +232,8 @@ export interface UserProfile {
   peak: Peak;
   struggle: Struggle;
   modules: { business: boolean; gym: boolean; life: boolean };
+  /** quando terminou (ou pulou) o tutorial de boas-vindas */
+  tutorialDoneAt?: string;
   createdAt: string;
   updatedAt: string;
 }

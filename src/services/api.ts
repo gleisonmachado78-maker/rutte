@@ -24,18 +24,49 @@ import type {
 } from '@/types';
 import { nextOccurrence, STATUS_LABEL } from '@/lib/task-utils';
 import { uid } from '@/lib/utils';
-import { createSeed, migrate, USER_ID, type Database, type Rating, type RelationshipStatus } from './seed';
+import { createEmpty, createSeed, migrate, USER_ID, type Database, type Rating, type RelationshipStatus } from './seed';
 import { categoriesFor, type StarterTask } from '@/lib/onboarding';
 
-const STORAGE_KEY = 'secretaria:db:v1';
+const BASE_KEY = 'secretaria:db:v1';
 const LATENCY = 120;
 
+/** Chave do armazenamento local: uma por conta (com login) ou a padrão (sem login). */
+let storageKey = BASE_KEY;
 let memory: Database | null = null;
+/** Avisado a cada gravação (a sincronização com a nuvem escuta aqui). */
+let onPersist: ((db: Database) => void) | null = null;
+
+/** Troca o "espaço" de dados local para a conta logada (null = modo sem login). */
+export function setStorageNamespace(userId: string | null) {
+  const key = userId ? `${BASE_KEY}:${userId}` : BASE_KEY;
+  if (key !== storageKey) {
+    storageKey = key;
+    memory = null;
+  }
+}
+export const setPersistListener = (fn: ((db: Database) => void) | null) => {
+  onPersist = fn;
+};
+/** Dados locais da conta atual, sem criar nada (null = nunca usou neste aparelho). */
+export function readLocalDb(): Database | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    return raw ? migrate(JSON.parse(raw) as Database) : null;
+  } catch {
+    return null;
+  }
+}
+/** Substitui os dados locais (ex.: os que vieram da nuvem), sem disparar nova sincronização. */
+export function replaceLocalDb(db: Database) {
+  memory = migrate(db);
+  persist(false);
+}
+export const currentDb = (): Database => load();
 
 function load(): Database {
   if (memory) return memory;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw) as Database;
       memory = migrate(parsed);
@@ -45,14 +76,16 @@ function load(): Database {
   } catch {
     /* localStorage indisponível ou corrompido: recomeça do seed */
   }
-  memory = createSeed();
+  // Primeiro uso: começa vazio (sem afazeres de exemplo)
+  memory = createEmpty();
   persist();
   return memory;
 }
 
-function persist() {
+function persist(notify = true) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
+    localStorage.setItem(storageKey, JSON.stringify(memory));
+    if (notify && memory) onPersist?.(memory);
   } catch (err) {
     throw new Error(
       err instanceof DOMException && err.name === 'QuotaExceededError'
@@ -402,14 +435,7 @@ export const api = {
       const now = new Date().toISOString();
       const nb: Notebook = { id: uid('nb'), name: 'Geral', emoji: '🗒️', order: 0, createdAt: now };
       db.notebooks = [nb];
-      const box = (title: string, data: Partial<NoteBox>, order: number): NoteBox => ({
-        id: uid('nt'), notebookId: nb.id, title, kind: 'texto', text: '', items: [], color: 'padrao', pinned: false, order, createdAt: now, updatedAt: now, ...data,
-      });
-      db.notes = [
-        box('Bem-vindo às Notas ✨', { text: 'Crie quantas caixas quiser: ideias, resumos, rascunhos.\nArraste pela alça ⠿ para reorganizar, mude a cor e fixe as importantes no topo.', color: 'amarelo', pinned: true }, 0),
-        box('Lista de compras', { kind: 'lista', color: 'verde', items: [{ id: uid('it'), text: 'Café', done: false }, { id: uid('it'), text: 'Frutas', done: true }, { id: uid('it'), text: 'Pão integral', done: false }] }, 1),
-        box('Ideias', { text: 'Anote aqui o que vier à cabeça 💡', color: 'azul' }, 2),
-      ];
+      db.notes = db.notes ?? [];
       persist();
     }
     return delay([...db.notebooks].sort((a, b) => a.order - b.order));
@@ -465,6 +491,20 @@ export const api = {
     if (stars > 0) ratings[key] = { stars: Math.min(5, Math.round(stars)), note: note?.trim() || undefined, at: new Date().toISOString() };
     else delete ratings[key];
     db.ratings = ratings;
+    persist();
+    return delay(undefined);
+  },
+
+  /* ------------------------------ Tutorial ------------------------------ */
+  async markTutorialDone(): Promise<void> {
+    const db = load();
+    if (db.user) db.user = { ...db.user, tutorialDoneAt: new Date().toISOString() };
+    persist();
+    return delay(undefined);
+  },
+  async resetTutorial(): Promise<void> {
+    const db = load();
+    if (db.user) db.user = { ...db.user, tutorialDoneAt: undefined };
     persist();
     return delay(undefined);
   },

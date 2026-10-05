@@ -541,3 +541,13 @@ export function useReorderNotes() {
     },
   });
 }
+
+/* ------------------------------------- Tutorial ------------------------------------- */
+
+export function useTutorialDone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.markTutorialDone,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.user }),
+  });
+}

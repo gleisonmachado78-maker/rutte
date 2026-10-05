@@ -1,6 +1,7 @@
 import { BrowserRouter, HashRouter, Link, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AppLayout } from '@/components/layout/app-layout';
+import { AuthGate } from '@/components/auth/auth-gate';
 import { ConfirmHost } from '@/components/ui/confirm';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -45,6 +46,7 @@ export default function App() {
   }, []);
   return (
     <Router>
+      <AuthGate>
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -60,6 +62,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      </AuthGate>
       <ConfirmHost />
       <Toaster
         theme={theme}

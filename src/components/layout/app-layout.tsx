@@ -5,11 +5,13 @@ import {
   DatabaseBackup,
   Dumbbell,
   Ellipsis,
+  GraduationCap,
   HandHeart,
   Layers,
   LayoutDashboard,
   Library,
   ListTodo,
+  LogOut,
   MapPin,
   Moon,
   PanelLeftClose,
@@ -30,12 +32,14 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
 import { FocusEngine, FocusPill } from '@/components/focus/focus-engine';
 import { Onboarding } from '@/components/onboarding/onboarding';
+import { Tour, welcomeSteps } from '@/components/tour/tour';
+import { useAuth } from '@/components/auth/auth-gate';
 import { TaskDrawer } from '@/components/tasks/task-drawer';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
-import { useModules, useResetData, useScopedTasks, useUser } from '@/hooks/use-data';
+import { useModules, useResetData, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
 import { firstName } from '@/lib/onboarding';
 import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
@@ -127,6 +131,7 @@ function NavLinkItem({ entry, collapsed, onNavigate, badge }: { entry: NavEntry;
       to={to}
       end={end}
       onClick={onNavigate}
+      data-tour={`nav-${to}`}
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
@@ -179,8 +184,10 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const theme = useUI((s) => s.theme);
   const toggleTheme = useUI((s) => s.toggleTheme);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
+  const setTourOpen = useUI((s) => s.setTourOpen);
   const setMobileMenu = useUI((s) => s.setMobileMenu);
   const reset = useResetData();
+  const auth = useAuth();
   const [backupOpen, setBackupOpen] = useState(false);
   const [mapsOpen, setMapsOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -219,6 +226,14 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           >
             <WandSparkles /> Personalizar a Rutte
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              setMobileMenu(false);
+              setTourOpen(true);
+            }}
+          >
+            <GraduationCap /> Ver tutorial de novo
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setBackupOpen(true)}>
             <DatabaseBackup /> Backup dos dados
           </DropdownMenuItem>
@@ -242,6 +257,14 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           >
             <RotateCcw /> Restaurar exemplos
           </DropdownMenuItem>
+          {auth.email && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => auth.signOut()}>
+                <LogOut /> <span className="min-w-0">Sair<span className="block truncate text-xs text-foreground/50">{auth.email}</span></span>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
@@ -269,6 +292,11 @@ export function AppLayout() {
   const primary = nav.filter((n) => n.primary);
   const more = nav.filter((n) => !n.primary);
   const showOnboarding = onboardingOpen || (!userLoading && user === null);
+  const tourOpen = useUI((s) => s.tourOpen);
+  const setTourOpen = useUI((s) => s.setTourOpen);
+  const tutorialDone = useTutorialDone();
+  // Tutorial: na primeira vez (depois da personalização) ou quando pedido no menu
+  const showTour = !showOnboarding && !!user && (tourOpen || !user.tutorialDoneAt);
 
   // Sem o módulo Empresa não há separação: mostra tudo
   useEffect(() => {
@@ -332,7 +360,7 @@ export function AppLayout() {
           </button>
         </div>
 
-        <Button onClick={() => openNewTask()} className={cn('h-10', collapsed && 'px-0')} aria-label="Novo afazer" title="Novo afazer (N)">
+        <Button onClick={() => openNewTask()} className={cn('h-10', collapsed && 'px-0')} aria-label="Novo afazer" title="Novo afazer (N)" data-tour="new-task">
           <Plus className="!size-[18px]" /> {!collapsed && 'Novo afazer'}
         </Button>
 
@@ -341,7 +369,9 @@ export function AppLayout() {
         <NavGroups collapsed={collapsed} />
 
         <div className="mt-auto border-t border-white/10 pt-3">
-          <AccountMenu collapsed={collapsed} />
+          <div data-tour="account">
+            <AccountMenu collapsed={collapsed} />
+          </div>
         </div>
       </aside>
 
@@ -381,6 +411,7 @@ export function AppLayout() {
             to={to}
             end={end}
             aria-label={label}
+            data-tour={`nav-${to}`}
             className={({ isActive }) => cn('flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors', isActive ? 'text-white' : 'text-white/45')}
           >
             {({ isActive }) => (
@@ -395,6 +426,7 @@ export function AppLayout() {
         <button
           type="button"
           onClick={() => setMobileMenu(true)}
+          data-tour="more"
           className={cn('flex h-[60px] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors', moreActive ? 'text-white' : 'text-white/45')}
           aria-label="Mais opções"
         >
@@ -409,6 +441,7 @@ export function AppLayout() {
         <button
           type="button"
           onClick={() => openNewTask()}
+          data-tour="new-task"
           className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-12 items-center gap-1.5 rounded-full bg-primary pl-3.5 pr-4 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:brightness-110 active:scale-95 md:hidden"
           aria-label="Novo afazer"
         >
@@ -421,6 +454,16 @@ export function AppLayout() {
       <FocusEngine />
       <FocusPill />
       {showOnboarding && <Onboarding existing={user ?? null} onClose={() => setOnboardingOpen(false)} />}
+      {showTour && (
+        <Tour
+          steps={welcomeSteps(user?.name && user.name !== 'Você' ? user.name.split(' ')[0] : '')}
+          onFinish={(completed) => {
+            setTourOpen(false);
+            if (!user?.tutorialDoneAt) tutorialDone.mutate();
+            if (completed) openNewTask();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, ChartPie, Dumbbell, Building, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
 import { Button } from '@/components/ui/button';
 import { useCompleteOnboarding } from '@/hooks/use-data';
@@ -10,13 +10,10 @@ import {
   MAX_GOALS,
   PEAKS,
   SITUATIONS,
-  starterTasks,
   STRUGGLES,
   suggestedModules,
 } from '@/lib/onboarding';
-import { recurrenceLabel } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import { api } from '@/services/api';
 import type { GoalId, Peak, Situation, Struggle, UserProfile } from '@/types';
 
 const toggle = <T,>(xs: T[], v: T) => (xs.includes(v) ? xs.filter((x) => x !== v) : [...xs, v]);
@@ -69,7 +66,7 @@ function Choice({
   );
 }
 
-const STEPS = ['Você', 'Momento', 'Objetivos', 'Rotina', 'Seu app', 'Plano'] as const;
+const STEPS = ['Você', 'Momento', 'Objetivos', 'Rotina', 'Seu app'] as const;
 
 /**
  * Primeira conversa com a Rutte: poucas perguntas que adaptam o app a cada pessoa
@@ -85,19 +82,12 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
   const [struggle, setStruggle] = useState<Struggle>(existing?.struggle ?? 'procrastinacao');
   const [modules, setModules] = useState<UserProfile['modules']>(existing?.modules ?? { business: false, gym: false, life: true });
   const [touchedModules, setTouchedModules] = useState(!!existing);
-  const pristine = useMemo(() => api.isPristine(), []);
-  const [mode, setMode] = useState<'fresh' | 'keep' | 'examples'>(existing || !pristine ? 'keep' : 'fresh');
 
   // Sugere os módulos pelas respostas até a pessoa mexer neles
   useEffect(() => {
     if (!touchedModules) setModules(suggestedModules(situations, goals));
   }, [situations, goals, touchedModules]);
 
-  const starter = useMemo(() => starterTasks(goals, modules), [goals, modules]);
-  const [picked, setPicked] = useState<string[]>([]);
-  useEffect(() => {
-    setPicked(existing ? [] : starter.map((s) => s.key));
-  }, [starter, existing]);
 
   const nick = firstName(name);
   const canNext = [name.trim().length > 0, situations.length > 0, goals.length > 0, true, true, true][step];
@@ -107,11 +97,10 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
     `Prazer, ${nick}! Me conta: como está a sua vida hoje? Pode marcar mais de uma opção.`,
     `Ótimo. E o que você quer conquistar nos próximos 3 meses? Escolha até ${MAX_GOALS} objetivos — é neles que eu vou focar.`,
     'Agora me ajuda a te ajudar: quando você rende mais e o que mais atrapalha a sua rotina?',
-    `Com base no que você falou, separei estas partes do app para você, ${nick}. Pode ligar ou desligar.`,
-    `Pronto! Preparei um plano inicial para os seus objetivos. Escolha o que quer começar a fazer${existing ? '' : ' hoje'}.`,
+    `Com base no que você falou, separei estas partes do app para você, ${nick}. Pode ligar ou desligar. Depois eu te mostro o app num tour rapidinho.`,
   ][step];
 
-  const finish = (skip = false) => {
+  const finish = () => {
     const now = new Date().toISOString();
     const profile: UserProfile = {
       name: name.trim() || 'Você',
@@ -126,8 +115,9 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
     complete.mutate(
       {
         profile,
-        mode: skip ? 'keep' : mode,
-        starter: skip ? [] : starter.filter((s) => picked.includes(s.key)),
+        mode: 'keep',
+        // a lista de afazeres começa vazia: nada é criado automaticamente
+        starter: [],
         time: PEAKS[peak].time,
         gymGoal: gymGoalFor(goals),
       },
@@ -277,37 +267,6 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
             </div>
           )}
 
-          {step === 5 && (
-            <div className="space-y-5">
-              {starter.length > 0 ? (
-                <div className="grid gap-2" role="group" aria-label="Afazeres iniciais">
-                  {starter.map((s) => (
-                    <Choice
-                      key={s.key}
-                      multi
-                      active={picked.includes(s.key)}
-                      onClick={() => setPicked((x) => toggle(x, s.key))}
-                      title={s.title}
-                      desc={[GOALS[s.goal].label, recurrenceLabel(s.recurrence), `às ${PEAKS[peak].time}`, s.scope === 'BUSINESS' ? 'Empresa' : null].filter(Boolean).join(' · ')}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-white/60">Nenhum afazer sugerido para esses objetivos.</p>
-              )}
-
-              <fieldset className="space-y-2">
-                <legend className="mb-2 font-semibold">E os dados do app?</legend>
-                <div className="grid gap-2" role="radiogroup">
-                  {(!pristine || existing) && (
-                    <Choice active={mode === 'keep'} onClick={() => setMode('keep')} title="Manter o que já tenho" desc="Só adiciona o plano e as categorias novas" />
-                  )}
-                  <Choice active={mode === 'fresh'} onClick={() => setMode('fresh')} title="Começar do zero" desc={pristine ? 'Só com o seu plano — recomendado' : 'Apaga os dados atuais deste aparelho'} />
-                  <Choice active={mode === 'examples'} onClick={() => setMode('examples')} title="Ver com dados de exemplo" desc="Para explorar o app antes de usar de verdade" />
-                </div>
-              </fieldset>
-            </div>
-          )}
         </div>
 
         {/* Navegação */}
@@ -321,7 +280,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
               Cancelar
             </Button>
           ) : (
-            <Button variant="ghost" className="text-white/60 hover:bg-white/10" onClick={() => finish(true)} disabled={complete.isPending}>
+            <Button variant="ghost" className="text-white/60 hover:bg-white/10" onClick={() => finish()} disabled={complete.isPending}>
               Pular por agora
             </Button>
           )}

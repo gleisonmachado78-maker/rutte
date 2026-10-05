@@ -35,3 +35,4 @@ rutte-celular.zip
 
 # PDFs pessoais nunca vão para o repositório
 *.pdf
+!.env.example

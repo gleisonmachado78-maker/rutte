@@ -254,6 +254,20 @@ function nextSunday() {
 }
 
 /** Migra bancos salvos por versões anteriores sem perder dados do usuário. */
+/** Banco vazio (conta nova): sem afazeres nem dados de exemplo; só as categorias padrão e a biblioteca de exercícios. */
+export function createEmpty(): Database {
+  const gym = createGymSeed();
+  return {
+    version: DB_VERSION,
+    tasks: [],
+    categories: DEFAULT_CATEGORIES,
+    projects: [],
+    contacts: [],
+    wheelAssessments: [],
+    gym: { exercises: gym.exercises, plan: gym.plan.map((d) => ({ ...d, title: '', exercises: [] })), sessions: [], bodyLog: [] },
+  };
+}
+
 export function migrate(db: Database): Database {
   const v = db.version ?? 1;
   if (v >= DB_VERSION) return db;

@@ -176,3 +176,13 @@ texto ou lista marcável, 8 cores, fixar, duplicar, mover de bloco, virar afazer
 Arrastar pela alça usa pointer events (mouse e toque; só troca dentro do mesmo grupo fixadas/outras). Busca em todos os blocos.
 Na grade a caixa é prévia (`mode="preview"`); clicar ou criar abre `mode="editor"` ampliado num Dialog (foco por `data-autofocus`);
 ao fechar volta ao tamanho normal e caixa nova vazia é descartada.
+
+## Login e nuvem (Supabase) + tutorial
+
+`src/lib/supabase.ts` liga só com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (sem elas: modo local sem login, como antes).
+`components/auth/auth-gate.tsx` (AuthGate dentro do Router): login/criar conta/esqueci a senha/Google opcional → `startSync(uid)`.
+`services/sync.ts`: o banco inteiro da conta é um JSON em `rutte_data` (RLS por `auth.uid()`, SQL em `supabase/schema.sql`); o app
+segue usando o armazenamento local por conta (`setStorageNamespace`) e cada `persist()` agenda um upsert (1,2 s); offline marca
+"dirty" e envia ao voltar. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
+Tutorial: `components/tour/tour.tsx` (`welcomeSteps`, alvos `data-tour`), aparece até `user.tutorialDoneAt`; menu “Ver tutorial de novo”.
+Publicação: `PUBLICAR.md` e `vercel.json`.
