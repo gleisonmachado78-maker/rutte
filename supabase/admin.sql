@@ -79,3 +79,18 @@ grant execute on function public.admin_delete_user(uuid) to authenticated;
 -- 7) Sua conta (criada antes de desligar a confirmação) passa a valer sem confirmar o e-mail -----------------
 update auth.users set email_confirmed_at = now()
  where lower(email) = 'gleisonmachado78@gmail.com' and email_confirmed_at is null;
+
+-- 8) Administrador define uma nova senha para qualquer conta (e já deixa o e-mail confirmado) -----------------
+create or replace function public.admin_set_password(p_id uuid, p_password text) returns void
+language plpgsql security definer set search_path = public, auth, extensions as $$
+begin
+  if not public.is_admin() then raise exception 'apenas administradores'; end if;
+  if length(coalesce(p_password, '')) < 6 then raise exception 'a senha precisa ter pelo menos 6 caracteres'; end if;
+  update auth.users
+     set encrypted_password = extensions.crypt(p_password, extensions.gen_salt('bf')),
+         email_confirmed_at = coalesce(email_confirmed_at, now()),
+         updated_at = now()
+   where id = p_id;
+end $$;
+revoke all on function public.admin_set_password(uuid, text) from public, anon;
+grant execute on function public.admin_set_password(uuid, text) to authenticated;

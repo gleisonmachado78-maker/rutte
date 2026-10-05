@@ -3,7 +3,8 @@
  * Cada pessoa só lê o próprio perfil; administradores leem e alteram todos e podem apagar contas.
  * Os dados de uso (afazeres, notas…) não passam por aqui — ficam no aparelho de cada um.
  */
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { authErrorPt, supabase } from '@/lib/supabase';
 
 export interface Profile {
   id: string;
@@ -46,4 +47,26 @@ export async function deleteAccount(id: string): Promise<void> {
   if (!supabase) throw new Error('Sem conexão com o servidor.');
   const { error } = await supabase.rpc('admin_delete_user', { p_id: id });
   if (error) throw new Error(error.message);
+}
+
+export async function setPassword(id: string, password: string): Promise<void> {
+  if (!supabase) throw new Error('Sem conexão com o servidor.');
+  const { error } = await supabase.rpc('admin_set_password', { p_id: id, p_password: password });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Administrador cria uma conta (e-mail + senha). Usa um cliente separado e sem sessão salva, para não trocar o login
+ * do administrador pelo da conta nova. Com a confirmação por e-mail desligada, a conta já pode entrar.
+ */
+export async function createAccount(email: string, password: string, name: string): Promise<void> {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+  if (!url || !anon) throw new Error('Login não configurado.');
+  const temp = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'rutte:auth:admin-create' } });
+  const { data, error } = await temp.auth.signUp({ email: email.trim(), password });
+  if (error) throw new Error(authErrorPt(error.message));
+  // signUp de um e-mail que já existe volta sem identidades (o Supabase não revela que existe)
+  if (!data.user || (data.user.identities && data.user.identities.length === 0)) throw new Error('Esse e-mail já tem conta.');
+  if (name.trim()) await updateProfile(data.user.id, { name: name.trim(), name_locked: true });
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Ban, Crown, Loader2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, Users } from 'lucide-react';
+import { Ban, Crown, Eye, EyeOff, KeyRound, Loader2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserPlus, Users, Wand2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ import { askConfirm } from '@/components/ui/confirm';
 import { Input, Label, Select, Textarea } from '@/components/ui/form-controls';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { deleteAccount, listProfiles, updateProfile, type Profile, type ProfilePatch } from '@/services/profiles';
+import { createAccount, deleteAccount, listProfiles, setPassword, updateProfile, type Profile, type ProfilePatch } from '@/services/profiles';
 
 const KEY = ['admin', 'profiles'];
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -25,6 +25,8 @@ export function AdminPage() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'admin'>('all');
   const [editing, setEditing] = useState<Profile | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [pwFor, setPwFor] = useState<Profile | null>(null);
 
   const { data = [], isLoading, error, refetch, isFetching } = useQuery({ queryKey: KEY, queryFn: listProfiles, enabled: isAdmin });
 
@@ -76,8 +78,11 @@ export function AdminPage() {
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
             <ShieldCheck className="size-7 text-primary" aria-hidden /> Administração
           </h1>
-          <p className="text-sm text-foreground/60">Quem usa a Rutte. Ajuste nomes, bloqueie ou apague contas. Os afazeres e notas de cada pessoa ficam no aparelho dela.</p>
+          <p className="text-sm text-foreground/60">Quem usa a Rutte. Crie contas, troque senhas, ajuste nomes, bloqueie ou apague. Os afazeres e notas de cada pessoa ficam no aparelho dela.</p>
         </div>
+        <Button onClick={() => setCreating(true)}>
+          <UserPlus className="size-4" aria-hidden /> Nova conta
+        </Button>
         <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} aria-hidden /> Atualizar
         </Button>
@@ -142,9 +147,12 @@ export function AdminPage() {
                   </p>
                   {p.note && <p className="mt-1 line-clamp-2 text-xs italic text-foreground/60">“{p.note}”</p>}
                 </div>
-                <div className="flex shrink-0 gap-1.5">
+                <div className="flex shrink-0 flex-wrap gap-1.5">
                   <Button size="sm" variant="outline" onClick={() => setEditing(p)}>
                     <Pencil className="size-3.5" aria-hidden /> Editar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setPwFor(p)} aria-label={`Definir nova senha para ${p.email}`}>
+                    <KeyRound className="size-3.5" aria-hidden /> Senha
                   </Button>
                   {!me && (
                     <>
@@ -168,6 +176,15 @@ export function AdminPage() {
         <Users className="size-3.5" aria-hidden /> A mesma lista aparece no Supabase em Authentication → Users.
       </p>
 
+      <CreateDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreated={() => {
+          setCreating(false);
+          qc.invalidateQueries({ queryKey: KEY });
+        }}
+      />
+      <PasswordDialog profile={pwFor} onClose={() => setPwFor(null)} />
       <EditDialog profile={editing} isSelf={editing?.email === email} onClose={() => setEditing(null)} onSave={(patch) => (editing ? save.mutateAsync({ id: editing.id, patch }).then(() => setEditing(null)) : undefined)} />
     </div>
   );
@@ -225,6 +242,144 @@ function EditForm({ profile, isSelf, onSave }: { profile: Profile; isSelf: boole
       <div className="flex justify-end">
         <Button type="submit" disabled={busy}>
           {busy && <Loader2 className="size-4 animate-spin" aria-hidden />} Salvar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Senha aleatória fácil de ditar: 3 sílabas + 4 números (ex.: "bomale4821"). */
+function randomPassword() {
+  const c = 'bcdfghjlmnprstv';
+  const v = 'aeiou';
+  const pick = (x: string) => x[Math.floor(Math.random() * x.length)];
+  return Array.from({ length: 3 }, () => pick(c) + pick(v)).join('') + String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function PasswordField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  const [show, setShow] = useState(true);
+  return (
+    <div className="flex gap-2">
+      <div className="relative min-w-0 flex-1">
+        <Input id={id} type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} minLength={6} required autoComplete="new-password" className="pr-10 font-mono" placeholder="Mínimo de 6 caracteres" />
+        <button type="button" onClick={() => setShow((x) => !x)} className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded text-foreground/50 hover:text-foreground" aria-label={show ? 'Esconder senha' : 'Mostrar senha'}>
+          {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </button>
+      </div>
+      <Button type="button" variant="outline" onClick={() => onChange(randomPassword())} title="Gerar uma senha">
+        <Wand2 className="size-4" aria-hidden /> Gerar
+      </Button>
+    </div>
+  );
+}
+
+function CreateDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md p-5">{open && <CreateForm onCreated={onCreated} />}</DialogContent>
+    </Dialog>
+  );
+}
+
+function CreateForm({ onCreated }: { onCreated: () => void }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPw] = useState(randomPassword);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await createAccount(email, password, name);
+      toast.success(`Conta criada: ${email.trim()}`, { description: 'Passe o e-mail e a senha para a pessoa. Ela já pode entrar.' });
+      onCreated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <DialogTitle className="text-lg font-bold">Nova conta</DialogTitle>
+        <DialogDescription className="text-sm text-foreground/60">A pessoa entra direto com este e-mail e senha, sem confirmação.</DialogDescription>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="new-name">Nome</Label>
+        <Input id="new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Opcional" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="new-email">E-mail</Label>
+        <Input id="new-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="off" placeholder="pessoa@email.com" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="new-pw">Senha</Label>
+        <PasswordField id="new-pw" value={password} onChange={setPw} />
+        <p className="text-xs text-foreground/50">Anote antes de salvar: depois ela não aparece mais (mas você pode definir outra).</p>
+      </div>
+      {error && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <UserPlus className="size-4" aria-hidden />} Criar conta
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function PasswordDialog({ profile, onClose }: { profile: Profile | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!profile} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md p-5">{profile && <PasswordForm key={profile.id} profile={profile} onDone={onClose} />}</DialogContent>
+    </Dialog>
+  );
+}
+
+function PasswordForm({ profile, onDone }: { profile: Profile; onDone: () => void }) {
+  const [password, setPw] = useState(randomPassword);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await setPassword(profile.id, password);
+      toast.success('Senha alterada', { description: `Passe a nova senha para ${profile.name || profile.email}.` });
+      onDone();
+    } catch (err) {
+      const m = err instanceof Error ? err.message : String(err);
+      setError(m.includes('admin_set_password') ? 'Falta rodar a parte 8 do arquivo supabase/admin.sql no Supabase.' : m);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <DialogTitle className="text-lg font-bold">Nova senha</DialogTitle>
+        <DialogDescription className="text-sm text-foreground/60">{profile.email}</DialogDescription>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="set-pw">Senha nova</Label>
+        <PasswordField id="set-pw" value={password} onChange={setPw} />
+        <p className="text-xs text-foreground/50">A senha antiga deixa de funcionar na hora. Se a pessoa estiver com a Rutte aberta, continua usando até sair.</p>
+      </div>
+      {error && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <KeyRound className="size-4" aria-hidden />} Salvar senha
         </Button>
       </div>
     </form>
