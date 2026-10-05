@@ -8,6 +8,7 @@ import {
   Search,
   Star,
   X,
+  Crown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -16,6 +17,8 @@ import { FreeBookCard } from "@/components/library/free-book-card";
 import { ReadingPlatforms } from "@/components/library/reading-platforms";
 import { PodcastCard } from "@/components/library/podcast-card";
 import { PODCASTS } from "@/lib/podcasts";
+import { MENTORS } from "@/lib/mentors";
+import { MentorsTab } from "@/components/library/mentors-tab";
 import { FREE_BOOKS } from "@/lib/free-books";
 import {
   VideoCard,
@@ -34,7 +37,7 @@ import { focusAreas } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import { LIFE_VIDEOS } from "@/lib/videos";
 
-type Tab = "livros" | "videos" | "podcasts";
+type Tab = "livros" | "videos" | "podcasts" | "nomes";
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -178,7 +181,7 @@ export function LibraryPage() {
       <div
         role="tablist"
         aria-label="Tipo de conteúdo"
-        className="flex w-fit gap-1 rounded-xl border border-border bg-card p-1"
+        className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-card p-1 sm:flex sm:w-fit"
       >
         {(
           [
@@ -200,6 +203,12 @@ export function LibraryPage() {
               icon: Headphones,
               n: PODCASTS.length,
             },
+            {
+              id: "nomes",
+              label: "Grandes nomes",
+              icon: Crown,
+              n: MENTORS.length,
+            },
           ] as const
         )
           .filter((t) => t.id !== "podcasts" || t.n > 0)
@@ -214,7 +223,7 @@ export function LibraryPage() {
                 setTopic("ALL");
               }}
               className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition-colors",
+                "inline-flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 text-sm font-semibold transition-colors sm:gap-1.5 sm:px-4",
                 tab === id
                   ? "bg-primary text-white"
                   : "text-foreground/65 hover:text-foreground",
@@ -249,7 +258,9 @@ export function LibraryPage() {
                 ? "Buscar por título ou autor…"
                 : tab === "podcasts"
                   ? "Buscar podcast…"
-                  : "Buscar vídeo ou canal…"
+                  : tab === "nomes"
+                    ? "Buscar pessoa ou podcast…"
+                    : "Buscar vídeo ou canal…"
             }
             aria-label="Buscar na biblioteca"
             className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-9 text-sm focus:border-primary focus:outline-none [&::-webkit-search-cancel-button]:hidden"
@@ -266,6 +277,7 @@ export function LibraryPage() {
           )}
         </div>
 
+        {tab !== "nomes" && (
         <div
           className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none]"
           role="toolbar"
@@ -296,8 +308,9 @@ export function LibraryPage() {
             </button>
           ))}
         </div>
+        )}
 
-        {tab === "livros" ? (
+        {tab === "nomes" ? null : tab === "livros" ? (
           <div
             className="flex flex-wrap gap-2"
             role="toolbar"
@@ -383,7 +396,9 @@ export function LibraryPage() {
 
       {tab === "livros" && !topRated && !shelfFilter && <ReadingPlatforms />}
 
-      {tab === "livros" ? (
+      {tab === "nomes" ? (
+        <MentorsTab query={q} />
+      ) : tab === "livros" ? (
         books.length + freeBooks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">
             {topRated

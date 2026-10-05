@@ -186,3 +186,9 @@ segue usando o armazenamento local por conta (`setStorageNamespace`) e cada `per
 "dirty" e envia ao voltar. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
 Tutorial: `components/tour/tour.tsx` (`welcomeSteps`, alvos `data-tour`), aparece até `user.tutorialDoneAt`; menu “Ver tutorial de novo”.
 Publicação: `PUBLICAR.md` e `vercel.json`.
+
+## Grandes nomes
+
+Aba "Grandes nomes" na Biblioteca (`components/library/mentors-tab.tsx`, dados em `src/lib/mentors.ts`): pessoas por área
+(`MENTOR_AREAS`), cada uma com os podcasts dela (ids de `podcasts.ts` — só cite ids que existam lá) e livros/vídeos achados por
+`match` (autor/canal). Filtros por área e por nome; `top` aparece primeiro, na ordem do array.
