@@ -2,11 +2,18 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Conexão com o Supabase: login (e-mail e senha) e, se ligado, cópia dos dados na nuvem.
- * Só liga quando as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY existem (no .env local ou no Vercel).
- * Sem elas, a Rutte funciona como antes: sem login e com os dados só no navegador.
+ * Usa VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY quando existem; senão, o projeto padrão da Rutte abaixo (assim o site
+ * no Vercel tem login mesmo sem variáveis cadastradas). A chave "publishable" é feita para ficar no navegador — a proteção
+ * são as regras (RLS) do banco. Nunca coloque aqui a chave secreta (service_role / secret).
+ * O arquivo único para celular (modo "single") não usa o padrão: roda sem login, com os dados só no aparelho.
  */
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const DEFAULT_URL = 'https://rpasribolewljtanpolu.supabase.co';
+const DEFAULT_KEY = 'sb_publishable_Xkou8LFYPQ3l5eqo7E0O-w_UUHYaN-M';
+const single = import.meta.env.MODE === 'single';
+export const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || (single ? undefined : DEFAULT_URL);
+export const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || (single ? undefined : DEFAULT_KEY);
+const url = supabaseUrl;
+const anon = supabaseKey;
 
 export const cloudEnabled = !!(url && anon);
 /**

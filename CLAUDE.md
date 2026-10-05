@@ -179,7 +179,8 @@ ao fechar volta ao tamanho normal e caixa nova vazia é descartada.
 
 ## Login e nuvem (Supabase) + tutorial
 
-`src/lib/supabase.ts` liga só com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (sem elas: modo local sem login, como antes).
+`src/lib/supabase.ts`: usa `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` ou, sem elas, o projeto padrão (URL + chave publishable no
+código, para o Vercel funcionar sem variáveis). O build `--mode single` (arquivo do celular) ignora o padrão e roda sem login.
 `components/auth/auth-gate.tsx` (AuthGate dentro do Router): login/criar conta/esqueci a senha/Google opcional → `startSync(uid)`.
 Por padrão é **só login** (`cloudData` falso): `startSync` escolhe o espaço local da conta e para por aí; os dados ficam
 no aparelho. Com `VITE_SUPABASE_SYNC=1`, `services/sync.ts` guarda o banco inteiro da conta como JSON em `rutte_data` (RLS por `auth.uid()`, SQL em `supabase/schema.sql`); o app

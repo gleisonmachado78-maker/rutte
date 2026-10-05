@@ -4,7 +4,7 @@
  * Os dados de uso (afazeres, notas…) não passam por aqui — ficam no aparelho de cada um.
  */
 import { createClient } from '@supabase/supabase-js';
-import { authErrorPt, supabase } from '@/lib/supabase';
+import { authErrorPt, supabase, supabaseKey, supabaseUrl } from '@/lib/supabase';
 
 export interface Profile {
   id: string;
@@ -60,10 +60,8 @@ export async function setPassword(id: string, password: string): Promise<void> {
  * do administrador pelo da conta nova. Com a confirmação por e-mail desligada, a conta já pode entrar.
  */
 export async function createAccount(email: string, password: string, name: string): Promise<void> {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (!url || !anon) throw new Error('Login não configurado.');
-  const temp = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'rutte:auth:admin-create' } });
+  if (!supabaseUrl || !supabaseKey) throw new Error('Login não configurado.');
+  const temp = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'rutte:auth:admin-create' } });
   const { data, error } = await temp.auth.signUp({ email: email.trim(), password });
   if (error) throw new Error(authErrorPt(error.message));
   // signUp de um e-mail que já existe volta sem identidades (o Supabase não revela que existe)
