@@ -6,14 +6,18 @@ import { toast } from 'sonner';
 import { RutteLogo } from '@/components/brand/rutte';
 import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { api, readLocalDb } from '@/services/api';
+import { touchProfile } from '@/services/profiles';
 import { flushSync, startSync, stopSync } from '@/services/sync';
 
 interface AuthInfo {
   /** e-mail da conta (null no modo sem login) */
   email: string | null;
+  /** administrador (pode ver e ajustar as outras contas) */
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
-const AuthContext = createContext<AuthInfo>({ email: null, signOut: async () => {} });
+const AuthContext = createContext<AuthInfo>({ email: null, isAdmin: false, signOut: async () => {} });
 export const useAuth = () => useContext(AuthContext);
 
 /* ----------------------------------- Visual comum ----------------------------------- */
@@ -254,6 +258,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [syncError, setSyncError] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const uid = session?.user.id ?? null;
 
   useEffect(() => {
@@ -271,14 +277,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (!uid) {
       stopSync();
       setReady(false);
+      setIsAdmin(false);
+      setBlocked(false);
       return;
     }
     let alive = true;
     setReady(false);
     setSyncError('');
     startSync(uid)
-      .then(() => {
+      .then(async () => {
+        // perfil na nuvem: último acesso, papel, bloqueio e nome definido pelo administrador
+        const profile = await touchProfile(readLocalDb()?.user?.name ?? '');
         if (!alive) return;
+        if (profile?.name_locked && profile.name) api.applyAdminName(profile.name);
+        setIsAdmin(profile?.role === 'admin');
+        setBlocked(!!profile?.blocked);
         qc.clear();
         setReady(true);
       })
@@ -288,7 +301,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     };
   }, [uid, attempt, qc]);
 
-  if (!cloudEnabled) return <AuthContext.Provider value={{ email: null, signOut: async () => {} }}>{children}</AuthContext.Provider>;
+  if (!cloudEnabled) return <AuthContext.Provider value={{ email: null, isAdmin: false, signOut: async () => {} }}>{children}</AuthContext.Provider>;
   if (session === undefined) return <Splash text="Abrindo a Rutte…" />;
   if (recovery && session) return <NewPasswordScreen onDone={() => setRecovery(false)} />;
   if (!session) return <LoginScreen />;
@@ -310,11 +323,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
       </Screen>
     );
   if (!ready) return <Splash text="Carregando seus dados…" />;
+  if (blocked)
+    return (
+      <Screen>
+        <Brand subtitle="Acesso bloqueado" />
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <p className="text-sm text-white/80">Esta conta foi bloqueada pelo administrador da Rutte. Se acha que é um engano, fale com quem te convidou.</p>
+          <button type="button" onClick={() => supabase?.auth.signOut()} className="mt-5 inline-flex h-11 items-center rounded-xl bg-primary px-5 font-semibold">
+            Sair
+          </button>
+        </div>
+      </Screen>
+    );
 
   const signOut = async () => {
     await flushSync();
     await supabase?.auth.signOut();
     qc.clear();
   };
-  return <AuthContext.Provider value={{ email: session.user.email ?? null, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ email: session.user.email ?? null, isAdmin, signOut }}>{children}</AuthContext.Provider>;
 }

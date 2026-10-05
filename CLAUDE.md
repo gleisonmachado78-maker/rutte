@@ -185,6 +185,10 @@ Por padrão é **só login** (`cloudData` falso): `startSync` escolhe o espaço 
 no aparelho. Com `VITE_SUPABASE_SYNC=1`, `services/sync.ts` guarda o banco inteiro da conta como JSON em `rutte_data` (RLS por `auth.uid()`, SQL em `supabase/schema.sql`); o app
 segue usando o armazenamento local por conta (`setStorageNamespace`) e cada `persist()` agenda um upsert (1,2 s); offline marca
 "dirty" e envia ao voltar. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
+Administração: `supabase/admin.sql` (tabela `profiles` com RLS, `is_admin()`, gatilho que cria o perfil e faz o e-mail do dono
+admin, RPCs `rutte_touch(p_name)` — último acesso + nome — e `admin_delete_user`). `services/profiles.ts`; AuthGate chama
+`touchProfile` após `startSync`: `blocked` → tela de bloqueio, `name_locked` → `api.applyAdminName`, `role` → `useAuth().isAdmin`.
+Página `pages/admin.tsx` (rota `/admin`, só admin; item no menu da conta). Nunca usar a chave service_role no app.
 Tutorial: `components/tour/tour.tsx` (`welcomeSteps`, alvos `data-tour`), aparece até `user.tutorialDoneAt`; menu “Ver tutorial de novo”.
 Publicação: `PUBLICAR.md` e `vercel.json`.
 

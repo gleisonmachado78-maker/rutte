@@ -510,6 +510,13 @@ export const api = {
   },
 
   /* --------------------------- Personalização --------------------------- */
+  /** Nome definido pelo administrador da conta (vem do perfil na nuvem ao entrar). */
+  applyAdminName(name: string) {
+    const db = load();
+    if (!db.user || !name.trim() || db.user.name === name.trim()) return;
+    db.user = { ...db.user, name: name.trim(), updatedAt: new Date().toISOString() };
+    persist();
+  },
   async getUser(): Promise<UserProfile | null> {
     return delay(load().user ?? null);
   },

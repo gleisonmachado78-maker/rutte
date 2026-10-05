@@ -26,10 +26,11 @@ import {
   UserRound,
   WandSparkles,
   Trash2,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
 import { FocusEngine, FocusPill } from '@/components/focus/focus-engine';
 import { Onboarding } from '@/components/onboarding/onboarding';
@@ -192,6 +193,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const reset = useResetData();
   const wipe = useWipeData();
   const auth = useAuth();
+  const navigate = useNavigate();
   const [backupOpen, setBackupOpen] = useState(false);
   const [mapsOpen, setMapsOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -222,6 +224,16 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           <DropdownMenuItem onSelect={toggleTheme}>
             {theme === 'dark' ? <Sun /> : <Moon />} {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
           </DropdownMenuItem>
+          {auth.isAdmin && (
+            <DropdownMenuItem
+              onSelect={() => {
+                setMobileMenu(false);
+                navigate('/admin');
+              }}
+            >
+              <ShieldCheck /> Administração (contas)
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onSelect={() => {
               setMobileMenu(false);

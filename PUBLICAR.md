@@ -14,7 +14,11 @@ Leva uns 15 minutos. Nada aqui pede cartão de crédito.
    - **Project URL** → vai em `VITE_SUPABASE_URL`
    - a chave **anon public** → vai em `VITE_SUPABASE_ANON_KEY`
    > A chave *anon* é feita para ficar no site (a proteção é a regra do passo 3). **Nunca** use a chave `service_role`.
-5. (Opcional) **Authentication → Email templates**: traduza os e-mails de confirmação e de nova senha para português.
+5. **Área do administrador:** em **SQL Editor → New query**, cole [`supabase/admin.sql`](supabase/admin.sql) e clique em **Run**.
+   Cria a tabela `profiles` e deixa `gleisonmachado78@gmail.com` como administrador (troque o e-mail no arquivo se for outro).
+   O administrador vê o menu da conta → **Administração (contas)**: lista de todos, mudar nome/papel/observação, bloquear e apagar.
+6. **Sem e-mail de confirmação:** **Authentication → Sign In / Providers → Email** → desligue **Confirm email** → **Save**.
+7. (Opcional) **Authentication → Email templates**: traduza os e-mails de confirmação e de nova senha para português.
 
 ## 2. Vercel (site no ar)
 
