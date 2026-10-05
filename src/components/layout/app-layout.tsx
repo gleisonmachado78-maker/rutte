@@ -185,6 +185,8 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const toggleTheme = useUI((s) => s.toggleTheme);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const setTourOpen = useUI((s) => s.setTourOpen);
+  const motion = useUI((s) => s.motion);
+  const setMotion = useUI((s) => s.setMotion);
   const setMobileMenu = useUI((s) => s.setMobileMenu);
   const reset = useResetData();
   const auth = useAuth();
@@ -233,6 +235,14 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
             }}
           >
             <GraduationCap /> Ver tutorial de novo
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              setMotion(motion === 'auto' ? 'on' : motion === 'on' ? 'off' : 'auto');
+            }}
+          >
+            <Sparkles /> Animações: {motion === 'auto' ? 'automático' : motion === 'on' ? 'sempre ligadas' : 'desligadas'}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setBackupOpen(true)}>
             <DatabaseBackup /> Backup dos dados
@@ -306,6 +316,11 @@ export function AppLayout() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  const motion = useUI((s) => s.motion);
+  useEffect(() => {
+    document.documentElement.dataset.motion = motion;
+  }, [motion]);
 
   // Contexto Empresa troca o acento da interface (vermelho → azul de mesmo tom)
   useEffect(() => {

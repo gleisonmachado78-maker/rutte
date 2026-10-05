@@ -51,7 +51,8 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       className={cn(
-        'group relative flex gap-3 rounded-xl border bg-card p-4 transition-all duration-200 hover:-translate-y-px hover:border-foreground/20 hover:shadow-md',
+        'group relative flex gap-3 rounded-xl border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lg',
+        done && 'bg-emerald-500/[0.06]',
         fresh && 'animate-pop-in [animation:pop-in_420ms_cubic-bezier(.2,.9,.3,1.2)_both,fresh-glow_1.4s_ease-out_2]',
         overdue ? 'border-brand/40 border-l-4 border-l-brand-neon shadow-[inset_4px_0_12px_-6px_rgb(255_46_59_/_0.6)]' : 'border-border',
         closed && 'opacity-60',

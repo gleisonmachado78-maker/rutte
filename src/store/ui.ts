@@ -59,6 +59,9 @@ interface UIState {
   /** tutorial aberto pelo menu ("Ver tutorial de novo") */
   tourOpen: boolean;
   setTourOpen: (open: boolean) => void;
+  /** animações: auto (segue o sistema), on (sempre) ou off */
+  motion: 'auto' | 'on' | 'off';
+  setMotion: (m: 'auto' | 'on' | 'off') => void;
   toggleTheme: () => void;
   toggleSidebar: () => void;
   setMobileMenu: (open: boolean) => void;
@@ -90,6 +93,8 @@ export const useUI = create<UIState>()(
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
       tourOpen: false,
       setTourOpen: (tourOpen) => set({ tourOpen }),
+      motion: 'auto',
+      setMotion: (motion) => set({ motion }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setMobileMenu: (open) => set({ mobileMenuOpen: open }),
@@ -111,6 +116,7 @@ export const useUI = create<UIState>()(
       },
       partialize: (s) => ({
         theme: s.theme,
+        motion: s.motion,
         scope: s.scope,
         sidebarCollapsed: s.sidebarCollapsed,
         viewMode: s.viewMode,

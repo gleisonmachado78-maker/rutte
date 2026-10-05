@@ -173,20 +173,11 @@ a {
   color-scheme: dark;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 /* ------------------------------ Microanimações ------------------------------ */
 @layer utilities {
   /* filhos entram em cascata (até 12 com atraso; os demais juntos) */
   .stagger > * {
-    animation: item-in 380ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    animation: item-in 480ms cubic-bezier(0.16, 0.8, 0.25, 1) both;
   }
   .stagger > *:nth-child(2) { animation-delay: 40ms; }
   .stagger > *:nth-child(3) { animation-delay: 80ms; }
@@ -198,7 +189,7 @@ a {
   .stagger > *:nth-child(9) { animation-delay: 310ms; }
   .stagger > *:nth-child(10) { animation-delay: 340ms; }
   .stagger > *:nth-child(11) { animation-delay: 360ms; }
-  .stagger > *:nth-child(n + 12) { animation-delay: 380ms; }
+  .stagger > *:nth-child(n + 12) { animation-delay: 540ms; }
 
   /* risco que "corre" sobre o texto ao concluir */
   .strike {
@@ -225,26 +216,51 @@ button[role='checkbox'][aria-checked='true'] {
   100% { transform: scale(1); }
 }
 @keyframes item-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
   to { opacity: 1; transform: none; }
 }
 
 /* leve "afundar" ao tocar em botões (propriedade scale soma com os transforms existentes) */
 button:not(:disabled):active,
 a[role='button']:active {
-  scale: 0.97;
+  scale: 0.95;
 }
 
+/* aceno do "Bom dia 👋" */
+.wave {
+  display: inline-block;
+  transform-origin: 70% 75%;
+  animation: wave 1.6s ease-in-out 0.4s 2;
+}
+@keyframes wave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(16deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+}
+
+/* sem animações: quando o sistema pede (modo Automático) ou quando a pessoa desliga no app */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion='on']) *,
+  html:not([data-motion='on']) *::before,
+  html:not([data-motion='on']) *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
-  button:not(:disabled):active {
+  html:not([data-motion='on']) button:not(:disabled):active {
     scale: 1;
   }
+}
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+html[data-motion='off'] button:not(:disabled):active {
+  scale: 1;
 }

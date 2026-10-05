@@ -124,7 +124,7 @@ export function DashboardPage() {
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
             {greeting(now)}
-            {nick && `, ${nick}`}! 👋
+            {nick && `, ${nick}`}! <span className="wave">👋</span>
           </h1>
           <p className="relative mt-2 inline-block rounded-2xl rounded-tl-sm bg-muted px-4 py-2 text-sm text-foreground/80">
             <strong className="font-brand text-primary dark:text-neon dark:text-glow">Rutte:</strong>{' '}

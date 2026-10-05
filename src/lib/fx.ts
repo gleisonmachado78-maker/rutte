@@ -3,7 +3,13 @@
  * Tudo é desligado quando o sistema pede "reduzir movimento".
  */
 
-export const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+export const reducedMotion = () => {
+  if (typeof window === 'undefined') return true;
+  const pref = document.documentElement.dataset.motion;
+  if (pref === 'on') return false;
+  if (pref === 'off') return true;
+  return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+};
 
 /* Último toque/clique: o confete sai de onde a pessoa tocou */
 let lastPoint: { x: number; y: number; at: number } | null = null;
@@ -19,7 +25,7 @@ export function celebrate(opts: { x?: number; y?: number; count?: number; spread
   const recent = lastPoint && Date.now() - lastPoint.at < 1500 ? lastPoint : null;
   const x = opts.x ?? recent?.x ?? window.innerWidth / 2;
   const y = opts.y ?? recent?.y ?? window.innerHeight / 2;
-  const count = opts.count ?? 26;
+  const count = opts.count ?? 40;
   const spread = opts.spread ?? 1;
 
   const layer = document.createElement('div');
@@ -30,12 +36,12 @@ export function celebrate(opts: { x?: number; y?: number; count?: number; spread
   let alive = count;
   for (let i = 0; i < count; i++) {
     const p = document.createElement('span');
-    const size = 5 + Math.random() * 6;
+    const size = 6 + Math.random() * 7;
     const round = Math.random() < 0.35;
     p.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${size}px;height:${round ? size : size * 0.45}px;background:${COLORS[i % COLORS.length]};border-radius:${round ? '50%' : '2px'};box-shadow:0 0 6px rgba(224,57,58,.45)`;
     layer.appendChild(p);
     const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.3 * spread;
-    const dist = (60 + Math.random() * 90) * spread;
+    const dist = (80 + Math.random() * 130) * spread;
     const dx = Math.cos(ang) * dist;
     const dy = Math.sin(ang) * dist;
     const rot = (Math.random() - 0.5) * 720;
