@@ -4,7 +4,7 @@
  * (protegida por RLS: cada um só lê e grava a própria linha). O app continua lendo/gravando no
  * armazenamento local (rápido e funciona offline) e cada mudança é enviada à nuvem com uma pequena pausa.
  */
-import { supabase } from '@/lib/supabase';
+import { cloudData, supabase } from '@/lib/supabase';
 import { currentDb, readLocalDb, replaceLocalDb, setPersistListener, setStorageNamespace } from './api';
 import { createEmpty } from './seed';
 
@@ -38,7 +38,7 @@ const setVal = (name: string, v: string) => {
 async function push() {
   window.clearTimeout(timer);
   timer = 0;
-  if (!supabase || !userId) return;
+  if (!supabase || !userId || !cloudData) return;
   if (!navigator.onLine) {
     setState('offline');
     return;
@@ -80,6 +80,13 @@ export async function startSync(uid: string): Promise<void> {
   setStorageNamespace(uid);
   setPersistListener(null);
   const local = readLocalDb();
+
+  // Só login: os dados da conta ficam neste aparelho (cada conta no seu espaço), nada vai para a nuvem.
+  if (!cloudData) {
+    replaceLocalDb(local ?? createEmpty());
+    setState('saved');
+    return;
+  }
 
   const { data, error } = await supabase.from(TABLE).select('data, updated_at').eq('user_id', uid).maybeSingle();
   if (error) {

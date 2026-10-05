@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { RutteLogo } from '@/components/brand/rutte';
 import { cn } from '@/lib/utils';
+import { cloudData } from '@/lib/supabase';
 
 export interface TourStep {
   /** seletor do elemento destacado; sem alvo = cartão no centro */
@@ -163,6 +164,6 @@ export function welcomeSteps(name: string): TourStep[] {
     { target: '[data-tour="nav-/gratitude"]', fallback: more, title: 'Gratidão', text: 'Diário de gratidão, meditação guiada do dia e orações para começar e terminar o dia em paz.' },
     { target: '[data-tour="nav-/library"]', fallback: more, title: 'Biblioteca', text: 'Livros, audiolivros, vídeos e podcasts escolhidos por tema para você crescer.' },
     { target: '[data-tour="account"]', fallback: more, title: 'Sua conta e configurações', text: 'Aqui você muda o tema, personaliza a Rutte, faz backup, configura a IA e sai da conta. Dá para rever este tutorial por aqui também.' },
-    { title: 'Tudo pronto! 🚀', text: 'Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho. Que tal começar criando o seu primeiro afazer?' },
+    { title: 'Tudo pronto! 🚀', text: `${cloudData ? 'Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.' : 'Seus dados ficam guardados neste aparelho, só na sua conta.'} Que tal começar criando o seu primeiro afazer?` },
   ];
 }

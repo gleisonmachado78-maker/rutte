@@ -4,7 +4,7 @@ import { Eye, EyeOff, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-r
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RutteLogo } from '@/components/brand/rutte';
-import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase } from '@/lib/supabase';
+import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { flushSync, startSync, stopSync } from '@/services/sync';
 
@@ -203,7 +203,7 @@ function LoginScreen() {
           </>
         )}
       </div>
-      <p className="mt-4 text-center text-xs text-white/45">Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.</p>
+      <p className="mt-4 text-center text-xs text-white/45">{cloudData ? 'Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.' : 'Seus dados ficam guardados neste aparelho, separados para cada conta.'}</p>
     </Screen>
   );
 }

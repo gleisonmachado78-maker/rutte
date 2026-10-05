@@ -7,9 +7,9 @@ Leva uns 15 minutos. Nada aqui pede cartão de crédito.
 
 1. Entre em <https://supabase.com> → **Start your project** → faça login (pode ser com o GitHub).
 2. **New project**: dê um nome (ex.: `rutte`), crie uma senha do banco (guarde-a) e escolha a região **South America (São Paulo)**.
-3. Quando o projeto terminar de criar, abra **SQL Editor → New query**, cole todo o conteúdo do arquivo
+3. *(Só se for guardar os dados na nuvem — `VITE_SUPABASE_SYNC=1`.)* Abra **SQL Editor → New query**, cole o conteúdo de
    [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Isso cria a tabela `rutte_data` com proteção
-   (cada pessoa só enxerga os próprios dados).
+   (cada pessoa só enxerga os próprios dados). No modo padrão (só login) este passo não é necessário.
 4. Abra **Project Settings → API** (ou **Data API**) e copie:
    - **Project URL** → vai em `VITE_SUPABASE_URL`
    - a chave **anon public** → vai em `VITE_SUPABASE_ANON_KEY`
@@ -27,6 +27,7 @@ Leva uns 15 minutos. Nada aqui pede cartão de crédito.
    | `VITE_SUPABASE_URL` | Project URL do Supabase |
    | `VITE_SUPABASE_ANON_KEY` | chave anon public |
    | `VITE_SUPABASE_GOOGLE` | `0` (ou `1` se fizer o passo 4) |
+   | `VITE_SUPABASE_SYNC` | `0` = dados só no aparelho (padrão) · `1` = também na nuvem |
 4. Clique em **Deploy**. No fim, o Vercel mostra o endereço, algo como `https://rutte-xxxx.vercel.app`.
 
 ## 3. Ligar os dois
@@ -52,7 +53,11 @@ Para o login funcionar em `http://localhost:5173`, adicione também `http://loca
 
 ## Como os dados funcionam
 
-- Cada conta tem os seus dados salvos na nuvem (tabela `rutte_data`) e uma cópia no aparelho, então o app é rápido
-  e continua funcionando sem internet; as mudanças sobem sozinhas quando a conexão volta.
-- O mesmo login no celular e no computador mostra os mesmos dados.
+- **Quem usa:** todo cadastro aparece no Supabase em **Authentication → Users** (e-mail, data do cadastro, último acesso);
+  dali dá para bloquear ou apagar uma conta.
+- **Padrão (`VITE_SUPABASE_SYNC=0`):** o Supabase cuida só do login. Os dados de cada conta ficam **no aparelho**, cada
+  e-mail no seu espaço (dois cadastros no mesmo celular não se misturam). Trocar de aparelho começa do zero — use
+  o Backup do menu para levar os dados.
+- **Com `VITE_SUPABASE_SYNC=1`:** os dados também vão para a nuvem (tabela `rutte_data`) e o mesmo login mostra os mesmos
+  dados no celular e no computador; sem internet, as mudanças sobem quando a conexão volta.
 - Chaves de IA (Gemini/Claude), chave do Google Maps e PDFs anexados ficam **só no aparelho** (não vão para a nuvem).

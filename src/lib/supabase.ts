@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Conexão com o Supabase (login e dados na nuvem).
+ * Conexão com o Supabase: login (e-mail e senha) e, se ligado, cópia dos dados na nuvem.
  * Só liga quando as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY existem (no .env local ou no Vercel).
  * Sem elas, a Rutte funciona como antes: sem login e com os dados só no navegador.
  */
@@ -9,6 +9,11 @@ const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 export const cloudEnabled = !!(url && anon);
+/**
+ * Dados na nuvem: só com VITE_SUPABASE_SYNC=1. Por padrão o Supabase cuida apenas do login (a lista de quem
+ * se cadastrou fica no painel) e os dados de cada conta ficam só no aparelho, separados por conta.
+ */
+export const cloudData = cloudEnabled && import.meta.env.VITE_SUPABASE_SYNC === '1';
 /** Botão "Continuar com Google" (só se o provedor Google estiver ligado no Supabase). */
 export const googleEnabled = cloudEnabled && import.meta.env.VITE_SUPABASE_GOOGLE === '1';
 
