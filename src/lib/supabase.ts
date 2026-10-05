@@ -40,6 +40,8 @@ export function authErrorPt(message: string) {
   if (m.includes('password should be at least') || m.includes('weak password')) return 'A senha precisa ter pelo menos 6 caracteres (use letras e números).';
   if (m.includes('unable to validate email') || m.includes('invalid email') || m.includes('email address') && m.includes('invalid')) return 'Esse e-mail não parece válido.';
   if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) return 'Muitas tentativas seguidas. Espere um minuto e tente de novo.';
+  if (m.includes('signups') && m.includes('disabled')) return 'Os cadastros estão fechados no momento. Fale com o administrador da Rutte.';
+  if (m.includes('logins') && m.includes('disabled')) return 'O login por e-mail está desligado no momento. Fale com o administrador da Rutte.';
   if (m.includes('failed to fetch') || m.includes('network')) return 'Sem conexão com o servidor. Verifique a internet.';
   if (m.includes('same as the old') || m.includes('different from the old')) return 'A nova senha precisa ser diferente da anterior.';
   return message;
