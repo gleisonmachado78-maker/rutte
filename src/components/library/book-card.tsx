@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { ratingKey, StarRating } from '@/components/ui/star-rating';
 import { MyPdf } from '@/components/library/my-pdf';
 import { AudiobookLinks } from '@/components/library/audiobook-links';
-import { HIGHLIGHT_CARD } from '@/components/library/highlight';
 
 /** Capa do Google Livros; sem internet (ou se a imagem falhar), mostra uma capa tipográfica. */
 export function BookCover({ book, className }: { book: Book; className?: string }) {
@@ -70,7 +69,7 @@ export function BookCard({ book, status }: { book: Book; status?: ShelfStatus })
   };
 
   return (
-    <article className={cn(HIGHLIGHT_CARD, 'flex gap-3 p-3 pl-4')}>
+    <article className="flex gap-3 rounded-xl border border-border bg-card p-3">
       <div className="w-[84px] shrink-0 sm:w-24">
         <BookCover book={book} />
       </div>

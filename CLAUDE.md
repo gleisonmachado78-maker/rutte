@@ -196,8 +196,7 @@ Aba "Grandes nomes" na Biblioteca (`components/library/mentors-tab.tsx`, dados e
 Fotos (`lib/mentor-photos.ts`): uma consulta à API da Wikipédia pt (`wiki`, `pilicense=free`, ignora desambiguação) + arquivos
 avulsos do Commons (`commons`), cache 30 dias em localStorage; sem foto livre → `photo` (avatar do canal oficial no YouTube, nome/inscritos
 conferidos; descartar avatares padrão de letra); sem nada → capa do podcast. `<img referrerPolicy="no-referrer">` (yt3 bloqueia alguns).
-Destaque dos cartões: `components/library/highlight.ts` (`HIGHLIGHT_CARD` + `HIGHLIGHT_STRONG`), usado em todas as abas da
-Biblioteca (livros, grátis, vídeos via `VideoCard highlight`, podcasts, grandes nomes, plataformas). Faixa é `::before` → use `pl-4`. Só ponha `wiki`/`commons` conferidos
+Cartões com destaque na cor primária (degradê + faixa à esquerda; neon só no escuro). Só ponha `wiki`/`commons` conferidos
 (há homônimos: Leandro Vieira carnavalesco, Paulo Vieira humorista).
 
 ## Microanimações

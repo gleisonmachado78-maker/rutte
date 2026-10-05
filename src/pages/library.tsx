@@ -554,7 +554,7 @@ export function LibraryPage() {
                       role="listitem"
                       className="w-[78vw] max-w-[280px] shrink-0 snap-start sm:w-[260px]"
                     >
-                      <VideoCard video={v} onPlay={player.play} highlight />
+                      <VideoCard video={v} onPlay={player.play} />
                     </div>
                   ))}
               </div>

@@ -1,8 +1,6 @@
 import { Award, Download, ExternalLink, Gift, Scale, UserPlus, Wrench } from 'lucide-react';
 import { TOPIC_BY_ID, type FreeBook } from '@/lib/library';
 import { ratingKey, StarRating } from '@/components/ui/star-rating';
-import { HIGHLIGHT_CARD, HIGHLIGHT_STRONG } from '@/components/library/highlight';
-import { cn } from '@/lib/utils';
 
 /** Capa tipográfica para livros gratuitos (sem capa no Google Livros). */
 function FreeCover({ book }: { book: FreeBook }) {
@@ -24,7 +22,7 @@ function FreeCover({ book }: { book: FreeBook }) {
 
 export function FreeBookCard({ book }: { book: FreeBook }) {
   return (
-    <article className={cn(HIGHLIGHT_CARD, 'flex gap-3 p-3 pl-4', book.category === 'classico' && HIGHLIGHT_STRONG)}>
+    <article className="flex gap-3 rounded-xl border border-border bg-card p-3">
       <div className="w-[84px] shrink-0 sm:w-24">
         <FreeCover book={book} />
       </div>

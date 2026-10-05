@@ -5,9 +5,8 @@ import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
 import { cn } from '@/lib/utils';
 import { ratingKey, StarRating, StarsBadge, useStars } from '@/components/ui/star-rating';
 import { embedUrl, thumbUrl, videoDesc, watchUrl, type LifeVideo } from '@/lib/videos';
-import { HIGHLIGHT_CARD } from '@/components/library/highlight';
 
-export function VideoCard({ video, onPlay, highlight }: { video: LifeVideo; onPlay: (v: LifeVideo) => void; highlight?: boolean }) {
+export function VideoCard({ video, onPlay }: { video: LifeVideo; onPlay: (v: LifeVideo) => void }) {
   const area = LIFE_AREA_BY_ID[video.area];
   const Icon = area.icon;
   const stars = useStars(ratingKey('video', video.youtubeId));
@@ -15,10 +14,7 @@ export function VideoCard({ video, onPlay, highlight }: { video: LifeVideo; onPl
     <button
       type="button"
       onClick={() => onPlay(video)}
-      className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg',
-        highlight && HIGHLIGHT_CARD,
-      )}
+      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       aria-label={`Assistir: ${video.title}`}
     >
       <span className="relative block aspect-video w-full overflow-hidden bg-muted">
