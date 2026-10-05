@@ -4,7 +4,7 @@ import { Eye, EyeOff, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-r
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RutteLogo } from '@/components/brand/rutte';
-import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData } from '@/lib/supabase';
+import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData, getLastEmail, getRemember, setRemember } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { api, readLocalDb } from '@/services/api';
 import { touchProfile } from '@/services/profiles';
@@ -68,8 +68,9 @@ function GoogleIcon() {
 
 function LoginScreen() {
   const [mode, setMode] = useState<'entrar' | 'criar' | 'esqueci'>('entrar');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(getLastEmail);
   const [password, setPassword] = useState('');
+  const [remember, setRememberState] = useState(getRemember);
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -80,6 +81,7 @@ function LoginScreen() {
     if (!supabase) return;
     setError('');
     setBusy(true);
+    if (mode !== 'esqueci') setRemember(remember, email.trim());
     try {
       if (mode === 'entrar') {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -171,6 +173,14 @@ function LoginScreen() {
                 </button>
               </div>
             </div>
+          )}
+
+          {mode !== 'esqueci' && (
+            <label className="flex cursor-pointer select-none items-center gap-2.5 pt-1 text-sm text-white/80">
+              <input type="checkbox" checked={remember} onChange={(e) => setRememberState(e.target.checked)} className="size-4 cursor-pointer rounded border-white/30 bg-white/5 accent-[#E0393A]" />
+              Lembrar de mim
+              <span className="text-xs text-white/45">{remember ? '(continua conectado neste aparelho)' : '(sai ao fechar o navegador)'}</span>
+            </label>
           )}
 
           {error && (

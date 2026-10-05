@@ -16,6 +16,41 @@ const url = supabaseUrl;
 const anon = supabaseKey;
 
 export const cloudEnabled = !!(url && anon);
+
+/* "Lembrar de mim": marcado (padrão) guarda a sessão no aparelho; desmarcado, só até fechar o navegador. */
+const REMEMBER_KEY = 'rutte:remember';
+const LAST_EMAIL_KEY = 'rutte:last-email';
+const safe = <T,>(fn: () => T, fallback: T): T => {
+  try {
+    return fn();
+  } catch {
+    return fallback;
+  }
+};
+export const getRemember = () => safe(() => localStorage.getItem(REMEMBER_KEY) !== '0', true);
+export function setRemember(on: boolean, email?: string) {
+  safe(() => {
+    localStorage.setItem(REMEMBER_KEY, on ? '1' : '0');
+    if (on && email) localStorage.setItem(LAST_EMAIL_KEY, email);
+    if (!on) localStorage.removeItem(LAST_EMAIL_KEY);
+  }, undefined);
+}
+export const getLastEmail = () => safe(() => localStorage.getItem(LAST_EMAIL_KEY) ?? '', '');
+/** Onde o Supabase guarda a sessão: localStorage (lembrar) ou sessionStorage (até fechar o navegador). */
+const sessionStore = {
+  getItem: (k: string) => safe(() => sessionStorage.getItem(k) ?? localStorage.getItem(k), null),
+  setItem: (k: string, v: string) =>
+    safe(() => {
+      const [keep, drop] = getRemember() ? [localStorage, sessionStorage] : [sessionStorage, localStorage];
+      keep.setItem(k, v);
+      drop.removeItem(k);
+    }, undefined),
+  removeItem: (k: string) =>
+    safe(() => {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    }, undefined),
+};
 /**
  * Dados na nuvem: só com VITE_SUPABASE_SYNC=1. Por padrão o Supabase cuida apenas do login (a lista de quem
  * se cadastrou fica no painel) e os dados de cada conta ficam só no aparelho, separados por conta.
@@ -25,7 +60,7 @@ export const cloudData = cloudEnabled && import.meta.env.VITE_SUPABASE_SYNC === 
 export const googleEnabled = cloudEnabled && import.meta.env.VITE_SUPABASE_GOOGLE === '1';
 
 export const supabase: SupabaseClient | null = cloudEnabled
-  ? createClient(url!, anon!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'rutte:auth' } })
+  ? createClient(url!, anon!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'rutte:auth', storage: sessionStore } })
   : null;
 
 /** Endereço para onde os e-mails de confirmação/recuperação devolvem a pessoa. */
