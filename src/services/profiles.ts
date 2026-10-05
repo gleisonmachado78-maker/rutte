@@ -29,6 +29,17 @@ export async function touchProfile(localName: string): Promise<Profile | null> {
   return data as Profile;
 }
 
+/** Lê o próprio perfil (a regra do banco só deixa ver o seu). `null` se não achar ou sem conexão. */
+export async function getMyProfile(id: string): Promise<Profile | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+  if (error || !data) return null;
+  return data as Profile;
+}
+
+/** E-mail do dono da Rutte: sempre entra (não pode ficar trancado para fora da própria administração). */
+export const OWNER_EMAIL = 'gleisonmachado78@gmail.com';
+
 export async function listProfiles(): Promise<Profile[]> {
   if (!supabase) return [];
   const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });

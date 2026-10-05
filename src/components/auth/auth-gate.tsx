@@ -7,7 +7,7 @@ import { RutteLogo } from '@/components/brand/rutte';
 import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData, getLastEmail, getRemember, setRemember } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { api, readLocalDb } from '@/services/api';
-import { touchProfile } from '@/services/profiles';
+import { getMyProfile, OWNER_EMAIL, touchProfile } from '@/services/profiles';
 import { flushSync, startSync, stopSync } from '@/services/sync';
 
 interface AuthInfo {
@@ -300,13 +300,19 @@ export function AuthGate({ children }: { children: ReactNode }) {
       .then(async () => {
         // perfil na nuvem: último acesso, papel, bloqueio e nome definido pelo administrador
         const localName = readLocalDb()?.user?.name ?? '';
-        const profile = await touchProfile(localName === 'Você' ? '' : localName); // 'Você' é o nome provisório
+        const touched = await touchProfile(localName === 'Você' ? '' : localName); // 'Você' é o nome provisório
+        // confirma que a resposta é desta conta; se não vier, lê o perfil direto
+        const profile = touched && touched.id === uid ? touched : await getMyProfile(uid);
         if (!alive) return;
+        const owner = (session?.user.email ?? '').toLowerCase() === OWNER_EMAIL;
         if (profile?.name_locked && profile.name) api.applyAdminName(profile.name);
-        setIsAdmin(profile?.role === 'admin');
+        setIsAdmin(owner || profile?.role === 'admin');
         setBlocked(!!profile?.blocked);
-        // sem perfil (sem internet) segue liberado; com perfil, só entra depois de aprovado
-        setPending(!!profile && profile.approved === false && profile.role !== 'admin');
+        // Só entra com aprovação confirmada. Sem resposta do servidor: com internet, espera (tela "em análise");
+        // sem internet, segue com o que está no aparelho para não travar quem já usava.
+        if (owner) setPending(false);
+        else if (profile) setPending(profile.approved === false && profile.role !== 'admin');
+        else setPending(navigator.onLine);
         qc.clear();
         setReady(true);
       })
