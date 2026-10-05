@@ -25,6 +25,7 @@ import {
   Timer,
   UserRound,
   WandSparkles,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -39,7 +40,7 @@ import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
-import { useModules, useResetData, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
+import { useModules, useResetData, useWipeData, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
 import { firstName } from '@/lib/onboarding';
 import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
@@ -189,6 +190,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const setMotion = useUI((s) => s.setMotion);
   const setMobileMenu = useUI((s) => s.setMobileMenu);
   const reset = useResetData();
+  const wipe = useWipeData();
   const auth = useAuth();
   const [backupOpen, setBackupOpen] = useState(false);
   const [mapsOpen, setMapsOpen] = useState(false);
@@ -266,6 +268,19 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
             }
           >
             <RotateCcw /> Restaurar exemplos
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-brand"
+            onSelect={async () =>
+              (await askConfirm({
+                title: 'Apagar todos os seus dados?',
+                message: 'Afazeres, notas, treinos, avaliações, perfil e conversas com a Rutte IA serão apagados e o app volta a ficar vazio, como no primeiro acesso. Não dá para desfazer — faça um backup antes, se quiser guardar.',
+                confirmLabel: 'Apagar tudo',
+                danger: true,
+              })) && wipe.mutate()
+            }
+          >
+            <Trash2 /> Apagar meus dados
           </DropdownMenuItem>
           {auth.email && (
             <>

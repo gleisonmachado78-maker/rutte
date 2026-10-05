@@ -623,5 +623,12 @@ export const api = {
     persist();
     return delay(undefined);
   },
+
+  /** Apaga tudo e volta ao estado de primeiro acesso (sem perfil, sem afazeres). */
+  async wipeDatabase(): Promise<void> {
+    memory = createEmpty();
+    persist();
+    return delay(undefined);
+  },
 };
 

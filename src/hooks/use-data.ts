@@ -7,6 +7,7 @@ import type { NoteBox, Notebook } from '@/types';
 import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
 import { celebrate, markFresh } from '@/lib/fx';
+import { useChat } from '@/store/chat';
 import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
 
 export const qk = {
@@ -167,6 +168,18 @@ export function useResetData() {
     onSuccess: () => {
       qc.invalidateQueries();
       toast.success('Dados de exemplo restaurados');
+    },
+  });
+}
+
+export function useWipeData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.wipeDatabase,
+    onSuccess: () => {
+      useChat.getState().clear();
+      qc.invalidateQueries();
+      toast.success('Seus dados foram apagados. Vamos começar do zero!');
     },
   });
 }
