@@ -1,5 +1,7 @@
 import { ExternalLink, Library } from 'lucide-react';
 import { READING_PLATFORMS } from '@/lib/reading-platforms';
+import { HIGHLIGHT_CARD } from '@/components/library/highlight';
+import { cn } from '@/lib/utils';
 
 /** Onde ler best-sellers atuais sem pagar, de forma legal (bibliotecas digitais e testes grátis). */
 export function ReadingPlatforms() {
@@ -14,7 +16,7 @@ export function ReadingPlatforms() {
       </p>
       <ul className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
         {READING_PLATFORMS.map((p) => (
-          <li key={p.name} className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3">
+          <li key={p.name} className={cn(HIGHLIGHT_CARD, 'flex flex-col gap-1 p-3 pl-4')}>
             <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline dark:text-neon">
               {p.name} <ExternalLink className="size-3.5" aria-hidden />
             </a>

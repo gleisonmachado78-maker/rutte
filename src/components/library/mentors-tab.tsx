@@ -10,6 +10,7 @@ import { PODCASTS, type Podcast } from '@/lib/podcasts';
 import { openSpotify, spotifyEmbedUrl, spotifyWebUrl } from '@/lib/spotify';
 import { cn } from '@/lib/utils';
 import { LIFE_VIDEOS } from '@/lib/videos';
+import { HIGHLIGHT_CARD, HIGHLIGHT_STRONG } from '@/components/library/highlight';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const POD = new Map(PODCASTS.map((p) => [p.spotifyId, p]));
@@ -106,12 +107,11 @@ function MentorCard({ m, photos, onOpen }: { m: Mentor; photos: Photos; onOpen: 
   return (
     <article
       className={cn(
-        // destaque na cor da Rutte: fundo com degradê vermelho→navy, borda e brilho neon suaves
-        'relative flex gap-3 overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-card to-card p-3 pl-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md dark:border-primary/30 dark:from-primary/[0.12] dark:to-navy/40 dark:shadow-neon dark:hover:shadow-neon-lg',
-        m.top && 'from-primary/[0.11] dark:from-primary/[0.18]',
+        HIGHLIGHT_CARD,
+        'flex gap-3 p-3 pl-4',
+        m.top && HIGHLIGHT_STRONG,
       )}
     >
-      <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary to-primary/30" />
       <button type="button" onClick={onOpen} className="w-[84px] shrink-0 self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:w-24" aria-label={`Ver perfil de ${m.name}`}>
         <Portrait m={m} photos={photos} />
       </button>

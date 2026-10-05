@@ -4,6 +4,8 @@ import { ratingKey, StarRating, StarsBadge, useStars } from '@/components/ui/sta
 import { TOPIC_BY_ID } from '@/lib/library';
 import type { Podcast } from '@/lib/podcasts';
 import { openSpotify, spotifyEmbedUrl, spotifyWebUrl } from '@/lib/spotify';
+import { HIGHLIGHT_CARD, HIGHLIGHT_STRONG } from '@/components/library/highlight';
+import { cn } from '@/lib/utils';
 
 /** Ícone do Spotify (marca simplificada) */
 function SpotifyMark({ className }: { className?: string }) {
@@ -22,7 +24,7 @@ export function PodcastCard({ podcast }: { podcast: Podcast }) {
   const stars = useStars(key);
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
+    <article className={cn(HIGHLIGHT_CARD, 'flex flex-col gap-3 p-3 pl-4', podcast.featured && HIGHLIGHT_STRONG)}>
       <div className="flex gap-3">
         <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted sm:size-24">
           {podcast.thumb && !imgFailed ? (
