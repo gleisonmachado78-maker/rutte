@@ -297,7 +297,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     startSync(uid)
       .then(async () => {
         // perfil na nuvem: último acesso, papel, bloqueio e nome definido pelo administrador
-        const profile = await touchProfile(readLocalDb()?.user?.name ?? '');
+        const localName = readLocalDb()?.user?.name ?? '';
+        const profile = await touchProfile(localName === 'Você' ? '' : localName); // 'Você' é o nome provisório
         if (!alive) return;
         if (profile?.name_locked && profile.name) api.applyAdminName(profile.name);
         setIsAdmin(profile?.role === 'admin');
