@@ -6,6 +6,8 @@ import { isClosed, isOverdue, relativeDueLabel } from '@/lib/task-utils';
 import { LIFE_AREA_BY_ID } from '@/lib/life-areas';
 import { shortPlace } from '@/lib/maps';
 import { cn } from '@/lib/utils';
+import { isFresh } from '@/lib/fx';
+import { useState } from 'react';
 import { useUI } from '@/store/ui';
 import type { Task } from '@/types';
 import { ColorBadge, OverdueBadge, PriorityBadge, StatusBadge } from './badges';
@@ -29,6 +31,8 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
   const scopeFilter = useUI((s) => s.scope);
   const lifeArea = task.lifeAreaId ? LIFE_AREA_BY_ID[task.lifeAreaId] : undefined;
   const hasAttachments = (task.attachments?.length ?? 0) > 0;
+  // recém-criado: entra com um brilho (consulta só na montagem)
+  const [fresh] = useState(() => isFresh(task.id));
 
   const toggle = (checked: boolean) =>
     update.mutate({
@@ -47,7 +51,8 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       className={cn(
-        'group relative flex gap-3 rounded-xl border bg-card p-4 transition-all duration-200 hover:border-foreground/20 hover:shadow-md',
+        'group relative flex gap-3 rounded-xl border bg-card p-4 transition-all duration-200 hover:-translate-y-px hover:border-foreground/20 hover:shadow-md',
+        fresh && 'animate-pop-in [animation:pop-in_420ms_cubic-bezier(.2,.9,.3,1.2)_both,fresh-glow_1.4s_ease-out_2]',
         overdue ? 'border-brand/40 border-l-4 border-l-brand-neon shadow-[inset_4px_0_12px_-6px_rgb(255_46_59_/_0.6)]' : 'border-border',
         closed && 'opacity-60',
         draggable && 'cursor-grab active:cursor-grabbing',
@@ -71,8 +76,8 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
         >
           <h3
             className={cn(
-              'text-sm font-semibold leading-snug text-foreground sm:text-[15px]',
-              done && 'line-through decoration-foreground/40',
+              'strike text-sm font-semibold leading-snug text-foreground sm:text-[15px]',
+              done && 'strike-on',
             )}
           >
             {task.title}

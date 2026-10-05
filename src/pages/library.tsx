@@ -431,7 +431,7 @@ export function LibraryPage() {
                   />{" "}
                   {t.label}
                 </h2>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2">
                   {freeBooks
                     .filter((b) => b.topic === t.id)
                     .sort(
@@ -494,7 +494,7 @@ export function LibraryPage() {
                   const shown = all ? list : list.slice(0, 6);
                   return (
                     <>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="stagger grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {shown.map((p) => (
                           <PodcastCard key={p.spotifyId} podcast={p} />
                         ))}

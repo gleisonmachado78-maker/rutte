@@ -147,7 +147,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <section aria-label="Indicadores" className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi label="Tarefas hoje" value={today.length} icon={ListTodo} onClick={() => goTasks({ date: 'TODAY' })} />
         <Kpi label="Atrasadas" value={overdue.length} icon={TriangleAlert} tone="danger" onClick={() => goTasks({ date: 'OVERDUE' })} />
         <Kpi label="Em andamento" value={inProgress.length} icon={CirclePlay} onClick={() => goTasks({ statuses: ['IN_PROGRESS'] })} />
@@ -198,7 +198,7 @@ export function DashboardPage() {
                   <Icon className="size-4" aria-hidden /> {label}
                   <span className="text-foreground/40">· {items.length}</span>
                 </h3>
-                <div className="space-y-2">
+                <div className="stagger space-y-2">
                   {items.map(({ task }) => (
                     <TaskCard key={task.id} task={task} />
                   ))}

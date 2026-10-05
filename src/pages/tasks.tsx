@@ -89,7 +89,7 @@ export function TasksPage() {
       ) : viewMode === 'kanban' ? (
         <KanbanBoard tasks={filtered} />
       ) : (
-        <ul className="space-y-2">
+        <ul className="stagger space-y-2">
           {filtered.map((t) => (
             <li key={t.id}>
               <TaskCard task={t} />

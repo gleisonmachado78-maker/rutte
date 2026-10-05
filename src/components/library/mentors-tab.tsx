@@ -180,7 +180,7 @@ export function MentorsTab({ query }: { query: string }) {
       {list.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-foreground/60">Ninguém encontrado com esse filtro.</p>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="stagger grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((m) => (
             <MentorCard key={m.id} m={m} onPick={(id) => setPerson(id)} />
           ))}

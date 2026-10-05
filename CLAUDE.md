@@ -192,3 +192,10 @@ Publicação: `PUBLICAR.md` e `vercel.json`.
 Aba "Grandes nomes" na Biblioteca (`components/library/mentors-tab.tsx`, dados em `src/lib/mentors.ts`): pessoas por área
 (`MENTOR_AREAS`), cada uma com os podcasts dela (ids de `podcasts.ts` — só cite ids que existam lá) e livros/vídeos achados por
 `match` (autor/canal). Filtros por área e por nome; `top` aparece primeiro, na ordem do array.
+
+## Microanimações
+
+`src/lib/fx.ts`: `celebrate()` (confete DOM + Web Animations, sai do último toque) e `markFresh/isFresh` (brilho do item recém-criado).
+CSS em `index.css` (camada utilities): `.stagger` (cascata dos filhos), `.strike/.strike-on` (risco animado), check-pop e `scale` ao
+tocar em botões; keyframes `page-in`, `item-in`, `pop-in`, `fresh-glow` no tailwind.config. Tudo respeita `prefers-reduced-motion`.
+Não usar `.stagger` em listas reordenáveis por arrastar (Notas): reinserir o nó reinicia a animação.

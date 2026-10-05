@@ -166,7 +166,7 @@ function NavGroups({ collapsed, onNavigate, only }: { collapsed?: boolean; onNav
         const items = nav.filter((n) => n.group === g);
         if (!items.length) return null;
         return (
-          <div key={g} className="flex flex-col gap-0.5">
+          <div key={g} className="stagger flex flex-col gap-0.5">
             {!collapsed && <span className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">{GROUP_LABEL[g]}</span>}
             {items.map((n) => (
               <NavLinkItem key={n.to} entry={n} collapsed={collapsed} onNavigate={onNavigate} badge={n.to === '/tasks' ? overdue : undefined} />
@@ -398,7 +398,7 @@ export function AppLayout() {
       </Dialog>
 
       <main id="main" className={cn('pb-28 transition-all duration-200 md:pb-10', collapsed ? 'md:pl-[72px]' : 'md:pl-60')}>
-        <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+        <div key={location.pathname} className="mx-auto w-full max-w-6xl animate-page-in px-4 py-5 sm:px-6 sm:py-8">
           <Outlet />
         </div>
       </main>

@@ -6,6 +6,7 @@ import type { Rating, RelationshipStatus } from '@/services/seed';
 import type { NoteBox, Notebook } from '@/types';
 import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
+import { celebrate, markFresh } from '@/lib/fx';
 import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
 
 export const qk = {
@@ -53,6 +54,7 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (input: TaskInput) => api.createTask(input),
     onSuccess: (task) => {
+      markFresh(task.id);
       qc.setQueryData<Task[]>(qk.tasks, (old = []) => [task, ...old]);
       toast.success('Afazer criado', {
         description: task.title,
@@ -88,6 +90,7 @@ export function useUpdateTask() {
       });
       if (silent) return;
       if (patch.status === 'COMPLETED') {
+        celebrate();
         toast.success('Afazer concluído 🎉', {
           description: spawned ? `Próxima ocorrência criada para ${spawned.dueDate.split('-').reverse().join('/')}` : task.title,
         });
@@ -361,6 +364,7 @@ export function useSaveFocusSession() {
   return useMutation({
     mutationFn: api.saveFocusSession,
     onSuccess: (s) => {
+      celebrate({ count: 34, spread: 1.3 });
       qc.invalidateQueries({ queryKey: qk.focus });
       if (s.taskId) qc.invalidateQueries({ queryKey: qk.tasks });
     },
@@ -413,6 +417,7 @@ export function useSaveGratitude() {
     mutationFn: api.saveGratitude,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.gratitude });
+      celebrate({ count: 22 });
       toast.success('Gratidão registrada 🙏', { description: 'A Rutte guardou o seu dia.' });
     },
     onError: errorToast,
