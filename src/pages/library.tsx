@@ -55,6 +55,8 @@ export function LibraryPage() {
   const [onlyAnimated, setOnlyAnimated] = useState(false);
   const [onlyFree, setOnlyFree] = useState(false);
   const [topRated, setTopRated] = useState(false);
+  /** temas de podcast abertos em "Ver mais" */
+  const [openTopics, setOpenTopics] = useState<string[]>([]);
   const { data: shelf = {} } = useBookShelf();
   const { data: ratings = {} } = useRatings();
   const stars = (key: string) => ratings[key]?.stars ?? 0;
@@ -464,14 +466,37 @@ export function LibraryPage() {
                     aria-hidden
                   />{" "}
                   {t.label}
+                  <span className="text-sm font-medium text-foreground/45">
+                    {podcasts.filter((p) => p.topic === t.id).length}
+                  </span>
                 </h2>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {podcasts
+                {(() => {
+                  // populares primeiro; mostra 6 por tema até tocar em "Ver mais"
+                  const list = podcasts
                     .filter((p) => p.topic === t.id)
-                    .map((p) => (
-                      <PodcastCard key={p.spotifyId} podcast={p} />
-                    ))}
-                </div>
+                    .sort((a, b) => (topRated ? 0 : Number(!!b.featured) - Number(!!a.featured)));
+                  const all = openTopics.includes(t.id) || topic !== "ALL" || !!query || topRated;
+                  const shown = all ? list : list.slice(0, 6);
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {shown.map((p) => (
+                          <PodcastCard key={p.spotifyId} podcast={p} />
+                        ))}
+                      </div>
+                      {list.length > 6 && topic === "ALL" && !query && !topRated && (
+                        <button
+                          type="button"
+                          onClick={() => setOpenTopics((o) => (o.includes(t.id) ? o.filter((x) => x !== t.id) : [...o, t.id]))}
+                          aria-expanded={all}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:border-primary hover:text-primary"
+                        >
+                          {all ? "Ver menos" : `Ver mais ${list.length - 6} podcasts de ${t.label}`}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </section>
             ))
         )

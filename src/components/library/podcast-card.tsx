@@ -35,7 +35,10 @@ export function PodcastCard({ podcast }: { podcast: Podcast }) {
           <StarsBadge stars={stars} className="absolute left-1 top-1" />
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="font-semibold leading-snug">{podcast.title}</h4>
+          <h4 className="font-semibold leading-snug">
+            {podcast.title}
+            {podcast.featured && <span className="ml-1.5 inline-block rounded-full bg-amber-400/20 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Popular</span>}
+          </h4>
           <p className="text-xs text-foreground/60">{podcast.host}</p>
           <p className="mt-1 text-sm leading-snug text-foreground/80">{podcast.desc}</p>
         </div>

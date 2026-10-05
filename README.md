@@ -58,7 +58,7 @@ src/
 - **Rutte IA:** conversa com o Gemini (plano grátis do Google AI Studio) ou com a Claude (com a sua chave) que conhece seus afazeres, metas, treinos e Roda da Vida, cria/conclui/adia afazeres, pesquisa na web (com fontes), cria infográficos e imagens, gera relatórios com gráficos dos seus dados, tem 4 personalidades e atalhos como "Resumo da manhã" e "Revisão da noite".
 - **Relacionamento amoroso:** a Roda da Vida pergunta se você tem um par; para quem está solteiro(a), traz um passo a passo (por onde começar, onde conhecer pessoas, ações da semana e cuidados).
 - **Holograma 3D:** na tela "Como fazer" de cada exercício, um holograma 3D animado que gira e pode ser arrastado para ver de qualquer ângulo (com opção 2D).
-- **Podcasts e audiolivros:** 33 podcasts em português por tema, que abrem direto no app do Spotify ou tocam dentro da Rutte; cada livro tem links de audiolivro.
+- **Podcasts e audiolivros:** 116 podcasts em português por tema (com os grandes nomes marcados como Popular e "Ver mais" por tema), que abrem direto no app do Spotify ou tocam dentro da Rutte; cada livro tem links de audiolivro.
 - **Avaliações:** 1 a 5 estrelas (e opinião curta) em livros, vídeos, orações e meditações; filtro "Mais bem avaliados".
 - **Foco (Pomodoro):** página `/focus` com campo "O que você vai fazer agora?" (texto livre ou um afazer), anel holográfico, fases configuráveis (25/5/15, longa a cada 4), som e vibração no fim, mini-cronômetro nas outras telas e registro dos pomodoros (também no histórico do afazer). Botão "Focar" dentro de cada afazer.
 - O banco local migra sozinho (v1 → v2 → v3) sem perder dados.
