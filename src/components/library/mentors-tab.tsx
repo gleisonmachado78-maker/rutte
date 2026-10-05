@@ -32,7 +32,7 @@ function Avatar({ m, photos, size = 'md' }: { m: Mentor; photos: Photos; size?: 
   const src = options[0];
   const box = size === 'sm' ? 'size-7 rounded-full text-[10px]' : size === 'lg' ? 'size-24 rounded-2xl text-2xl' : 'size-14 rounded-xl text-base';
   return src ? (
-    <img src={src} alt={size === 'sm' ? '' : `Foto de ${m.name}`} loading="lazy" onError={() => setFailed((f) => [...f, src])} className={cn('shrink-0 bg-muted object-cover object-top ring-1 ring-border', box)} />
+    <img src={src} alt={size === 'sm' ? '' : `Foto de ${m.name}`} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed((f) => [...f, src])} className={cn('shrink-0 bg-muted object-cover object-top ring-1 ring-border', box)} />
   ) : (
     <span className={cn('grid shrink-0 place-items-center bg-gradient-to-br from-primary to-navy font-bold text-white', box)}>{initials(m.name)}</span>
   );
@@ -87,7 +87,7 @@ function Portrait({ m, photos }: { m: Mentor; photos: Photos }) {
   return (
     <div className="relative">
       {src ? (
-        <img src={src} alt={`Foto de ${m.name}`} loading="lazy" onError={() => setFailed((f) => [...f, src])} className="aspect-[3/4] w-full rounded-md bg-muted object-cover object-top shadow-md" />
+        <img src={src} alt={`Foto de ${m.name}`} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed((f) => [...f, src])} className="aspect-[3/4] w-full rounded-md bg-muted object-cover object-top shadow-md" />
       ) : (
         <div className="flex aspect-[3/4] w-full flex-col justify-between rounded-md bg-gradient-to-br from-primary to-navy p-2.5 text-white shadow-md">
           <span aria-hidden>{area.emoji}</span>
@@ -104,7 +104,14 @@ function MentorCard({ m, photos, onOpen }: { m: Mentor; photos: Photos; onOpen: 
   const first = POD.get(m.podcasts[0]);
   const photo = photos[m.id];
   return (
-    <article className="flex gap-3 rounded-xl border border-border bg-card p-3">
+    <article
+      className={cn(
+        // destaque na cor da Rutte: fundo com degradê vermelho→navy, borda e brilho neon suaves
+        'relative flex gap-3 overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-card to-card p-3 pl-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md dark:border-primary/30 dark:from-primary/[0.12] dark:to-navy/40 dark:shadow-neon dark:hover:shadow-neon-lg',
+        m.top && 'from-primary/[0.11] dark:from-primary/[0.18]',
+      )}
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary to-primary/30" />
       <button type="button" onClick={onOpen} className="w-[84px] shrink-0 self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:w-24" aria-label={`Ver perfil de ${m.name}`}>
         <Portrait m={m} photos={photos} />
       </button>
@@ -130,7 +137,7 @@ function MentorCard({ m, photos, onOpen }: { m: Mentor; photos: Photos; onOpen: 
               </span>
             );
           })}
-          {photo && <span className="text-foreground/55">Foto: Wikipédia</span>}
+          {photo && <span className="text-foreground/55">Foto: {photo.from}</span>}
         </div>
         <StarRating itemKey={ratingKey('mentor', m.id)} label={m.name} />
         <div className="mt-auto flex flex-wrap gap-2">
@@ -217,7 +224,7 @@ function MentorProfile({ m, photos }: { m: Mentor; photos: Photos }) {
         <p className="text-[11px] text-foreground/45">
           Foto:{' '}
           <a href={photo.page} target="_blank" rel="noreferrer" className="underline hover:text-primary">
-            Wikipédia / Wikimedia Commons
+            {photo.from}
           </a>
         </p>
       )}

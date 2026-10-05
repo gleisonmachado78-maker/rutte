@@ -194,7 +194,9 @@ Aba "Grandes nomes" na Biblioteca (`components/library/mentors-tab.tsx`, dados e
 `match` (autor/canal) e uma `bio` curta. Layout igual ao dos livros: uma seção por área principal (`areas[0]`), cartões horizontais com retrato
 (3:4, selo Top), bio, áreas, nota (`ratingKey('mentor', id)`), "Ouvir no Spotify" e "Ver perfil" (Dialog). Ao filtrar uma área entram todos que atuam nela. Filtro por nome; `top` aparece primeiro.
 Fotos (`lib/mentor-photos.ts`): uma consulta à API da Wikipédia pt (`wiki`, `pilicense=free`, ignora desambiguação) + arquivos
-avulsos do Commons (`commons`), cache 30 dias em localStorage; sem foto → capa do podcast. Só ponha `wiki`/`commons` conferidos
+avulsos do Commons (`commons`), cache 30 dias em localStorage; sem foto livre → `photo` (avatar do canal oficial no YouTube, nome/inscritos
+conferidos; descartar avatares padrão de letra); sem nada → capa do podcast. `<img referrerPolicy="no-referrer">` (yt3 bloqueia alguns).
+Cartões com destaque na cor primária (degradê + faixa à esquerda; neon só no escuro). Só ponha `wiki`/`commons` conferidos
 (há homônimos: Leandro Vieira carnavalesco, Paulo Vieira humorista).
 
 ## Microanimações

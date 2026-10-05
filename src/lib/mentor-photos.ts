@@ -1,12 +1,18 @@
 /**
  * Fotos dos "Grandes nomes": vêm da Wikipédia em português (imagens livres do Wikimedia Commons).
- * Uma única consulta para todos, guardada no aparelho por 30 dias. Sem foto → capa do podcast.
+ * Uma única consulta para todos, guardada no aparelho por 30 dias. Sem foto livre → foto do canal oficial no YouTube
+ * (`photo` em mentors.ts); sem nenhuma → capa do podcast.
  */
 import { useEffect, useState } from 'react';
 import { MENTORS } from './mentors';
 
-type Photo = { src: string; page: string };
-const KEY = 'rutte:mentor-photos:v2';
+type Photo = { src: string; page: string; from: string };
+const KEY = 'rutte:mentor-photos:v3';
+
+/** Fotos fixas dos canais oficiais (não precisam de consulta). */
+const CHANNEL: Record<string, Photo> = Object.fromEntries(
+  MENTORS.filter((m) => m.photo).map((m) => [m.id, { src: m.photo!, page: m.photoFrom ?? '', from: 'canal oficial no YouTube' }]),
+);
 const TTL = 30 * 24 * 60 * 60 * 1000;
 
 let cache: Record<string, Photo> | null = null;
@@ -50,7 +56,7 @@ async function fetchPhotos(): Promise<Record<string, Photo>> {
     const title = final(m.wiki!);
     const page = q.pages?.find((p) => p.title === title);
     if (page && !page.missing && !page.pageprops?.disambiguation && page.thumbnail?.source) {
-      photos[m.id] = { src: page.thumbnail.source, page: `https://pt.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}` };
+      photos[m.id] = { src: page.thumbnail.source, page: `https://pt.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`, from: 'Wikipédia' };
     }
   }
   // fotos avulsas do Commons (só quando a página da Wikipédia não tem uma)
@@ -59,6 +65,7 @@ async function fetchPhotos(): Promise<Record<string, Photo>> {
       photos[m.id] = {
         src: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(m.commons)}?width=400`,
         page: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(m.commons.replace(/ /g, '_'))}`,
+        from: 'Wikimedia Commons',
       };
     }
   }
@@ -85,5 +92,5 @@ export function useMentorPhotos() {
       alive = false;
     };
   }, []);
-  return photos;
+  return { ...CHANNEL, ...photos };
 }
