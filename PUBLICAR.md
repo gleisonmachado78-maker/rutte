@@ -17,7 +17,8 @@ Leva uns 15 minutos. Nada aqui pede cartão de crédito.
 5. **Área do administrador:** em **SQL Editor → New query**, cole [`supabase/admin.sql`](supabase/admin.sql) e clique em **Run**.
    Cria a tabela `profiles` e deixa `gleisonmachado78@gmail.com` como administrador (troque o e-mail no arquivo se for outro).
    O administrador vê o menu da conta → **Administração (contas)**: lista de todos, criar contas, definir nova senha,
-   mudar nome/papel/observação, bloquear e apagar.
+   mudar nome/papel/observação, bloquear e apagar. Quem se cadastra pelo site fica **aguardando aprovação** até você
+   aceitar em **Pedidos de acesso**.
 6. **Sem e-mail de confirmação:** **Authentication → Sign In / Providers → Email** → desligue **Confirm email** → **Save**.
 7. (Opcional) **Authentication → Email templates**: traduza os e-mails de confirmação e de nova senha para português.
 

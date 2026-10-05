@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Ban, Crown, Eye, EyeOff, KeyRound, Loader2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserPlus, Users, Wand2 } from 'lucide-react';
+import { Ban, Check, Crown, Eye, EyeOff, Hourglass, KeyRound, Loader2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserPlus, Users, Wand2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ export function AdminPage() {
   const { isAdmin, email } = useAuth();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<'all' | 'blocked' | 'admin'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'blocked' | 'admin'>('all');
   const [editing, setEditing] = useState<Profile | null>(null);
   const [creating, setCreating] = useState(false);
   const [pwFor, setPwFor] = useState<Profile | null>(null);
@@ -49,22 +49,28 @@ export function AdminPage() {
 
   const list = useMemo(() => {
     const s = norm(q.trim());
-    return data.filter((p) => (filter === 'all' || (filter === 'blocked' ? p.blocked : p.role === 'admin')) && (!s || norm(`${p.email} ${p.name ?? ''} ${p.note ?? ''}`).includes(s)));
+    return data.filter((p) => (filter === 'all' || (filter === 'pending' ? !p.approved : filter === 'blocked' ? p.blocked : p.role === 'admin')) && (!s || norm(`${p.email} ${p.name ?? ''} ${p.note ?? ''}`).includes(s)));
   }, [data, q, filter]);
 
   if (!isAdmin) return <Navigate to="/" replace />;
+
+  const pendingList = data.filter((p) => !p.approved);
 
   const now = Date.now();
   const stats = [
     { label: 'Contas', value: data.length },
     { label: 'Ativas nos últimos 7 dias', value: data.filter((p) => p.last_seen && now - Date.parse(p.last_seen) < 7 * 864e5).length },
     { label: 'Novas nos últimos 7 dias', value: data.filter((p) => now - Date.parse(p.created_at) < 7 * 864e5).length },
-    { label: 'Bloqueadas', value: data.filter((p) => p.blocked).length },
+    { label: 'Aguardando aprovação', value: data.filter((p) => !p.approved).length },
   ];
 
   const toggleBlock = async (p: Profile) => {
     if (!p.blocked && !(await askConfirm({ title: `Bloquear ${p.name || p.email}?`, message: 'A pessoa não consegue mais usar a Rutte até você desbloquear. Os dados no aparelho dela não são apagados.', confirmLabel: 'Bloquear', danger: true }))) return;
     save.mutate({ id: p.id, patch: { blocked: !p.blocked } });
+  };
+  const refuse = async (p: Profile) => {
+    if (await askConfirm({ title: `Recusar o pedido de ${p.email}?`, message: 'O cadastro é apagado e a pessoa não consegue entrar. Ela pode pedir de novo depois.', confirmLabel: 'Recusar', danger: true }))
+      remove.mutate(p.id);
   };
   const del = async (p: Profile) => {
     if (await askConfirm({ title: `Apagar a conta de ${p.email}?`, message: 'O login deixa de existir e o e-mail sai da lista. Não dá para desfazer (a pessoa pode criar uma conta nova depois).', confirmLabel: 'Apagar conta', danger: true }))
@@ -97,6 +103,33 @@ export function AdminPage() {
         ))}
       </div>
 
+      {pendingList.length > 0 && (
+        <section className="rounded-2xl border border-amber-400/40 bg-amber-400/[0.07] p-4" aria-labelledby="pending-title">
+          <h2 id="pending-title" className="mb-3 flex items-center gap-2 font-bold">
+            <Hourglass className="size-5 text-amber-600 dark:text-amber-300" aria-hidden /> Pedidos de acesso
+            <span className="rounded-full bg-amber-400/25 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-800 dark:text-amber-200">{pendingList.length}</span>
+          </h2>
+          <ul className="space-y-2">
+            {pendingList.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+                <div className="min-w-0 flex-1 basis-56">
+                  <p className="truncate font-semibold">{p.email}</p>
+                  <p className="text-xs text-foreground/55">Pediu acesso {ago(p.created_at)}</p>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button size="sm" onClick={() => save.mutate({ id: p.id, patch: { approved: true } })} aria-label={`Aceitar ${p.email}`}>
+                    <Check className="size-3.5" aria-hidden /> Aceitar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => refuse(p)} aria-label={`Recusar ${p.email}`}>
+                    <Ban className="size-3.5" aria-hidden /> Recusar
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-0 flex-1 basis-60">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" aria-hidden />
@@ -104,6 +137,7 @@ export function AdminPage() {
         </div>
         <Select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label="Filtrar" className="w-auto">
           <option value="all">Todas</option>
+          <option value="pending">Aguardando aprovação</option>
           <option value="blocked">Bloqueadas</option>
           <option value="admin">Administradores</option>
         </Select>
@@ -139,6 +173,7 @@ export function AdminPage() {
                       </span>
                     )}
                     {p.blocked && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">Bloqueada</span>}
+                    {!p.approved && <span className="rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">Aguardando</span>}
                     {me && <span className="text-xs font-normal text-foreground/50">(você)</span>}
                   </p>
                   <p className="truncate text-sm text-foreground/70">{p.email}</p>

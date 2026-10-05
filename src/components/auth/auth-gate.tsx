@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Hourglass, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RutteLogo } from '@/components/brand/rutte';
@@ -270,6 +270,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [pending, setPending] = useState(false);
   const uid = session?.user.id ?? null;
 
   useEffect(() => {
@@ -289,6 +290,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setReady(false);
       setIsAdmin(false);
       setBlocked(false);
+      setPending(false);
       return;
     }
     let alive = true;
@@ -303,6 +305,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
         if (profile?.name_locked && profile.name) api.applyAdminName(profile.name);
         setIsAdmin(profile?.role === 'admin');
         setBlocked(!!profile?.blocked);
+        // sem perfil (sem internet) segue liberado; com perfil, só entra depois de aprovado
+        setPending(!!profile && profile.approved === false && profile.role !== 'admin');
         qc.clear();
         setReady(true);
       })
@@ -334,6 +338,25 @@ export function AuthGate({ children }: { children: ReactNode }) {
       </Screen>
     );
   if (!ready) return <Splash text="Carregando seus dados…" />;
+  if (pending)
+    return (
+      <Screen>
+        <Brand subtitle="Cadastro em análise" />
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <Hourglass className="mx-auto size-10 text-neon" aria-hidden />
+          <p className="mt-3 text-[15px] leading-relaxed">Recebemos seu pedido de acesso com <strong>{session.user.email}</strong>.</p>
+          <p className="mt-2 text-sm text-white/70">Assim que o administrador aprovar, é só voltar aqui e entrar. Você não precisa se cadastrar de novo.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => setAttempt((a) => a + 1)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold hover:brightness-110">
+              <RefreshCw className="size-4" aria-hidden /> Já fui aprovado
+            </button>
+            <button type="button" onClick={() => supabase?.auth.signOut()} className="inline-flex h-11 items-center rounded-xl border border-white/15 px-5 font-semibold text-white/80">
+              Sair
+            </button>
+          </div>
+        </div>
+      </Screen>
+    );
   if (blocked)
     return (
       <Screen>

@@ -94,3 +94,17 @@ begin
 end $$;
 revoke all on function public.admin_set_password(uuid, text) from public, anon;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
+
+-- 9) Aprovação: quem se cadastra pelo site espera o administrador aceitar ----------------------------------------
+alter table public.profiles add column if not exists approved boolean not null default false;
+update public.profiles set approved = true where approved = false and created_at < now();   -- contas que já existiam
+
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare is_owner boolean := lower(new.email) = 'gleisonmachado78@gmail.com';
+begin
+  insert into public.profiles (id, email, role, approved)
+  values (new.id, new.email, case when is_owner then 'admin' else 'user' end, is_owner)
+  on conflict (id) do nothing;
+  return new;
+end $$;

@@ -14,6 +14,8 @@ export interface Profile {
   name_locked: boolean;
   role: 'user' | 'admin';
   blocked: boolean;
+  /** cadastro aceito pelo administrador (quem se cadastra pelo site começa como false) */
+  approved: boolean;
   note: string | null;
   created_at: string;
   last_seen: string | null;
@@ -34,7 +36,7 @@ export async function listProfiles(): Promise<Profile[]> {
   return (data ?? []) as Profile[];
 }
 
-export type ProfilePatch = Partial<Pick<Profile, 'name' | 'name_locked' | 'role' | 'blocked' | 'note'>>;
+export type ProfilePatch = Partial<Pick<Profile, 'name' | 'name_locked' | 'role' | 'blocked' | 'approved' | 'note'>>;
 
 export async function updateProfile(id: string, patch: ProfilePatch): Promise<Profile> {
   if (!supabase) throw new Error('Sem conexão com o servidor.');
@@ -66,5 +68,6 @@ export async function createAccount(email: string, password: string, name: strin
   if (error) throw new Error(authErrorPt(error.message));
   // signUp de um e-mail que já existe volta sem identidades (o Supabase não revela que existe)
   if (!data.user || (data.user.identities && data.user.identities.length === 0)) throw new Error('Esse e-mail já tem conta.');
-  if (name.trim()) await updateProfile(data.user.id, { name: name.trim(), name_locked: true });
+  // conta criada pelo administrador já nasce aprovada
+  await updateProfile(data.user.id, name.trim() ? { approved: true, name: name.trim(), name_locked: true } : { approved: true });
 }
