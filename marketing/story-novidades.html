@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rutte — Story de novidades</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --navy: #111727; --red: #b91b1c; --red2: #e0393a; --neon: #ff2e3b; --amber: #f5b70b;
+    --font: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Arial, sans-serif; --brand: 'Fraunces', Georgia, serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #05070d; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; color: #fff; font-family: var(--font);
+    background: radial-gradient(900px 700px at 85% 105%, rgba(185,27,28,.45), transparent 60%), radial-gradient(800px 600px at 0% -5%, rgba(127,29,28,.5), transparent 60%), linear-gradient(180deg, #0b1020, #111727 55%, #170f19); transform-origin: 0 0; }
+  .grain { position: absolute; inset: 0; opacity: .07; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px); pointer-events: none; }
+  .layer { position: absolute; inset: 0; opacity: 0; will-change: opacity, transform; }
+
+  /* textos */
+  .kicker { font-weight: 800; font-size: 34px; letter-spacing: .22em; text-transform: uppercase; color: var(--red2); }
+  .title { font-family: var(--brand); font-weight: 800; font-size: 104px; line-height: 1.02; letter-spacing: -.01em; }
+  .cap { position: absolute; left: 70px; right: 70px; top: 250px; text-align: center; }
+  .cap .t { font-weight: 800; font-size: 66px; line-height: 1.08; letter-spacing: -.01em; }
+  .cap .s { margin-top: 18px; font-weight: 600; font-size: 38px; color: rgba(255,255,255,.78); }
+  .hl { color: var(--neon); }
+  .pill { display: inline-flex; align-items: center; gap: 14px; padding: 14px 28px; border-radius: 999px; background: rgba(255,46,59,.14); border: 2px solid rgba(255,46,59,.5); font-weight: 700; font-size: 34px; }
+
+  /* celular */
+  .phone { position: absolute; left: 50%; top: 560px; width: 560px; height: 1204px; transform: translateX(-50%); border-radius: 64px; padding: 18px;
+    background: linear-gradient(160deg, #2b3247, #0e1220); box-shadow: 0 60px 160px rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,.08), 0 0 120px rgba(224,57,58,.25); }
+  .phone .scr { position: relative; width: 100%; height: 100%; border-radius: 48px; overflow: hidden; background: #0b1020; }
+  .phone img { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+  .phone .notch { position: absolute; left: 50%; top: 14px; width: 170px; height: 40px; border-radius: 20px; background: #05070d; transform: translateX(-50%); z-index: 3; }
+  .ring { position: absolute; border: 6px solid var(--neon); border-radius: 26px; box-shadow: 0 0 40px rgba(255,46,59,.8); z-index: 4; opacity: 0; }
+
+  /* cartão "em análise" (recriado no estilo do app) */
+  .card { position: absolute; left: 110px; right: 110px; top: 640px; border-radius: 48px; padding: 70px 60px; text-align: center;
+    background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.12); box-shadow: 0 50px 140px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
+  .card .ico { width: 130px; height: 130px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: rgba(245,183,11,.15); border: 3px solid rgba(245,183,11,.6); font-size: 70px; }
+  .card h3 { margin: 34px 0 0; font-family: var(--brand); font-size: 64px; }
+  .card p { margin: 20px 0 0; font-size: 36px; line-height: 1.35; color: rgba(255,255,255,.78); }
+  .card .ok { margin-top: 44px; display: inline-flex; gap: 14px; align-items: center; padding: 22px 40px; border-radius: 26px; background: #16a34a; font-weight: 800; font-size: 38px; opacity: 0; }
+
+  .credit { position: absolute; left: 0; right: 0; bottom: 280px; text-align: center; font-size: 34px; letter-spacing: .06em; color: rgba(255,255,255,.5); }
+  .credit b { color: rgba(255,255,255,.85); }
+
+  /* barras de progresso do story */
+  .bars { position: absolute; left: 36px; right: 36px; top: 36px; display: flex; gap: 10px; z-index: 10; }
+  .bars span { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+  .bars i { display: block; height: 100%; width: 0; background: #fff; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grain"></div>
+
+  <!-- 1. abertura -->
+  <div class="layer" id="s1">
+    <div style="position:absolute;left:0;right:0;top:560px;text-align:center">
+      <img id="logo" src="story-assets/rutte-logo.png" alt="" style="width:330px;filter:drop-shadow(0 0 60px rgba(255,46,59,.55))" />
+      <div class="kicker" style="margin-top:60px">Novidades</div>
+      <div class="title" style="margin-top:18px">na <span class="hl">Rutte</span></div>
+      <div style="margin-top:34px;font-size:40px;font-weight:600;color:rgba(255,255,255,.75)">Sua secretária digital ficou ainda melhor</div>
+    </div>
+  </div>
+
+  <!-- 2. login -->
+  <div class="layer" id="s2">
+    <div class="cap"><div class="t" id="s2t">Entre com <span class="hl">e-mail e senha</span></div><div class="s" id="s2s">Sua conta, seus dados, só no seu aparelho</div></div>
+    <div class="phone"><div class="scr"><div class="notch"></div><img id="img-login" src="story-assets/login.png" alt="" /><div class="ring" id="ring"></div></div></div>
+  </div>
+
+  <!-- 3. grandes nomes -->
+  <div class="layer" id="s3">
+    <div class="cap"><div class="t">Os <span class="hl">grandes nomes</span> de cada área</div><div class="s">Foto, biografia e podcasts no Spotify</div></div>
+    <div class="phone"><div class="scr"><div class="notch"></div><img id="img-gn" src="story-assets/grandes-nomes.png" alt="" /><img id="img-gn2" src="story-assets/grandes-nomes-2.png" alt="" style="opacity:0" /></div></div>
+  </div>
+
+  <!-- 4. acesso aprovado -->
+  <div class="layer" id="s4">
+    <div class="cap"><div class="t">Acesso <span class="hl">seguro</span></div><div class="s">Cada cadastro é aprovado antes de entrar</div></div>
+    <div class="card" id="card">
+      <div class="ico" id="ico">⏳</div>
+      <h3 id="cardT">Cadastro em análise</h3>
+      <p id="cardP">Recebemos seu pedido de acesso. Assim que for aprovado, é só entrar.</p>
+      <div class="ok" id="ok">✓ Acesso liberado</div>
+    </div>
+  </div>
+
+  <!-- 5. chamada -->
+  <div class="layer" id="s5">
+    <div style="position:absolute;left:0;right:0;top:600px;text-align:center">
+      <img src="story-assets/rutte-logo.png" alt="" style="width:240px;filter:drop-shadow(0 0 50px rgba(255,46,59,.5))" />
+      <div class="title" style="margin-top:50px;font-size:96px">Experimente<br/>agora</div>
+      <div id="url" class="pill" style="margin-top:56px;font-size:52px;padding:22px 44px">rutte.vercel.app</div>
+      <div style="margin-top:40px;font-size:38px;font-weight:600;color:rgba(255,255,255,.72)">Organize o que precisa fazer.<br/>Evolua no que precisa ser.</div>
+    </div>
+    <div class="credit">by <b>era.</b> consultoria</div>
+  </div>
+</div>
+
+<input id="seek" type="range" min="0" max="19" step="0.01" value="0" style="position:fixed;left:-9999px" />
+<script>
+  // Linha do tempo (segundos)
+  const S = [ [0, 2.8], [2.8, 7.6], [7.6, 12.4], [12.4, 15.8], [15.8, 19] ];
+  const DUR = 19;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);           // easeOutCubic
+  const inout = (x) => { x = clamp(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; };
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  const FADE = .35;
+
+  function layer(id, t, [a, b], first, last) {
+    const fin = first ? 1 : ease(prog(t, a, a + FADE));
+    const fout = last ? 1 : 1 - prog(t, b - FADE * .6, b);
+    const o = clamp(Math.min(fin, fout));
+    const el = $(id);
+    el.style.opacity = o;
+    el.style.transform = `translateY(${(1 - fin) * 60}px)`;
+    return prog(t, a, b);
+  }
+
+  let t = 0;
+  function render() {
+    // barras do story
+
+    // 1. abertura: logo cresce com brilho
+    const p1 = layer('s1', t, S[0], true, false);
+    $('logo').style.transform = `scale(${0.7 + 0.3 * ease(p1 * 2.2)})`;
+
+    // 2. login: tela entra, depois zoom no "Lembrar de mim"
+    const p2 = layer('s2', t, S[1]);
+    const z = inout(prog(t, 4.9, 5.9));           // zoom 0→1
+    const img = $('img-login');
+    // ponto do checkbox na captura (fração da altura da imagem)
+    const fx = 0.5, fy = 0.645, k = 1 + 0 * z;
+    img.style.transformOrigin = `${fx * 100}% ${fy * 100}%`;
+    img.style.transform = `translateY(${-(1 - ease(prog(t, 2.8, 3.6))) * 40}px) scale(${k})`;
+    const showRing = prog(t, 5.9, 6.3);
+    const ring = $('ring');
+    ring.style.opacity = showRing * (0.75 + 0.25 * Math.sin(t * 9));
+    ring.style.left = '22px'; ring.style.width = '478px'; ring.style.top = '688px'; ring.style.height = '82px';
+    const swap = t >= 5.3;
+    $('s2t').innerHTML = swap ? '<span class="hl">Lembrar de mim</span>' : 'Entre com <span class="hl">e-mail e senha</span>';
+    $('s2s').textContent = swap ? 'Entre uma vez e continue conectado' : 'Sua conta, seus dados, só no seu aparelho';
+
+    // 3. grandes nomes: rolagem suave entre as duas capturas
+    layer('s3', t, S[2]);
+    const scr = inout(prog(t, 8.4, 11.6));
+    const H = 524 / 1200 * 2580;                  // altura da imagem no celular (largura 524px)
+    const viewH = 1168;
+    $('img-gn').style.transform = `translateY(${-scr * 70}px) scale(${1 + scr * 0.03})`; void H; void viewH;
+    const cross = prog(t, 10.2, 10.8);
+    $('img-gn').style.opacity = 1 - cross;
+    $('img-gn2').style.opacity = cross;
+    $('img-gn2').style.transform = `translateY(${40 - scr * 70}px)`;
+
+    // 4. acesso: cartão "em análise" vira "liberado"
+    const p4 = layer('s4', t, S[3]);
+    const done = prog(t, 14.2, 14.6);
+    $('card').style.transform = `scale(${0.92 + 0.08 * ease(prog(t, 12.4, 13))})`;
+    $('ico').textContent = done > 0.5 ? '✅' : '⏳';
+    $('ico').style.background = done > 0.5 ? 'rgba(22,163,74,.18)' : 'rgba(245,183,11,.15)';
+    $('ico').style.borderColor = done > 0.5 ? 'rgba(22,163,74,.7)' : 'rgba(245,183,11,.6)';
+    $('cardT').textContent = done > 0.5 ? 'Aprovado!' : 'Cadastro em análise';
+    $('cardP').textContent = done > 0.5 ? 'Pronto: agora é só entrar e organizar o seu dia.' : 'Recebemos seu pedido de acesso. Assim que for aprovado, é só entrar.';
+    $('ok').style.opacity = ease(prog(t, 14.5, 15));
+    $('ok').style.transform = `scale(${0.8 + 0.2 * ease(prog(t, 14.5, 15))})`;
+
+    // 5. chamada
+    layer('s5', t, S[4], false, true);
+    const pulse = 1 + 0.04 * Math.sin(Math.max(0, t - 16.4) * 6);
+    $('url').style.transform = `scale(${ease(prog(t, 16.2, 16.8)) * pulse})`;
+  }
+
+  window.__seek = (x) => { t = x; render(); };
+  $('seek').max = DUR;
+
+  // Pré-visualização: toca sozinho e escala para caber na janela (na gravação usa #rec)
+  function fit() {
+    if (location.hash.includes('rec')) return;
+    const s = Math.min(innerWidth / 1080, innerHeight / 1920);
+    $('stage').style.transform = `translate(${(innerWidth - 1080 * s) / 2}px, 0) scale(${s})`;
+  }
+  addEventListener('resize', fit); fit();
+  if (!location.hash.includes('rec')) {
+    const start = performance.now();
+    (function loop(now) { t = ((now - start) / 1000) % (DUR + 1); render(); requestAnimationFrame(loop); })(start);
+  } else render();
+</script>
+</body>
+</html>
