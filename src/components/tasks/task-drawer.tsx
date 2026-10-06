@@ -2,6 +2,7 @@ import { askConfirm } from '@/components/ui/confirm';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Building,
+  CalendarPlus,
   CircleCheck,
   ClipboardList,
   UserRound,
@@ -38,6 +39,7 @@ import { useFocus } from '@/store/focus';
 import { useNavigate } from 'react-router-dom';
 import type { Scope, Task } from '@/types';
 import { LIFE_AREAS } from '@/lib/life-areas';
+import { SendToGoogle } from './send-to-google';
 import { OverdueBadge, PriorityBadge, StatusBadge } from './badges';
 import { taskSchema, toFormValues, toTaskInput, type TaskFormValues } from './task-schema';
 import { LocationField } from './location-field';
@@ -340,6 +342,7 @@ function TaskForm({
                 <span className="hidden sm:inline">Focar</span>
               </Button>
             )}
+            {task && <SendToGoogle task={task} icon={<CalendarPlus />} />}
           </>
         )}
         <div className="ml-auto flex items-center gap-2">

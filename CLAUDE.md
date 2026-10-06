@@ -213,3 +213,13 @@ Cartões com destaque na cor primária (degradê + faixa à esquerda; neon só n
 CSS em `index.css` (camada utilities): `.stagger` (cascata dos filhos), `.strike/.strike-on` (risco animado), check-pop e `scale` ao
 tocar em botões; keyframes `page-in`, `item-in`, `pop-in`, `fresh-glow` no tailwind.config. Preferência `useUI.motion` (auto/on/off) vira `html[data-motion]`: "on" ignora `prefers-reduced-motion`, "off" desliga tudo.
 Não usar `.stagger` em listas reordenáveis por arrastar (Notas): reinserir o nó reinicia a animação.
+
+## Google Agenda e alertas no aparelho
+
+`lib/google-calendar.ts`: Google Identity Services (modelo de token, escopo `calendar.events`) direto no navegador; token
+~1 h em localStorage, renovação silenciosa (`prompt: 'none'`). Client ID público em `VITE_GOOGLE_CLIENT_ID` ou salvo no
+aparelho pelo admin (menu → Google Agenda → Configuração). `listEvents` / `addTaskToGoogle`. Hooks em `hooks/use-google.ts`.
+Calendário mostra eventos do Google (azul `sky-600`) e botão Conectar; afazer tem "Google Agenda" no rodapé (`send-to-google.tsx`).
+`lib/alerts.ts` + `hooks/use-alerts.ts` (montado no AppLayout): a cada 30 s avisa X min antes de afazeres com horário e de
+eventos do Google, e manda o resumo da manhã; não repete (`rutte:alerts-sent`). Notificação via service worker
+(`public/sw.js` trata `notificationclick`). Limite: sem servidor de push, não avisa com o app totalmente fechado.

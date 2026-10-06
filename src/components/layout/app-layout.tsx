@@ -27,6 +27,7 @@ import {
   WandSparkles,
   Trash2,
   ShieldCheck,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -49,6 +50,8 @@ import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 import { BackupDialog } from './backup-dialog';
 import { MapsKeyDialog } from './maps-key-dialog';
+import { AlertsDialog, GoogleCalendarDialog } from './google-alerts-dialogs';
+import { useAlertsRunner } from '@/hooks/use-alerts';
 import { AiKeyDialog } from './ai-key-dialog';
 
 interface NavEntry {
@@ -197,6 +200,8 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const [backupOpen, setBackupOpen] = useState(false);
   const [mapsOpen, setMapsOpen] = useState(false);
+  const [gcalOpen, setGcalOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const name = user?.name && user.name !== 'Você' ? user.name : 'Você';
 
@@ -262,6 +267,12 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           <DropdownMenuItem onSelect={() => setBackupOpen(true)}>
             <DatabaseBackup /> Backup dos dados
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setAlertsOpen(true)}>
+            <Bell /> Alertas no aparelho
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setGcalOpen(true)}>
+            <CalendarDays /> Google Agenda
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setMapsOpen(true)}>
             <MapPin /> Google Maps (endereços)
           </DropdownMenuItem>
@@ -307,6 +318,8 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
       </DropdownMenu>
       <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
       <MapsKeyDialog open={mapsOpen} onOpenChange={setMapsOpen} />
+      <GoogleCalendarDialog open={gcalOpen} onOpenChange={setGcalOpen} />
+      <AlertsDialog open={alertsOpen} onOpenChange={setAlertsOpen} />
       <AiKeyDialog open={aiOpen} onOpenChange={setAiOpen} />
     </>
   );
@@ -326,6 +339,7 @@ export function AppLayout() {
   const setMobileMenu = useUI((s) => s.setMobileMenu);
   const openNewTask = useUI((s) => s.openNewTask);
   const location = useLocation();
+  useAlertsRunner();
   const nav = useNav();
   const primary = nav.filter((n) => n.primary);
   const more = nav.filter((n) => !n.primary);

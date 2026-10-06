@@ -67,3 +67,14 @@ Para o login funcionar em `http://localhost:5173`, adicione também `http://loca
 - **Com `VITE_SUPABASE_SYNC=1`:** os dados também vão para a nuvem (tabela `rutte_data`) e o mesmo login mostra os mesmos
   dados no celular e no computador; sem internet, as mudanças sobem quando a conexão volta.
 - Chaves de IA (Gemini/Claude), chave do Google Maps e PDFs anexados ficam **só no aparelho** (não vão para a nuvem).
+
+## Google Agenda (opcional)
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e ative a **Google Calendar API**.
+2. **Tela de permissão OAuth**: tipo *Externo*, nome "Rutte", seu e-mail de suporte; em *Escopos* adicione
+   . Enquanto o app estiver em *Teste*, só os e-mails cadastrados em *Usuários de teste*
+   conseguem conectar (até 100). Para liberar para todos, envie para verificação do Google.
+3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**. Em *Origens JavaScript autorizadas*,
+   coloque  (e  para testes).
+4. Copie o **ID do cliente** (termina em ) e coloque em  no Vercel
+   (ou mande para o desenvolvedor colocar no código). É um identificador público — não é senha.

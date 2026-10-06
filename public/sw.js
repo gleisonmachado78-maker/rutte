@@ -1,5 +1,5 @@
 // Service worker da Rutte: guarda o app para abrir sem internet.
-const CACHE = 'rutte-v1';
+const CACHE = 'rutte-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -27,5 +27,18 @@ self.addEventListener('fetch', (e) => {
         return res;
       })
       .catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))),
+  );
+});
+
+// Toque na notificação: foca a Rutte aberta ou abre o endereço do alerta
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const same = list.find((c) => c.url.startsWith(self.registration.scope));
+      if (same && url.startsWith(self.registration.scope)) return same.focus().then((c) => c && c.navigate ? c.navigate(url) : c);
+      return self.clients.openWindow(url);
+    }),
   );
 });

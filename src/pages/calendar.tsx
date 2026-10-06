@@ -13,7 +13,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Video } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, MapPin, Plus, Video } from 'lucide-react';
 import { RouteLinks } from '@/components/tasks/location-field';
 import { shortPlace } from '@/lib/maps';
 import { useMemo, useState } from 'react';
@@ -24,6 +24,10 @@ import { dueDateTime, isClosed, isOverdue, toISODate } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI } from '@/store/ui';
 import type { Task } from '@/types';
+import { useGoogleEvents, useGoogleStatus } from '@/hooks/use-google';
+import { connectGoogle, type GEvent } from '@/lib/google-calendar';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const WEEK_OPTS = { weekStartsOn: 0 as const, locale: ptBR };
 
@@ -57,7 +61,16 @@ function CalendarItem({ task, compact }: { task: Task; compact?: boolean }) {
   );
 }
 
-function DayList({ date, tasks }: { date: Date; tasks: Task[] }) {
+function GoogleItem({ ev }: { ev: GEvent }) {
+  return (
+    <a href={ev.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title={`Google Agenda: ${ev.title}`} className="flex w-full items-center gap-1 truncate rounded-md bg-sky-600/90 px-1.5 py-0.5 text-left text-[11px] font-medium text-white hover:bg-sky-600">
+      {ev.time && <span className="shrink-0 tabular-nums opacity-85">{ev.time}</span>}
+      <span className="truncate">{ev.title}</span>
+    </a>
+  );
+}
+
+function DayList({ date, tasks, events = [] }: { date: Date; tasks: Task[]; events?: GEvent[] }) {
   const openTask = useUI((s) => s.openTask);
   const openNewTask = useUI((s) => s.openNewTask);
   return (
@@ -68,9 +81,28 @@ function DayList({ date, tasks }: { date: Date; tasks: Task[] }) {
           <Plus /> Adicionar
         </Button>
       </div>
-      {tasks.length === 0 ? (
+      {events.length > 0 && (
+        <ul className="mt-3 space-y-2" aria-label="Google Agenda">
+          {events.map((ev) => (
+            <li key={ev.id}>
+              <a href={ev.link} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] p-3 transition-colors hover:bg-sky-500/10">
+                <span className="w-12 shrink-0 text-sm font-bold tabular-nums">{ev.time ?? 'Dia'}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{ev.title}</span>
+                  <span className="mt-0.5 flex items-center gap-1 text-xs text-sky-700 dark:text-sky-300">
+                    <CalendarDays className="size-3" aria-hidden /> Google Agenda
+                    {ev.location && <span className="truncate text-foreground/55">· {ev.location}</span>}
+                  </span>
+                </span>
+                <ExternalLink className="size-4 shrink-0 text-foreground/40" aria-hidden />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {tasks.length === 0 && events.length === 0 ? (
         <p className="mt-3 text-sm text-foreground/60">Nada agendado neste dia.</p>
-      ) : (
+      ) : tasks.length === 0 ? null : (
         <ul className="mt-3 space-y-2">
           {tasks.map((t) => (
             <li key={t.id}>
@@ -139,6 +171,25 @@ export function CalendarPage() {
     });
   }, [cursor, mode]);
 
+  const g = useGoogleStatus();
+  const qc = useQueryClient();
+  const gq = useGoogleEvents(days[0], addDays(days[days.length - 1], 1));
+  const gByDay = useMemo(() => {
+    const map = new Map<string, GEvent[]>();
+    for (const e of gq.data ?? []) map.set(e.date, [...(map.get(e.date) ?? []), e]);
+    return map;
+  }, [gq.data]);
+  const gFor = (d: Date) => gByDay.get(toISODate(d)) ?? [];
+  const connectG = async () => {
+    try {
+      await connectGoogle(true);
+      qc.invalidateQueries({ queryKey: ['gcal'] });
+      toast.success('Google Agenda conectado');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const move = (dir: 1 | -1) => {
     const next = mode === 'month' ? addMonths(cursor, dir) : addWeeks(cursor, dir);
     setCursor(next);
@@ -183,6 +234,17 @@ export function CalendarPage() {
               </button>
             ))}
           </div>
+          {g.configured && (
+            g.connected ? (
+              <span className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3 text-sm font-medium text-sky-700 dark:text-sky-300" title={gq.error instanceof Error ? gq.error.message : 'Google Agenda conectado'}>
+                <CalendarDays className="size-4" aria-hidden /> {gq.isError ? <button type="button" onClick={connectG} className="underline">Reconectar Google</button> : 'Google conectado'}
+              </span>
+            ) : (
+              <Button variant="outline" onClick={connectG}>
+                <CalendarDays /> Conectar Google Agenda
+              </Button>
+            )
+          )}
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={() => move(-1)} aria-label={mode === 'month' ? 'Mês anterior' : 'Semana anterior'}>
               <ChevronLeft />
@@ -199,6 +261,7 @@ export function CalendarPage() {
         <span className="inline-flex items-center gap-1.5"><span className="inline-flex size-4 items-center justify-center rounded bg-navy text-white dark:bg-white/15"><Video className="size-2.5" aria-hidden /></span> Reunião</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-brand" aria-hidden /> Atrasada</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-muted" aria-hidden /> Afazer</span>
+        {g.connected && <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-sky-600" aria-hidden /> Google Agenda</span>}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -214,6 +277,7 @@ export function CalendarPage() {
           <div className="grid grid-cols-7" role="grid" aria-label="Dias">
             {days.map((d) => {
               const items = itemsFor(d);
+              const gev = gFor(d);
               const outside = mode === 'month' && !isSameMonth(d, cursor);
               const isSel = isSameDay(d, selected);
               const hasOverdue = items.some((t) => isOverdue(t));
@@ -224,7 +288,7 @@ export function CalendarPage() {
                   role="gridcell"
                   tabIndex={0}
                   aria-selected={isSel}
-                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length} itens`}
+                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + gev.length} itens`}
                   onClick={() => setSelected(d)}
                   onDoubleClick={() => openNewTask({ dueDate: toISODate(d) })}
                   onKeyDown={(e) => {
@@ -250,6 +314,7 @@ export function CalendarPage() {
                   </span>
                   {/* Mobile: pontos; telas maiores: títulos */}
                   <div className={'flex flex-wrap justify-center gap-0.5 sm:hidden'}>
+                    {gev.slice(0, 2).map((e) => <span key={e.id} className="size-1.5 rounded-full bg-sky-500" aria-hidden />)}
                     {items.slice(0, 4).map((t) => (
                       <span
                         key={t.id}
@@ -260,11 +325,12 @@ export function CalendarPage() {
                     {hasOverdue && <span className="sr-only">Possui atrasadas</span>}
                   </div>
                   <div className={'hidden flex-col gap-1 sm:flex'}>
-                    {items.slice(0, max).map((t) => (
+                    {gev.slice(0, max).map((e) => <GoogleItem key={e.id} ev={e} />)}
+                    {items.slice(0, Math.max(0, max - gev.length)).map((t) => (
                       <CalendarItem key={t.id} task={t} compact />
                     ))}
-                    {items.length > max && (
-                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length - max} mais</span>
+                    {items.length + gev.length > max && (
+                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length + gev.length - max} mais</span>
                     )}
                   </div>
                 </div>
@@ -273,7 +339,7 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <DayList date={selected} tasks={itemsFor(selected)} />
+        <DayList date={selected} tasks={itemsFor(selected)} events={gFor(selected)} />
       </div>
       <p className="hidden text-xs text-foreground/50 sm:block">Dica: dê um duplo clique em um dia para criar um afazer nele.</p>
     </div>
