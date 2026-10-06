@@ -40,133 +40,51 @@ function Shell({ children }: { children: ReactNode }) {
 
 /* ------------------------------------------- página inicial ------------------------------------------- */
 
-const ORGANIZE = [
+const FEATURES = [
   { icon: CircleCheck, t: 'Afazeres', d: 'Prioridade, prazos, subtarefas, Kanban e recorrência.' },
-  { icon: CalendarDays, t: 'Agenda', d: 'Seu calendário com os eventos do Google Agenda juntos.' },
-  { icon: BellRing, t: 'Alertas', d: 'Aviso com som antes de cada compromisso, até com o app fechado.' },
+  { icon: CalendarDays, t: 'Agenda + Google Agenda', d: 'Veja seus compromissos e os eventos do Google no mesmo calendário.' },
+  { icon: BellRing, t: 'Alertas', d: 'Avisos com som antes de cada compromisso e resumo da manhã.' },
   { icon: Timer, t: 'Foco', d: 'Pomodoro para render sem distração.' },
-  { icon: NotebookPen, t: 'Notas', d: 'Blocos com caixas de texto e listas.' },
-];
-const EVOLVE = [
-  { icon: PieChart, t: 'Roda da Vida', d: 'Veja o equilíbrio entre as áreas da sua vida.' },
-  { icon: Dumbbell, t: 'Academia', d: 'Treinos, cargas e evolução mês a mês.' },
+  { icon: NotebookPen, t: 'Notas', d: 'Blocos de notas com caixas de texto e listas.' },
+  { icon: Sparkles, t: 'Rutte IA', d: 'Pergunte, pesquise e crie afazeres conversando.' },
+  { icon: PieChart, t: 'Roda da Vida', d: 'Equilíbrio entre as áreas da sua vida.' },
+  { icon: Dumbbell, t: 'Academia', d: 'Treinos, cargas e evolução.' },
   { icon: Heart, t: 'Gratidão', d: 'Diário, meditações e orações.' },
-  { icon: BookOpen, t: 'Biblioteca', d: 'Livros, vídeos, podcasts e grandes nomes.' },
+  { icon: BookOpen, t: 'Biblioteca', d: 'Livros, vídeos, podcasts e grandes nomes por tema.' },
 ];
-
-function Feature({ f }: { f: (typeof ORGANIZE)[number] }) {
-  return (
-    <div className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition-colors hover:border-primary/40 hover:bg-white/[0.06]">
-      <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-neon ring-1 ring-primary/30">
-        <f.icon className="size-5" aria-hidden />
-      </span>
-      <h3 className="mt-4 font-bold">{f.t}</h3>
-      <p className="mt-1 text-sm leading-relaxed text-white/65">{f.d}</p>
-    </div>
-  );
-}
-
-function SectionTitle({ kicker, title }: { kicker: string; title: ReactNode }) {
-  return (
-    <div className="mb-6">
-      <p className="text-xs font-bold uppercase tracking-[0.25em] text-neon">{kicker}</p>
-      <h2 className="mt-2 font-brand text-3xl font-bold sm:text-4xl">{title}</h2>
-    </div>
-  );
-}
 
 export function AboutPage() {
   return (
     <Shell>
-      {/* topo: texto + celular com a tela real */}
-      <section className="grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="text-center lg:text-left">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white/75">
-            <span className="size-2 rounded-full bg-neon shadow-[0_0_10px_rgba(255,46,59,.9)]" aria-hidden /> Sua secretária digital
-          </span>
-          <h1 className="mt-5 font-brand text-5xl font-bold leading-[1.05] sm:text-6xl">
-            Organize o dia.
-            <br />
-            <span className="italic text-neon">Evolua</span> a vida.
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/70 lg:mx-0">
-            A Rutte junta afazeres, agenda, alertas, foco e desenvolvimento pessoal em um só app — e ainda conversa com você pela Rutte IA.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
-            <Link to="/" className="btn-neon inline-flex h-12 items-center gap-2 rounded-xl px-6 font-bold text-white">
-              Começar agora <ArrowRight className="size-5" aria-hidden />
-            </Link>
-            <Link to="/privacidade" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 px-6 font-semibold text-white/85 hover:bg-white/5">
-              <ShieldCheck className="size-5" aria-hidden /> Seus dados
-            </Link>
-          </div>
-          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/60 lg:justify-start">
-            <li className="flex items-center gap-1.5"><CircleCheck className="size-4 text-neon" aria-hidden /> Funciona no celular e no computador</li>
-            <li className="flex items-center gap-1.5"><CircleCheck className="size-4 text-neon" aria-hidden /> Integra com o Google Agenda</li>
-          </ul>
-        </div>
-        <div className="relative mx-auto w-full max-w-[300px]">
-          <div className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(185,27,28,.45),transparent_65%)] blur-2xl" aria-hidden />
-          <div className="relative rounded-[44px] bg-gradient-to-br from-[#323a52] to-[#0d111d] p-3 shadow-[0_40px_100px_rgba(0,0,0,.6)] ring-1 ring-white/10">
-            <div className="absolute left-1/2 top-5 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-black" aria-hidden />
-            <img src="/sobre-app.jpg" alt="Tela inicial da Rutte com o resumo do dia" className="w-full rounded-[34px]" width={600} height={1290} />
-          </div>
-        </div>
-      </section>
-
-      {/* organize */}
-      <section className="mt-6">
-        <SectionTitle kicker="Organize seu dia" title={<>Tudo o que você precisa fazer, <span className="text-neon">no lugar certo</span></>} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {ORGANIZE.map((f) => <Feature key={f.t} f={f} />)}
-        </div>
-      </section>
-
-      {/* rutte ia em destaque */}
-      <section className="mt-12 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/20 via-white/[0.03] to-transparent p-7 sm:p-10">
-        <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-          <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary text-white shadow-neon-lg">
-            <Sparkles className="size-8" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-brand text-3xl font-bold">Rutte IA</h2>
-            <p className="mt-2 max-w-2xl leading-relaxed text-white/75">Peça um resumo do dia, um relatório do mês, uma pesquisa na web ou diga “me lembra de pagar a conta amanhã” — ela cria o afazer para você.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* evolua */}
-      <section className="mt-12">
-        <SectionTitle kicker="Evolua como pessoa" title={<>Cuide de você <span className="text-neon">por inteiro</span></>} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {EVOLVE.map((f) => <Feature key={f.t} f={f} />)}
-        </div>
-      </section>
-
-      {/* dados e google */}
-      <section className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-white/[0.035] p-7 sm:p-10 lg:grid-cols-[auto_1fr]">
-        <span className="grid size-14 place-items-center rounded-2xl bg-white/10 text-neon">
-          <ShieldCheck className="size-7" aria-hidden />
-        </span>
-        <div>
-          <h2 className="font-brand text-3xl font-bold">Seus dados, do seu jeito</h2>
-          <ul className="mt-4 grid gap-3 text-sm leading-relaxed text-white/75 sm:grid-cols-3">
-            <li><strong className="block text-white">No seu aparelho</strong>Seus afazeres e notas ficam guardados no seu celular ou computador.</li>
-            <li><strong className="block text-white">Google com permissão</strong>A agenda só é acessada quando você conecta, direto do seu navegador, e você pode desconectar quando quiser.</li>
-            <li><strong className="block text-white">Acesso aprovado</strong>Login com e-mail e senha, e cada cadastro é aprovado antes de entrar.</li>
-          </ul>
-          <Link to="/privacidade" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-neon hover:underline">
-            Ler a Política de Privacidade <ArrowRight className="size-4" aria-hidden />
+      <section className="py-10 text-center sm:py-16">
+        <RutteLogo glow className="mx-auto w-28" />
+        <h1 className="mt-6 font-brand text-5xl font-bold leading-tight sm:text-6xl">
+          Rutte, a sua <span className="text-neon">secretária digital</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-lg text-white/75">Organize o que você precisa fazer. Evolua no que você precisa ser. Afazeres, agenda, alertas, foco e desenvolvimento pessoal em um só app.</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link to="/" className="btn-neon inline-flex h-12 items-center gap-2 rounded-xl px-6 font-bold text-white">
+            Começar agora <ArrowRight className="size-5" aria-hidden />
+          </Link>
+          <Link to="/privacidade" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 px-6 font-semibold text-white/85 hover:bg-white/5">
+            <ShieldCheck className="size-5" aria-hidden /> Como cuidamos dos seus dados
           </Link>
         </div>
       </section>
-
-      {/* chamada final */}
-      <section className="mt-12 text-center">
-        <h2 className="font-brand text-4xl font-bold">Pronto para organizar sua rotina?</h2>
-        <Link to="/" className="btn-neon mt-6 inline-flex h-12 items-center gap-2 rounded-xl px-7 font-bold text-white">
-          Entrar na Rutte <ArrowRight className="size-5" aria-hidden />
-        </Link>
+      <section aria-label="O que a Rutte faz" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {FEATURES.map((f) => (
+          <div key={f.t} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+            <f.icon className="size-6 text-neon" aria-hidden />
+            <h2 className="mt-3 font-bold">{f.t}</h2>
+            <p className="mt-1 text-sm text-white/70">{f.d}</p>
+          </div>
+        ))}
+      </section>
+      <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm leading-relaxed text-white/75">
+        <h2 className="text-lg font-bold text-white">Integração com o Google Agenda</h2>
+        <p className="mt-2">
+          Se você quiser, a Rutte se conecta ao seu Google Agenda para mostrar seus eventos no calendário do app, avisar antes deles e criar eventos a partir dos seus afazeres. O acesso é feito direto no seu navegador, só acontece quando você autoriza e pode ser removido a qualquer momento. Veja os detalhes na <Link to="/privacidade" className="font-semibold text-neon hover:underline">Política de Privacidade</Link>.
+        </p>
       </section>
     </Shell>
   );
