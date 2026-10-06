@@ -78,8 +78,9 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
   const [name, setName] = useState(existing?.name ?? '');
   const [situations, setSituations] = useState<Situation[]>(existing?.situations ?? []);
   const [goals, setGoals] = useState<GoalId[]>(existing?.goals ?? []);
-  const [peak, setPeak] = useState<Peak>(existing?.peak ?? 'manha');
-  const [struggle, setStruggle] = useState<Struggle>(existing?.struggle ?? 'procrastinacao');
+  const [peaks, setPeaks] = useState<Peak[]>(existing?.peaks ?? (existing?.peak ? [existing.peak] : []));
+  const [struggles, setStruggles] = useState<Struggle[]>(existing?.struggles ?? (existing?.struggle ? [existing.struggle] : []));
+  const [notes, setNotes] = useState(existing?.notes ?? '');
   const [modules, setModules] = useState<UserProfile['modules']>(existing?.modules ?? { business: false, gym: false, life: true });
   const [touchedModules, setTouchedModules] = useState(!!existing);
 
@@ -92,13 +93,21 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
   const nick = firstName(name);
   const canNext = [name.trim().length > 0, situations.length > 0, goals.length > 0, true, true, true][step];
 
-  const speech = [
-    'Oi! Eu sou a Rutte, a secretária por trás da sua produtividade. Vou te fazer umas perguntas rápidas para deixar tudo do seu jeito. Como posso te chamar?',
-    `Prazer, ${nick}! Me conta: como está a sua vida hoje? Pode marcar mais de uma opção.`,
-    `Ótimo. E o que você quer conquistar nos próximos 3 meses? Escolha até ${MAX_GOALS} objetivos — é neles que eu vou focar.`,
-    'Agora me ajuda a te ajudar: quando você rende mais e o que mais atrapalha a sua rotina?',
-    `Com base no que você falou, separei estas partes do app para você, ${nick}. Pode ligar ou desligar. Depois eu te mostro o app num tour rapidinho.`,
-  ][step];
+  const speech = existing
+    ? [
+        `Oi de novo! Que bom te ver por aqui. Vamos ajustar as coisas para eu continuar te ajudando do jeito certo. Como você prefere que eu te chame?`,
+        `Combinado, ${nick}! A sua vida mudou desde a última vez? Pode marcar tudo o que fizer sentido agora.`,
+        `E os seus planos, continuam os mesmos? Escolha até ${MAX_GOALS} — eu fico de olho neles para você.`,
+        'Me conta de novo como anda a sua rotina: quando você rende mais e o que tem atrapalhado? Pode marcar várias opções.',
+        `Tudo anotado, ${nick}. Revise as partes do app que eu deixei prontas para você e mude o que quiser.`,
+      ][step]
+    : [
+        'Olá! Eu sou a Rutte, a sua nova secretária. 😊 A partir de hoje eu cuido da sua agenda, lembro você dos compromissos e ajudo a dar conta de tudo. Antes de começar, posso fazer umas perguntinhas para te conhecer melhor? Para começar: como você prefere que eu te chame?',
+        `Muito prazer, ${nick}! Vai ser uma alegria trabalhar com você. Para eu me organizar: como está a sua vida hoje? Pode marcar tudo o que fizer sentido.`,
+        `Anotado! Agora me conta os seus planos: o que você quer conquistar nos próximos meses? Escolha até ${MAX_GOALS} — eu vou ficar de olho neles por você.`,
+        'Para eu te ajudar do jeito certo, me conta da sua rotina: em que horários você rende mais e o que costuma atrapalhar? Pode marcar várias opções — e, se quiser, escreva com as suas palavras.',
+        `Prontinho, ${nick}! Com tudo o que você me contou, já deixei separado o que vai te ajudar mais. Pode ligar ou desligar o que quiser — quem manda aqui é você. Depois eu te mostro tudo num passeio rapidinho.`,
+      ][step];
 
   const finish = () => {
     const now = new Date().toISOString();
@@ -106,8 +115,11 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
       name: name.trim() || 'Você',
       situations,
       goals,
-      peak,
-      struggle,
+      peak: peaks[0] ?? 'manha',
+      struggle: struggles[0] ?? 'procrastinacao',
+      peaks,
+      struggles,
+      notes: notes.trim() || undefined,
       modules,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
@@ -118,7 +130,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
         mode: 'keep',
         // a lista de afazeres começa vazia: nada é criado automaticamente
         starter: [],
-        time: PEAKS[peak].time,
+        time: PEAKS[peaks[0] ?? 'manha'].time,
         gymGoal: gymGoalFor(goals),
       },
       { onSuccess: onClose },
@@ -156,7 +168,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
           {step === 0 && (
             <div className="space-y-2">
               <label htmlFor="ob-name" className="text-xs font-semibold uppercase tracking-wide text-white/60">
-                Seu nome
+                Como prefere ser chamado(a)
               </label>
               <input
                 id="ob-name"
@@ -164,7 +176,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && name.trim() && setStep(1)}
-                placeholder="Ex.: Ana"
+                placeholder="Seu nome ou apelido"
                 maxLength={40}
                 autoComplete="given-name"
                 className="h-12 w-full rounded-xl border border-white/20 bg-white/5 px-4 text-lg text-white placeholder:text-white/30 focus:border-neon focus:outline-none"
@@ -184,7 +196,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
           {step === 2 && (
             <>
               <p className="text-sm text-white/60">
-                {goals.length}/{MAX_GOALS} escolhidos
+                {goals.length} de {MAX_GOALS} escolhidos
               </p>
               <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Seus objetivos">
                 {(Object.keys(GOALS) as GoalId[]).map((g) => {
@@ -209,21 +221,39 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
           {step === 3 && (
             <div className="space-y-5">
               <fieldset className="space-y-2">
-                <legend className="mb-2 font-semibold">Quando você rende mais?</legend>
-                <div className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+                <legend className="mb-2 font-semibold">
+                  Quando você rende mais? <span className="text-sm font-normal text-white/55">(marque quantos quiser)</span>
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-2" role="group">
                   {(Object.keys(PEAKS) as Peak[]).map((p) => (
-                    <Choice key={p} active={peak === p} onClick={() => setPeak(p)} title={PEAKS[p].label} desc={PEAKS[p].desc} />
+                    <Choice key={p} multi active={peaks.includes(p)} onClick={() => setPeaks((x) => toggle(x, p))} title={PEAKS[p].label} desc={PEAKS[p].desc} />
                   ))}
                 </div>
               </fieldset>
               <fieldset className="space-y-2">
-                <legend className="mb-2 font-semibold">O que mais atrapalha você?</legend>
-                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup">
+                <legend className="mb-2 font-semibold">
+                  O que costuma atrapalhar? <span className="text-sm font-normal text-white/55">(marque quantos quiser)</span>
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-2" role="group">
                   {(Object.keys(STRUGGLES) as Struggle[]).map((s) => (
-                    <Choice key={s} active={struggle === s} onClick={() => setStruggle(s)} title={STRUGGLES[s].label} />
+                    <Choice key={s} multi active={struggles.includes(s)} onClick={() => setStruggles((x) => toggle(x, s))} title={STRUGGLES[s].label} />
                   ))}
                 </div>
               </fieldset>
+              <div className="space-y-2">
+                <label htmlFor="ob-notes" className="font-semibold">
+                  Quer me contar mais alguma coisa? <span className="text-sm font-normal text-white/55">(opcional)</span>
+                </label>
+                <textarea
+                  id="ob-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  maxLength={400}
+                  rows={3}
+                  placeholder="Ex.: trabalho em turnos, tenho dois filhos pequenos, quero voltar a estudar à noite…"
+                  className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-[15px] text-white placeholder:text-white/30 focus:border-neon focus:outline-none"
+                />
+              </div>
             </div>
           )}
 
@@ -263,7 +293,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
                 desc="Equilíbrio entre as áreas da vida, com vídeos e dicas"
                 icon={<ChartPie className="size-5" />}
               />
-              <p className="text-xs text-white/50">Dá para mudar depois em “Personalizar a Rutte”, no menu.</p>
+              <p className="text-xs text-white/50">Quando quiser mudar, é só me chamar em Configurações → Personalizar.</p>
             </div>
           )}
 
@@ -291,7 +321,7 @@ export function Onboarding({ existing, onClose }: { existing: UserProfile | null
               </Button>
             ) : (
               <Button size="lg" onClick={() => finish()} disabled={complete.isPending}>
-                <Sparkles /> {existing ? 'Salvar personalização' : 'Começar a usar'}
+                <Sparkles /> {existing ? 'Salvar' : 'Vamos começar!'}
               </Button>
             )}
           </div>

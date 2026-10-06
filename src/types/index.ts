@@ -208,7 +208,7 @@ export interface GymData {
 
 /* ------------------------------- Personalização ------------------------------- */
 
-export type Situation = 'clt' | 'empresa' | 'autonomo' | 'estudante' | 'casa';
+export type Situation = 'clt' | 'empresa' | 'autonomo' | 'estudante' | 'casa' | 'transicao' | 'aposentado';
 export type GoalId =
   | 'rotina'
   | 'produtividade'
@@ -221,16 +221,24 @@ export type GoalId =
   | 'familia'
   | 'fe'
   | 'mente';
-export type Peak = 'manha' | 'tarde' | 'noite';
-export type Struggle = 'procrastinacao' | 'esquecimento' | 'tempo' | 'motivacao' | 'sobrecarga';
+export type Peak = 'manha' | 'tarde' | 'noite' | 'madrugada' | 'varia';
+export type Struggle = 'procrastinacao' | 'esquecimento' | 'tempo' | 'motivacao' | 'sobrecarga' | 'distracao' | 'cansaco' | 'comecar';
 
 /** Respostas da primeira conversa com a Rutte — adaptam o app a cada pessoa. */
 export interface UserProfile {
   name: string;
   situations: Situation[];
   goals: GoalId[];
+  /** primeiro horário escolhido (compatibilidade) */
   peak: Peak;
+  /** primeira dificuldade escolhida (compatibilidade) */
   struggle: Struggle;
+  /** todos os horários em que rende mais */
+  peaks?: Peak[];
+  /** todas as dificuldades marcadas */
+  struggles?: Struggle[];
+  /** o que a pessoa contou com as próprias palavras */
+  notes?: string;
   modules: { business: boolean; gym: boolean; life: boolean };
   /** quando terminou (ou pulou) o tutorial de boas-vindas */
   tutorialDoneAt?: string;

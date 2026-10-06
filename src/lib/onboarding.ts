@@ -16,6 +16,8 @@ import {
   Rocket,
   Users,
   Wallet,
+  Compass,
+  Sun,
   type LucideIcon,
 } from 'lucide-react';
 import type { Category, GoalId, LifeAreaId, Peak, Scope, Situation, Struggle, TrainingGoal, UserProfile } from '@/types';
@@ -26,6 +28,8 @@ export const SITUATIONS: Record<Situation, { label: string; desc: string; icon: 
   autonomo: { label: 'Autônomo ou freelancer', desc: 'Atendo clientes por conta própria', icon: Rocket },
   estudante: { label: 'Estudo', desc: 'Faculdade, curso ou concurso', icon: GraduationCap },
   casa: { label: 'Cuido da casa e da família', desc: 'Rotina do lar, filhos, contas', icon: House },
+  transicao: { label: 'Estou em transição', desc: 'Buscando trabalho ou mudando de área', icon: Compass },
+  aposentado: { label: 'Sou aposentado(a)', desc: 'Tempo livre para projetos e cuidar de mim', icon: Sun },
 };
 
 export interface GoalDef {
@@ -122,6 +126,8 @@ export const PEAKS: Record<Peak, { label: string; desc: string; time: string }> 
   manha: { label: 'De manhã', desc: 'Acordo cedo e rendo mais cedo', time: '07:00' },
   tarde: { label: 'À tarde', desc: 'Pego no tranco depois do almoço', time: '14:00' },
   noite: { label: 'À noite', desc: 'Minha cabeça funciona melhor à noite', time: '20:00' },
+  madrugada: { label: 'De madrugada', desc: 'Rendo quando todo mundo dorme', time: '23:00' },
+  varia: { label: 'Depende do dia', desc: 'Minha rotina muda bastante', time: '09:00' },
 };
 
 export const STRUGGLES: Record<Struggle, { label: string; tips: string[] }> = {
@@ -170,9 +176,36 @@ export const STRUGGLES: Record<Struggle, { label: string; tips: string[] }> = {
       'Se algo está parado há semanas, decida: fazer, agendar ou apagar.',
     ],
   },
+  distracao: {
+    label: 'Me distraio fácil (celular, redes)',
+    tips: [
+      'Deixe o celular em outro cômodo durante um bloco de foco de 25 minutos.',
+      'Desative as notificações das redes sociais no horário de trabalho.',
+      'Use o modo Foco da Rutte: um afazer por vez, com o relógio na tela.',
+      'Combine consigo mesmo: rede social só depois de concluir a primeira tarefa do dia.',
+    ],
+  },
+  cansaco: {
+    label: 'Fico sem energia',
+    tips: [
+      'Coloque as tarefas mais pesadas no horário em que você rende mais.',
+      'Pausas curtas a cada hora: levante, beba água, respire fundo.',
+      'Durma e acorde em horários parecidos — a energia agradece.',
+      'Uma caminhada de 10 minutos rende mais que o terceiro café.',
+    ],
+  },
+  comecar: {
+    label: 'Não sei por onde começar',
+    tips: [
+      'Escreva tudo o que está na cabeça como afazeres. Depois escolha só um para agora.',
+      'Comece pelo que tem prazo mais perto — o resto pode esperar.',
+      'Peça para a Rutte IA: “organiza meu dia” e ela sugere a ordem.',
+      'Defina o primeiro passo bem pequeno: abrir o arquivo, ligar para alguém, separar o material.',
+    ],
+  },
 };
 
-export const MAX_GOALS = 3;
+export const MAX_GOALS = 5;
 
 /** Sugestões automáticas de módulos a partir das respostas. */
 export function suggestedModules(situations: Situation[], goals: GoalId[]): UserProfile['modules'] {
@@ -238,8 +271,9 @@ export function starterTasks(goals: GoalId[], modules: UserProfile['modules']): 
 }
 
 /** Dica do dia (muda a cada dia, conforme a maior dificuldade da pessoa). */
-export function tipOfTheDay(struggle: Struggle, date = new Date()) {
-  const tips = STRUGGLES[struggle].tips;
+export function tipOfTheDay(struggle: Struggle | Struggle[], date = new Date()) {
+  const list = (Array.isArray(struggle) ? struggle : [struggle]).filter((x) => STRUGGLES[x]);
+  const tips = (list.length ? list : (['procrastinacao'] as Struggle[])).flatMap((x) => STRUGGLES[x].tips);
   const day = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86_400_000);
   return tips[day % tips.length];
 }

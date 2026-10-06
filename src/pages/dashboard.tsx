@@ -140,7 +140,7 @@ export function DashboardPage() {
             <p className="mt-2 flex max-w-2xl items-start gap-2 text-sm text-foreground/70">
               <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
               <span>
-                <strong className="text-foreground">Dica de hoje:</strong> {tipOfTheDay(user.struggle, now)}
+                <strong className="text-foreground">Dica de hoje:</strong> {tipOfTheDay(user.struggles?.length ? user.struggles : user.struggle, now)}
               </span>
             </p>
           )}

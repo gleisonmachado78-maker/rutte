@@ -124,7 +124,7 @@ export async function buildContext(persona: PersonaId): Promise<string> {
     '',
     `Agora: ${format(now, "EEEE, d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })} (hoje = ${today}).`,
     user
-      ? `Pessoa: ${user.name}. Situação: ${user.situations.map((s) => SITUATIONS[s]?.label).join(', ') || '—'}. Objetivos: ${user.goals.map((g) => GOALS[g]?.label).join(', ') || '—'}. Rende mais: ${PEAKS[user.peak]?.label ?? user.peak}. Maior dificuldade: ${STRUGGLES[user.struggle]?.label ?? user.struggle}.`
+      ? `Pessoa: ${user.name}. Situação: ${user.situations.map((s) => SITUATIONS[s]?.label).join(', ') || '—'}. Objetivos: ${user.goals.map((g) => GOALS[g]?.label).join(', ') || '—'}. Rende mais: ${(user.peaks?.length ? user.peaks : [user.peak]).map((p) => PEAKS[p]?.label ?? p).join(', ')}. Dificuldades: ${(user.struggles?.length ? user.struggles : [user.struggle]).map((x) => STRUGGLES[x]?.label ?? x).join(', ')}.${user.notes ? ` Contou: ${user.notes}` : ''}`
       : 'Pessoa ainda não fez a personalização.',
     relationship ? `Vida amorosa: ${relationship === 'casal' ? 'em um relacionamento' : 'solteiro(a)'}.` : '',
     '',
