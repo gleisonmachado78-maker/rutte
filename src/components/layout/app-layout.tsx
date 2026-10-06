@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { DevCredit } from '@/components/brand/credit';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
 import { FocusEngine, FocusPill } from '@/components/focus/focus-engine';
 import { Onboarding } from '@/components/onboarding/onboarding';
@@ -414,6 +415,7 @@ export function AppLayout() {
           <div data-tour="account">
             <AccountMenu collapsed={collapsed} />
           </div>
+          {!collapsed && <DevCredit className="mt-2 px-2" />}
         </div>
       </aside>
 
@@ -435,6 +437,7 @@ export function AppLayout() {
           <NavGroups onNavigate={() => setMobileMenu(false)} />
           <div className="mt-auto border-t border-white/10 pt-3">
             <AccountMenu />
+            <DevCredit className="mt-2 px-2" />
           </div>
         </SheetContent>
       </Dialog>

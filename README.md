@@ -63,3 +63,7 @@ src/
 - **Avaliações:** 1 a 5 estrelas (e opinião curta) em livros, vídeos, orações e meditações; filtro "Mais bem avaliados".
 - **Foco (Pomodoro):** página `/focus` com campo "O que você vai fazer agora?" (texto livre ou um afazer), anel holográfico, fases configuráveis (25/5/15, longa a cada 4), som e vibração no fim, mini-cronômetro nas outras telas e registro dos pomodoros (também no histórico do afazer). Botão "Focar" dentro de cada afazer.
 - O banco local migra sozinho (v1 → v2 → v3) sem perder dados.
+
+---
+
+Desenvolvido por **era. consultoria**.

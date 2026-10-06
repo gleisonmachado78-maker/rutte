@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff, Hourglass, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { DevCredit } from '@/components/brand/credit';
 import { RutteLogo } from '@/components/brand/rutte';
 import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData, getLastEmail, getRemember, setRemember } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,10 @@ function Screen({ children }: { children: ReactNode }) {
   return (
     <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-navy px-4 py-10 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_500px_at_80%_110%,rgb(185_27_28/0.35),transparent_60%),radial-gradient(700px_400px_at_10%_-10%,rgb(127_29_28/0.4),transparent_60%)]" aria-hidden />
-      <div className="relative w-full max-w-md">{children}</div>
+      <div className="relative w-full max-w-md">
+        {children}
+        <DevCredit className="mt-6 text-center" />
+      </div>
     </div>
   );
 }
