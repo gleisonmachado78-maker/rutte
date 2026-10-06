@@ -223,3 +223,9 @@ Calendário mostra eventos do Google (azul `sky-600`) e botão Conectar; afazer 
 `lib/alerts.ts` + `hooks/use-alerts.ts` (montado no AppLayout): a cada 30 s avisa X min antes de afazeres com horário e de
 eventos do Google, e manda o resumo da manhã; não repete (`rutte:alerts-sent`). Notificação via service worker
 (`public/sw.js` trata `notificationclick`). Limite: sem servidor de push, não avisa com o app totalmente fechado.
+Alertas sonoros/visuais: `fireAlert` (toast destacado + `playChime` Web Audio + vibração com a tela aberta; notificação do
+sistema fora dela). Push com o app fechado: `lib/push.ts` (VAPID público no código; privado só nos segredos da função),
+`supabase/push.sql` (push_subscriptions, reminders, RPCs `save_push_subscription`/`sync_reminders`, pg_cron a cada minuto)
+e `supabase/functions/send-reminders` (Deno + web-push, sem verificação de JWT). `useAlertsRunner` sincroniza 7 dias de
+alertas quando o push está ligado; o SW (`push`) repassa para a tela se ela estiver aberta (sem duplicar, pela `tag`).
+Páginas públicas sem login: `/sobre`, `/privacidade`, `/termos` (`pages/public-pages.tsx`), fora do AuthGate no App.tsx.

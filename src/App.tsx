@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { AdminPage } from '@/pages/admin';
+import { AboutPage, PrivacyPage, TermsPage } from '@/pages/public-pages';
 import { AssistantPage } from '@/pages/assistant';
 import { CalendarPage } from '@/pages/calendar';
 import { DashboardPage } from '@/pages/dashboard';
@@ -34,6 +35,27 @@ function NotFound() {
 // No HTML único (aberto via file://) a navegação usa #/rota
 const Router = import.meta.env.MODE === 'single' ? HashRouter : BrowserRouter;
 
+function PrivateRoutes() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="tasks" element={<TasksPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="life" element={<LifePage />} />
+        <Route path="gym" element={<GymPage />} />
+        <Route path="focus" element={<FocusPage />} />
+        <Route path="assistant" element={<AssistantPage />} />
+        <Route path="notes" element={<NotesPage />} />
+        <Route path="library" element={<LibraryPage />} />
+        <Route path="gratitude" element={<GratitudePage />} />
+        <Route path="admin" element={<AdminPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
+}
+
 export default function App() {
   const theme = useUI((s) => s.theme);
   // Alguns leitores de HTML (ex.: no iPhone) não guardam dados: avisa uma vez
@@ -47,24 +69,13 @@ export default function App() {
   }, []);
   return (
     <Router>
-      <AuthGate>
       <Routes>
-        <Route element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="calendar" element={<CalendarPage />} />
-          <Route path="life" element={<LifePage />} />
-          <Route path="gym" element={<GymPage />} />
-          <Route path="focus" element={<FocusPage />} />
-          <Route path="assistant" element={<AssistantPage />} />
-          <Route path="notes" element={<NotesPage />} />
-          <Route path="library" element={<LibraryPage />} />
-          <Route path="gratitude" element={<GratitudePage />} />
-          <Route path="admin" element={<AdminPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
+        {/* páginas públicas (sem login) */}
+        <Route path="/sobre" element={<AboutPage />} />
+        <Route path="/privacidade" element={<PrivacyPage />} />
+        <Route path="/termos" element={<TermsPage />} />
+        <Route path="*" element={<AuthGate><PrivateRoutes /></AuthGate>} />
       </Routes>
-      </AuthGate>
       <ConfirmHost />
       <Toaster
         theme={theme}

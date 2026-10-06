@@ -1,5 +1,5 @@
 // Service worker da Rutte: guarda o app para abrir sem internet.
-const CACHE = 'rutte-v2';
+const CACHE = 'rutte-v3';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -39,6 +39,30 @@ self.addEventListener('notificationclick', (e) => {
       const same = list.find((c) => c.url.startsWith(self.registration.scope));
       if (same && url.startsWith(self.registration.scope)) return same.focus().then((c) => c && c.navigate ? c.navigate(url) : c);
       return self.clients.openWindow(url);
+    }),
+  );
+});
+
+// Alerta vindo do servidor (funciona com a Rutte fechada). Com a Rutte aberta na tela, ela mesma mostra o aviso com som.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Rutte', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const visible = list.find((c) => c.visibilityState === 'visible' && c.focused);
+      if (visible) {
+        visible.postMessage(Object.assign({ type: 'rutte-push' }, d));
+        return;
+      }
+      return self.registration.showNotification(d.title || 'Rutte', {
+        body: d.body || '',
+        tag: d.tag,
+        icon: 'icon-192.png',
+        badge: 'icon-192.png',
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: { url: d.url || './' },
+      });
     }),
   );
 });

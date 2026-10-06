@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, CalendarCheck2, CalendarDays, ExternalLink, Loader2, LogOut, Send } from 'lucide-react';
+import { Bell, BellOff, BellRing, CalendarCheck2, CalendarDays, ExternalLink, Loader2, LogOut, Send, Volume2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,10 @@ import { Input, Label, Select } from '@/components/ui/form-controls';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/components/auth/auth-gate';
 import { useGoogleStatus } from '@/hooks/use-google';
-import { askPermission, getAlertSettings, notify, permission, saveAlertSettings, type AlertSettings } from '@/lib/alerts';
+import { askPermission, fireAlert, getAlertSettings, notify, permission, planAlerts, playChime, saveAlertSettings, type AlertSettings } from '@/lib/alerts';
+import { disablePush, enablePush, pushSupported, syncReminders } from '@/lib/push';
+import { useTasks } from '@/hooks/use-data';
+import { addDays } from 'date-fns';
 import { connectGoogle, disconnectGoogle, getClientId, setClientId } from '@/lib/google-calendar';
 
 type DProps = { open: boolean; onOpenChange: (o: boolean) => void };
@@ -111,30 +114,71 @@ export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
 
 /* --------------------------------------------- Alertas --------------------------------------------- */
 
+function Toggle({ id, checked, onChange, label, hint, icon }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string; hint: string; icon: React.ReactNode }) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 hover:bg-muted/50">
+      <span className="mt-0.5 text-primary">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="block text-xs text-foreground/60">{hint}</span>
+      </span>
+      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 size-5 shrink-0 cursor-pointer accent-[#E0393A]" />
+    </label>
+  );
+}
+
 export function AlertsDialog({ open, onOpenChange }: DProps) {
   const [s, setS] = useState<AlertSettings>(getAlertSettings);
   const [perm, setPerm] = useState(permission());
+  const [busyPush, setBusyPush] = useState(false);
+  const { data: tasks = [] } = useTasks();
   const update = (patch: Partial<AlertSettings>) => {
     const next = { ...s, ...patch };
     setS(next);
     saveAlertSettings(next);
+    return next;
   };
 
   const enable = async () => {
     const p = await askPermission();
     setPerm(p);
+    playChime(); // também destrava o som neste aparelho
     if (p === 'granted') {
       update({ enabled: true });
       toast.success('Alertas ligados');
       notify('🔔 Alertas da Rutte ligados', 'Você será avisado antes dos seus compromissos.', { tag: 'rutte-test' });
-    } else if (p === 'denied') {
-      toast.error('O navegador bloqueou as notificações', { description: 'Libere nas configurações do site (cadeado ao lado do endereço) e tente de novo.' });
-    } else if (p === 'unsupported') {
-      toast.error('Este navegador não mostra notificações.', { description: 'No iPhone, instale a Rutte na tela de início (Compartilhar → Adicionar à Tela de Início) e abra por lá.' });
+    } else {
+      // sem notificação do sistema: continuam os avisos na tela, com som
+      update({ enabled: true });
+      if (p === 'denied') toast.warning('Notificações bloqueadas no navegador', { description: 'Os avisos aparecem na tela da Rutte com som. Para receber fora do app, libere as notificações do site (cadeado ao lado do endereço).' });
+      else if (p === 'unsupported') toast.warning('Este navegador não mostra notificações', { description: 'Os avisos aparecem na tela da Rutte com som. No iPhone, instale a Rutte na tela de início para receber fora do app.' });
     }
   };
 
-  const on = s.enabled && perm === 'granted';
+  const togglePush = async (on: boolean) => {
+    setBusyPush(true);
+    try {
+      if (on) {
+        await enablePush();
+        const next = update({ push: true });
+        const now = new Date();
+        await syncReminders(planAlerts(tasks, [], now, addDays(now, 7), next));
+        toast.success('Pronto: a Rutte avisa mesmo fechada');
+      } else {
+        update({ push: false });
+        await disablePush();
+        toast('Alertas com o app fechado desligados');
+      }
+    } catch (e) {
+      update({ push: false });
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyPush(false);
+    }
+  };
+
+  const on = s.enabled;
+  const canPush = pushSupported() && perm === 'granted';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
@@ -142,7 +186,7 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
           <Bell className="size-5 text-primary" aria-hidden /> Alertas no aparelho
         </DialogTitle>
         <DialogDescription className="mt-1 text-sm text-foreground/70">
-          A Rutte avisa com uma notificação no celular ou no computador quando algo precisa ser feito.
+          A Rutte avisa com som e na tela quando algo precisa ser feito — dentro do app, com ele minimizado e até fechado.
         </DialogDescription>
 
         {!on ? (
@@ -150,7 +194,6 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
             <Button onClick={enable}>
               <Bell className="size-4" aria-hidden /> Ligar alertas
             </Button>
-            {perm === 'denied' && <p className="text-xs text-primary">As notificações estão bloqueadas para este site. Libere nas configurações do navegador.</p>}
           </div>
         ) : (
           <div className="mt-4 space-y-4">
@@ -175,11 +218,27 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
                 </Select>
               </div>
             </div>
+
+            <Toggle id="al-sound" checked={s.sound} onChange={(v) => { update({ sound: v }); if (v) playChime(); }} icon={<Volume2 className="size-5" />} label="Tocar som" hint="Um toque curto junto com cada aviso." />
+            <Toggle
+              id="al-push"
+              checked={s.push}
+              onChange={(v) => !busyPush && void togglePush(v)}
+              icon={busyPush ? <Loader2 className="size-5 animate-spin" /> : <BellRing className="size-5" />}
+              label="Avisar mesmo com a Rutte fechada"
+              hint={canPush ? 'Os próximos alertas (horário e título) ficam guardados com segurança no servidor só para isso.' : 'Precisa das notificações liberadas. No iPhone, instale a Rutte na tela de início.'}
+            />
+
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => notify('🔔 Teste da Rutte', 'Assim chegam os seus alertas.', { tag: 'rutte-test' })}>
-                <Send className="size-4" aria-hidden /> Enviar um teste
+              <Button variant="outline" onClick={() => fireAlert('🔔 Teste da Rutte', 'Assim chegam os seus alertas.', { tag: 'rutte-test' })}>
+                <Send className="size-4" aria-hidden /> Testar na tela
               </Button>
-              <Button variant="ghost" onClick={() => { update({ enabled: false }); toast('Alertas desligados'); }}>
+              {perm === 'granted' && (
+                <Button variant="outline" onClick={() => { playChime(); notify('🔔 Teste da Rutte', 'Assim chegam os alertas fora do app.', { tag: 'rutte-test-2' }); }}>
+                  <BellRing className="size-4" aria-hidden /> Testar notificação
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => { update({ enabled: false }); if (s.push) void togglePush(false); toast('Alertas desligados'); }}>
                 <BellOff className="size-4" aria-hidden /> Desligar
               </Button>
             </div>
@@ -187,9 +246,10 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
         )}
 
         <ul className="mt-5 list-disc space-y-1 pl-5 text-xs text-foreground/60">
-          <li>Avisa nos afazeres que têm horário, nos eventos do Google Agenda (se conectado) e manda o resumo da manhã.</li>
-          <li>Funciona com a Rutte aberta ou minimizada. Se o app for fechado por completo, os avisos voltam quando você abrir.</li>
-          <li>No iPhone, instale a Rutte na tela de início e ligue os alertas por lá (exigência da Apple).</li>
+          <li><strong>Dentro do app:</strong> aviso destacado na tela, com som e vibração.</li>
+          <li><strong>Fora do app:</strong> notificação do celular/computador, com o som do aparelho — inclusive com a Rutte fechada, se ligado acima.</li>
+          <li>Avisa nos afazeres com horário, nos eventos do Google Agenda e no resumo da manhã.</li>
+          <li>No iPhone, instale a Rutte na tela de início (Compartilhar → Adicionar à Tela de Início) e ligue os alertas por lá.</li>
         </ul>
       </DialogContent>
     </Dialog>

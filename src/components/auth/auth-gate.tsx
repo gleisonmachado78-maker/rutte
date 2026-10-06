@@ -222,6 +222,11 @@ function LoginScreen() {
         )}
       </div>
       <p className="mt-4 text-center text-xs text-white/45">{cloudData ? 'Seus dados ficam salvos na sua conta e aparecem em qualquer aparelho.' : 'Seus dados ficam guardados neste aparelho, separados para cada conta.'}</p>
+      <p className="mt-2 flex justify-center gap-4 text-xs text-white/55">
+        <a href="/sobre" className="hover:text-white hover:underline">Sobre a Rutte</a>
+        <a href="/privacidade" className="hover:text-white hover:underline">Privacidade</a>
+        <a href="/termos" className="hover:text-white hover:underline">Termos de Uso</a>
+      </p>
     </Screen>
   );
 }
