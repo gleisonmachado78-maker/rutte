@@ -11,7 +11,7 @@ import { askPermission, fireAlert, getAlertSettings, notify, permission, planAle
 import { disablePush, enablePush, pushSupported, syncReminders } from '@/lib/push';
 import { useTasks } from '@/hooks/use-data';
 import { addDays } from 'date-fns';
-import { connectGoogle, disconnectGoogle, getClientId, setClientId } from '@/lib/google-calendar';
+import { connectGoogle, disconnectGoogle, getClientId, getClientOverride, setClientId } from '@/lib/google-calendar';
 
 type DProps = { open: boolean; onOpenChange: (o: boolean) => void };
 
@@ -22,7 +22,7 @@ export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const [cid, setCid] = useState(getClientId());
+  const [cid, setCid] = useState(getClientOverride);
 
   const connect = async () => {
     setBusy(true);
@@ -74,37 +74,64 @@ export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
           </div>
         )}
 
-        {/* Configuração do administrador: Client ID do Google Cloud */}
+        {/* Configuração do administrador */}
         {isAdmin && (
           <details className="mt-5 rounded-xl border border-border p-3 text-sm" open={!configured}>
             <summary className="cursor-pointer font-semibold">Configuração (administrador)</summary>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-foreground/75">
+
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-foreground/80">
+              <dt className="text-foreground/55">Projeto</dt>
+              <dd>Rutte (Google Cloud, <code>rutte-510817</code>)</dd>
+              <dt className="text-foreground/55">Client ID</dt>
+              <dd className="break-all font-mono text-xs">{getClientId()}</dd>
+              <dt className="text-foreground/55">Site autorizado</dt>
+              <dd><code>https://rutte.vercel.app</code></dd>
+              <dt className="text-foreground/55">Situação</dt>
+              <dd>
+                <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">Em teste</span> — só os e-mails cadastrados como usuários de teste conseguem conectar (até 100).
+              </dd>
+            </dl>
+
+            <p className="mt-3 font-semibold">Liberar para um cliente</p>
+            <p className="text-foreground/70">
+              Em{' '}
+              <a href="https://console.cloud.google.com/auth/audience?project=rutte-510817" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline">
+                Google Cloud → Público <ExternalLink className="size-3" aria-hidden />
+              </a>
+              , clique em <strong>Add users</strong> e coloque o e-mail Google do cliente.
+            </p>
+
+            <p className="mt-3 font-semibold">Liberar para todos (verificação do Google)</p>
+            <ul className="list-disc space-y-0.5 pl-5 text-foreground/70">
+              <li>Página inicial: <a href="/sobre" target="_blank" className="text-primary hover:underline">rutte.vercel.app/sobre</a> ✓</li>
+              <li>Política de Privacidade: <a href="/privacidade" target="_blank" className="text-primary hover:underline">rutte.vercel.app/privacidade</a> ✓</li>
+              <li>Termos de Uso: <a href="/termos" target="_blank" className="text-primary hover:underline">rutte.vercel.app/termos</a> ✓</li>
+              <li>Domínio próprio (ex.: rutte.com.br) ligado ao Vercel — pendente</li>
               <li>
-                No{' '}
-                <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline">
-                  Google Cloud <ExternalLink className="size-3" aria-hidden />
+                Enviar para verificação em{' '}
+                <a href="https://console.cloud.google.com/auth/verification?project=rutte-510817" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline">
+                  Central de verificação <ExternalLink className="size-3" aria-hidden />
                 </a>
-                , ative a <strong>Google Calendar API</strong>.
               </li>
-              <li>Em “Tela de permissão OAuth”, crie o app (Externo) e adicione o escopo de eventos do Calendar.</li>
-              <li>Em “Credenciais”, crie um <strong>ID do cliente OAuth</strong> do tipo <strong>Aplicativo da Web</strong>, com a origem <code>https://rutte.vercel.app</code>.</li>
-              <li>Cole o ID abaixo (termina em <code>.apps.googleusercontent.com</code>).</li>
-            </ol>
-            <Label htmlFor="gcid" className="mt-3 block">Client ID</Label>
-            <div className="mt-1 flex gap-2">
-              <Input id="gcid" value={cid} onChange={(e) => setCid(e.target.value)} placeholder="000000000000-xxxx.apps.googleusercontent.com" className="font-mono text-xs" />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (cid.trim() && !/\.apps\.googleusercontent\.com$/.test(cid.trim())) return toast.error('Esse não parece um Client ID do Google.');
-                  setClientId(cid);
-                  toast.success(cid.trim() ? 'Client ID salvo neste aparelho' : 'Client ID removido');
-                }}
-              >
-                Salvar
-              </Button>
-            </div>
-            <p className="mt-2 text-xs text-foreground/55">Salvo aqui, vale só neste aparelho (bom para testar). Para valer para todos, peça para colocar o ID no código da Rutte.</p>
+            </ul>
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-foreground/55">Usar outro Client ID só neste aparelho (testes)</summary>
+              <div className="mt-2 flex gap-2">
+                <Input id="gcid" value={cid} onChange={(e) => setCid(e.target.value)} placeholder="000000000000-xxxx.apps.googleusercontent.com" className="font-mono text-xs" aria-label="Client ID para testes" />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (cid.trim() && !/\.apps\.googleusercontent\.com$/.test(cid.trim())) return toast.error('Esse não parece um Client ID do Google.');
+                    setClientId(cid);
+                    toast.success(cid.trim() ? 'Client ID de teste salvo neste aparelho' : 'Voltou a usar o Client ID da Rutte');
+                  }}
+                >
+                  Salvar
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-foreground/55">Deixe vazio e salve para voltar ao Client ID oficial da Rutte.</p>
+            </details>
           </details>
         )}
       </DialogContent>

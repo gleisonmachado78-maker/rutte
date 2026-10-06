@@ -37,6 +37,8 @@ const safe = <T,>(fn: () => T, fb: T): T => {
 /** Client ID do projeto "Rutte" no Google Cloud (público: só identifica o app; a origem autorizada é rutte.vercel.app). */
 const DEFAULT_CLIENT_ID = '930277505269-jcml92ldfsf3m6u8lc991kq9o1eoospk.apps.googleusercontent.com';
 export const getClientId = () => safe(() => localStorage.getItem(CLIENT_KEY), null) || ((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '') || DEFAULT_CLIENT_ID;
+/** Client ID de teste salvo só neste aparelho (vazio = usa o oficial). */
+export const getClientOverride = () => safe(() => localStorage.getItem(CLIENT_KEY), null) ?? '';
 export const setClientId = (id: string) => safe(() => (id.trim() ? localStorage.setItem(CLIENT_KEY, id.trim()) : localStorage.removeItem(CLIENT_KEY)), undefined);
 export const isConfigured = () => /\.apps\.googleusercontent\.com$/.test(getClientId());
 /** a pessoa ligou a integração (tentamos renovar o token em silêncio) */
