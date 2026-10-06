@@ -72,9 +72,9 @@ Para o login funcionar em `http://localhost:5173`, adicione também `http://loca
 
 1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e ative a **Google Calendar API**.
 2. **Tela de permissão OAuth**: tipo *Externo*, nome "Rutte", seu e-mail de suporte; em *Escopos* adicione
-   . Enquanto o app estiver em *Teste*, só os e-mails cadastrados em *Usuários de teste*
+   `.../auth/calendar.events`. Enquanto o app estiver em *Teste*, só os e-mails cadastrados em *Usuários de teste*
    conseguem conectar (até 100). Para liberar para todos, envie para verificação do Google.
 3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**. Em *Origens JavaScript autorizadas*,
-   coloque  (e  para testes).
-4. Copie o **ID do cliente** (termina em ) e coloque em  no Vercel
+   coloque `https://rutte.vercel.app` (e `http://localhost:5173` para testes).
+4. Copie o **ID do cliente** (termina em `.apps.googleusercontent.com`) e coloque em `VITE_GOOGLE_CLIENT_ID` no Vercel
    (ou mande para o desenvolvedor colocar no código). É um identificador público — não é senha.
