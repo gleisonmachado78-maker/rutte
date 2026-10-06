@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { Textarea } from '@/components/ui/form-controls';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
+import { PanelFrame, PDesc, PTitle, type PanelProps } from './panel-frame';
 import { useImportData } from '@/hooks/use-data';
 import { api } from '@/services/api';
 
@@ -13,7 +13,7 @@ import { api } from '@/services/api';
  * Backup dos dados: como tudo fica salvo só no navegador de cada aparelho,
  * é assim que se leva os dados do computador para o celular (e vice-versa).
  */
-export function BackupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function BackupDialog({ open = true, onOpenChange = () => {}, inline }: PanelProps) {
   const importer = useImportData();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pasted, setPasted] = useState('');
@@ -63,12 +63,11 @@ export function BackupDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="text-lg font-bold">Backup dos dados</DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/70">
+    <PanelFrame inline={inline} open={open} onOpenChange={onOpenChange}>
+        <PTitle className="text-lg font-bold">Backup dos dados</PTitle>
+        <PDesc className="mt-1 text-sm text-foreground/70">
           Seus dados ficam salvos só neste aparelho. Para levar para o celular (ou outro computador), exporte aqui e importe lá.
-        </DialogDescription>
+        </PDesc>
 
         <section className="mt-5 space-y-2">
           <h3 className="text-sm font-semibold">1. Exportar deste aparelho</h3>
@@ -101,7 +100,6 @@ export function BackupDialog({ open, onOpenChange }: { open: boolean; onOpenChan
             <Upload /> Restaurar backup colado
           </Button>
         </section>
-      </DialogContent>
-    </Dialog>
+      </PanelFrame>
   );
 }

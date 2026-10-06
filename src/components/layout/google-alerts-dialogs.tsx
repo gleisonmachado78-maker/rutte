@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/form-controls';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
+import { PanelFrame, PDesc, PTitle, type PanelProps } from './panel-frame';
 import { useAuth } from '@/components/auth/auth-gate';
 import { useGoogleStatus } from '@/hooks/use-google';
 import { askPermission, fireAlert, getAlertSettings, notify, permission, planAlerts, playChime, saveAlertSettings, type AlertSettings } from '@/lib/alerts';
@@ -13,11 +13,11 @@ import { useTasks } from '@/hooks/use-data';
 import { addDays } from 'date-fns';
 import { connectGoogle, disconnectGoogle, getClientId, getClientOverride, setClientId } from '@/lib/google-calendar';
 
-type DProps = { open: boolean; onOpenChange: (o: boolean) => void };
+
 
 /* ------------------------------------------- Google Agenda ------------------------------------------- */
 
-export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
+export function GoogleCalendarDialog({ open = true, onOpenChange = () => {}, inline }: PanelProps) {
   const { configured, connected } = useGoogleStatus();
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -38,14 +38,13 @@ export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+    <PanelFrame inline={inline} open={open} onOpenChange={onOpenChange}>
+        <PTitle className="flex items-center gap-2 text-lg font-bold">
           <CalendarDays className="size-5 text-primary" aria-hidden /> Google Agenda
-        </DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/70">
+        </PTitle>
+        <PDesc className="mt-1 text-sm text-foreground/70">
           Veja seus eventos do Google no Calendário da Rutte, receba alertas deles e envie afazeres para a sua agenda.
-        </DialogDescription>
+        </PDesc>
 
         {!configured ? (
           <p className="mt-4 rounded-xl border border-dashed border-border p-4 text-sm text-foreground/70">
@@ -134,8 +133,7 @@ export function GoogleCalendarDialog({ open, onOpenChange }: DProps) {
             </details>
           </details>
         )}
-      </DialogContent>
-    </Dialog>
+      </PanelFrame>
   );
 }
 
@@ -154,7 +152,7 @@ function Toggle({ id, checked, onChange, label, hint, icon }: { id: string; chec
   );
 }
 
-export function AlertsDialog({ open, onOpenChange }: DProps) {
+export function AlertsDialog({ open = true, onOpenChange = () => {}, inline }: PanelProps) {
   const [s, setS] = useState<AlertSettings>(getAlertSettings);
   const [perm, setPerm] = useState(permission());
   const [busyPush, setBusyPush] = useState(false);
@@ -207,14 +205,13 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
   const on = s.enabled;
   const canPush = pushSupported() && perm === 'granted';
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+    <PanelFrame inline={inline} open={open} onOpenChange={onOpenChange}>
+        <PTitle className="flex items-center gap-2 text-lg font-bold">
           <Bell className="size-5 text-primary" aria-hidden /> Alertas no aparelho
-        </DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/70">
+        </PTitle>
+        <PDesc className="mt-1 text-sm text-foreground/70">
           A Rutte avisa com som e na tela quando algo precisa ser feito — dentro do app, com ele minimizado e até fechado.
-        </DialogDescription>
+        </PDesc>
 
         {!on ? (
           <div className="mt-4 space-y-2">
@@ -278,7 +275,6 @@ export function AlertsDialog({ open, onOpenChange }: DProps) {
           <li>Avisa nos afazeres com horário, nos eventos do Google Agenda e no resumo da manhã.</li>
           <li>No iPhone, instale a Rutte na tela de início (Compartilhar → Adicionar à Tela de Início) e ligue os alertas por lá.</li>
         </ul>
-      </DialogContent>
-    </Dialog>
+      </PanelFrame>
   );
 }

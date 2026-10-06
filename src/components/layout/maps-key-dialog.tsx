@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/form-controls';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
+import { PanelFrame, PDesc, PTitle, type PanelProps } from './panel-frame';
 import { getMapsKey, setMapsKey } from '@/lib/maps';
 
 /** Onde a pessoa cola a própria chave do Google Maps (fica só neste navegador). */
-export function MapsKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function MapsKeyDialog({ open = true, onOpenChange = () => {}, inline }: PanelProps) {
   const [value, setValue] = useState('');
   const current = getMapsKey();
 
@@ -27,14 +27,13 @@ export function MapsKeyDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+    <PanelFrame inline={inline} open={open} onOpenChange={onOpenChange}>
+        <PTitle className="flex items-center gap-2 text-lg font-bold">
           <KeyRound className="size-5 text-primary" aria-hidden /> Google Maps
-        </DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/70">
+        </PTitle>
+        <PDesc className="mt-1 text-sm text-foreground/70">
           Com a sua chave, o campo de local sugere endereços enquanto você digita e mostra o mapa. Sem ela, você digita o endereço e os botões “Como chegar” continuam funcionando.
-        </DialogDescription>
+        </PDesc>
 
         <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-foreground/80">
           <li>
@@ -90,7 +89,6 @@ export function MapsKeyDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             Salvar chave
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </PanelFrame>
   );
 }

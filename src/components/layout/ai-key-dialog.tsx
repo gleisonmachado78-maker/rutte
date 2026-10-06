@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/form-controls';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
+import { PanelFrame, PDesc, PTitle, type PanelProps } from './panel-frame';
 import {
   AI_MODELS,
   getAiKey,
@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 const LINK = 'inline-flex items-center gap-0.5 font-medium text-primary hover:underline';
 
 /** Escolha do provedor (Gemini grátis ou Claude), chave (fica só neste navegador), modelo e pesquisa na web. */
-export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function AiKeyDialog({ open = true, onOpenChange = () => {}, inline }: PanelProps) {
   const [provider, setProv] = useState<AiProvider>(getProvider());
   const [value, setValue] = useState('');
   const [model, setModel] = useState('');
@@ -98,14 +98,13 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+    <PanelFrame inline={inline} open={open} onOpenChange={onOpenChange}>
+        <PTitle className="flex items-center gap-2 text-lg font-bold">
           <Sparkles className="size-5 text-primary" aria-hidden /> Rutte IA
-        </DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/70">
+        </PTitle>
+        <PDesc className="mt-1 text-sm text-foreground/70">
           Escolha qual inteligência artificial a Rutte usa para conversar, entender seus dados e criar afazeres por você.
-        </DialogDescription>
+        </PDesc>
 
         <div role="radiogroup" aria-label="Provedor de IA" className="mt-4 grid grid-cols-2 gap-2">
           {(
@@ -239,7 +238,6 @@ export function AiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             {testing && <Loader2 className="animate-spin" />} Salvar e usar {isGemini ? 'Gemini' : 'Claude'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </PanelFrame>
   );
 }

@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { AdminPage } from '@/pages/admin';
+import { SettingsPage } from '@/pages/settings';
 import { AboutPage, PrivacyPage, TermsPage } from '@/pages/public-pages';
 import { AssistantPage } from '@/pages/assistant';
 import { CalendarPage } from '@/pages/calendar';
@@ -50,6 +51,7 @@ function PrivateRoutes() {
         <Route path="library" element={<LibraryPage />} />
         <Route path="gratitude" element={<GratitudePage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

@@ -229,3 +229,7 @@ sistema fora dela). Push com o app fechado: `lib/push.ts` (VAPID público no có
 e `supabase/functions/send-reminders` (Deno + web-push, sem verificação de JWT). `useAlertsRunner` sincroniza 7 dias de
 alertas quando o push está ligado; o SW (`push`) repassa para a tela se ela estiver aberta (sem duplicar, pela `tag`).
 Páginas públicas sem login: `/sobre`, `/privacidade`, `/termos` (`pages/public-pages.tsx`), fora do AuthGate no App.tsx.
+Aba Configurações (`pages/settings.tsx`, rota `/settings?tab=geral|alertas|google|ia|maps|dados`, grupo "Ajustes" no menu):
+os painéis de alertas, Google Agenda, Rutte IA, Google Maps e backup usam `PanelFrame` (`layout/panel-frame.tsx`) — o mesmo
+componente vira janela (Dialog) ou seção da página com `inline`. Use `PTitle`/`PDesc` no lugar de DialogTitle/Description.
+O menu da conta leva às abas; Restaurar exemplos e Apagar meus dados ficam na aba Dados.

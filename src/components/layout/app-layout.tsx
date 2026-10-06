@@ -12,12 +12,10 @@ import {
   Library,
   ListTodo,
   LogOut,
-  MapPin,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  RotateCcw,
   Settings,
   Sparkles,
   StickyNote,
@@ -25,12 +23,11 @@ import {
   Timer,
   UserRound,
   WandSparkles,
-  Trash2,
   ShieldCheck,
   Bell,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { DevCredit } from '@/components/brand/credit';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
@@ -40,19 +37,14 @@ import { Tour, welcomeSteps } from '@/components/tour/tour';
 import { useAuth } from '@/components/auth/auth-gate';
 import { TaskDrawer } from '@/components/tasks/task-drawer';
 import { Button } from '@/components/ui/button';
-import { askConfirm } from '@/components/ui/confirm';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
-import { useModules, useResetData, useWipeData, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
+import { useModules, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
 import { firstName } from '@/lib/onboarding';
 import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
-import { BackupDialog } from './backup-dialog';
-import { MapsKeyDialog } from './maps-key-dialog';
-import { AlertsDialog, GoogleCalendarDialog } from './google-alerts-dialogs';
 import { useAlertsRunner } from '@/hooks/use-alerts';
-import { AiKeyDialog } from './ai-key-dialog';
 
 interface NavEntry {
   to: string;
@@ -62,7 +54,7 @@ interface NavEntry {
   end?: boolean;
   personalOnly?: boolean;
   module?: 'gym' | 'life';
-  group: 'organizar' | 'evoluir';
+  group: 'organizar' | 'evoluir' | 'ajustes';
   /** aparece na barra inferior do celular (o resto fica em "Mais") */
   primary?: boolean;
 }
@@ -78,9 +70,10 @@ const NAV: NavEntry[] = [
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
   { to: '/gratitude', label: 'Gratidão', icon: HandHeart, group: 'evoluir' },
   { to: '/library', label: 'Biblioteca', short: 'Livros', icon: Library, group: 'evoluir' },
+  { to: '/settings', label: 'Configurações', short: 'Ajustes', icon: Settings, group: 'ajustes' },
 ];
 
-const GROUP_LABEL = { organizar: 'Organizar', evoluir: 'Evoluir' } as const;
+const GROUP_LABEL = { organizar: 'Organizar', evoluir: 'Evoluir', ajustes: 'Ajustes' } as const;
 
 /** Itens visíveis: respeita os módulos escolhidos e o contexto (Academia some no modo Empresa). */
 function useNav() {
@@ -168,7 +161,7 @@ function NavGroups({ collapsed, onNavigate, only }: { collapsed?: boolean; onNav
   const nav = only ?? visible;
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-4">
-      {(['organizar', 'evoluir'] as const).map((g) => {
+      {(['organizar', 'evoluir', 'ajustes'] as const).map((g) => {
         const items = nav.filter((n) => n.group === g);
         if (!items.length) return null;
         return (
@@ -191,18 +184,13 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   const toggleTheme = useUI((s) => s.toggleTheme);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const setTourOpen = useUI((s) => s.setTourOpen);
-  const motion = useUI((s) => s.motion);
-  const setMotion = useUI((s) => s.setMotion);
   const setMobileMenu = useUI((s) => s.setMobileMenu);
-  const reset = useResetData();
-  const wipe = useWipeData();
   const auth = useAuth();
   const navigate = useNavigate();
-  const [backupOpen, setBackupOpen] = useState(false);
-  const [mapsOpen, setMapsOpen] = useState(false);
-  const [gcalOpen, setGcalOpen] = useState(false);
-  const [alertsOpen, setAlertsOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  const go = (to: string) => {
+    setMobileMenu(false);
+    navigate(to);
+  };
   const name = user?.name && user.name !== 'Você' ? user.name : 'Você';
 
   return (
@@ -256,55 +244,21 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           >
             <GraduationCap /> Ver tutorial de novo
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              setMotion(motion === 'auto' ? 'on' : motion === 'on' ? 'off' : 'auto');
-            }}
-          >
-            <Sparkles /> Animações: {motion === 'auto' ? 'automático' : motion === 'on' ? 'sempre ligadas' : 'desligadas'}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => go('/settings')}>
+            <Settings /> Configurações
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setBackupOpen(true)}>
-            <DatabaseBackup /> Backup dos dados
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setAlertsOpen(true)}>
+          <DropdownMenuItem onSelect={() => go('/settings?tab=alertas')}>
             <Bell /> Alertas no aparelho
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setGcalOpen(true)}>
+          <DropdownMenuItem onSelect={() => go('/settings?tab=google')}>
             <CalendarDays /> Google Agenda
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setMapsOpen(true)}>
-            <MapPin /> Google Maps (endereços)
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setAiOpen(true)}>
+          <DropdownMenuItem onSelect={() => go('/settings?tab=ia')}>
             <Sparkles /> Rutte IA (Gemini ou Claude)
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-brand"
-            onSelect={async () =>
-              (await askConfirm({
-                title: 'Restaurar dados de exemplo?',
-                message: 'Todos os seus afazeres, treinos e avaliações serão substituídos pelos exemplos. Faça um backup antes, se quiser guardar.',
-                confirmLabel: 'Substituir tudo',
-                danger: true,
-              })) && reset.mutate()
-            }
-          >
-            <RotateCcw /> Restaurar exemplos
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-brand"
-            onSelect={async () =>
-              (await askConfirm({
-                title: 'Apagar todos os seus dados?',
-                message: 'Afazeres, notas, treinos, avaliações, perfil e conversas com a Rutte IA serão apagados e o app volta a ficar vazio, como no primeiro acesso. Não dá para desfazer — faça um backup antes, se quiser guardar.',
-                confirmLabel: 'Apagar tudo',
-                danger: true,
-              })) && wipe.mutate()
-            }
-          >
-            <Trash2 /> Apagar meus dados
+          <DropdownMenuItem onSelect={() => go('/settings?tab=dados')}>
+            <DatabaseBackup /> Backup e dados
           </DropdownMenuItem>
           {auth.email && (
             <>
@@ -316,11 +270,6 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <BackupDialog open={backupOpen} onOpenChange={setBackupOpen} />
-      <MapsKeyDialog open={mapsOpen} onOpenChange={setMapsOpen} />
-      <GoogleCalendarDialog open={gcalOpen} onOpenChange={setGcalOpen} />
-      <AlertsDialog open={alertsOpen} onOpenChange={setAlertsOpen} />
-      <AiKeyDialog open={aiOpen} onOpenChange={setAiOpen} />
     </>
   );
 }
