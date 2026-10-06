@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rutte — Story completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --red2: #e0393a; --neon: #ff2e3b; --font: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Arial, sans-serif; --brand: 'Fraunces', Georgia, serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #05070d; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; color: #fff; font-family: var(--font); transform-origin: 0 0;
+    background: radial-gradient(900px 700px at 85% 105%, rgba(185,27,28,.45), transparent 60%), radial-gradient(800px 600px at 0% -5%, rgba(127,29,28,.5), transparent 60%), linear-gradient(180deg, #0b1020, #111727 55%, #170f19); }
+  .grain { position: absolute; inset: 0; opacity: .07; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px); pointer-events: none; }
+  .layer { position: absolute; inset: 0; opacity: 0; }
+  .hl { color: var(--neon); }
+  .title { font-family: var(--brand); font-weight: 800; line-height: 1.02; }
+
+  .cap { position: absolute; left: 60px; right: 60px; top: 250px; text-align: center; }
+  .cap .n { display: inline-block; font-weight: 800; font-size: 28px; letter-spacing: .2em; color: var(--red2); }
+  .cap .t { margin-top: 10px; font-weight: 800; font-size: 70px; line-height: 1.05; letter-spacing: -.01em; }
+  .cap .s { margin-top: 14px; font-weight: 600; font-size: 38px; color: rgba(255,255,255,.78); }
+
+  .phone { position: absolute; left: 50%; top: 560px; width: 560px; height: 1204px; margin-left: -280px; border-radius: 64px; padding: 18px; opacity: 0;
+    background: linear-gradient(160deg, #2b3247, #0e1220); box-shadow: 0 60px 160px rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,.08), 0 0 120px rgba(224,57,58,.25); }
+  .phone .scr { position: relative; width: 100%; height: 100%; border-radius: 48px; overflow: hidden; background: #111727; }
+  .phone .scr img { position: absolute; left: 0; top: 0; width: 100%; }
+  .phone .notch { position: absolute; left: 50%; top: 14px; width: 170px; height: 40px; border-radius: 20px; background: #05070d; transform: translateX(-50%); z-index: 3; }
+
+  .dots { position: absolute; left: 0; right: 0; top: 1800px; display: flex; justify-content: center; gap: 12px; opacity: 0; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.25); }
+  .dots i.on { background: var(--neon); box-shadow: 0 0 14px rgba(255,46,59,.8); }
+
+  .pill { display: inline-flex; align-items: center; padding: 22px 44px; border-radius: 999px; background: rgba(255,46,59,.14); border: 2px solid rgba(255,46,59,.5); font-weight: 700; font-size: 52px; }
+  .tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin: 46px 90px 0; }
+  .tags span { padding: 12px 22px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); font-weight: 600; font-size: 28px; color: rgba(255,255,255,.85); }
+  .credit { position: absolute; left: 0; right: 0; bottom: 280px; text-align: center; font-size: 34px; letter-spacing: .06em; color: rgba(255,255,255,.5); }
+  .credit b { color: rgba(255,255,255,.85); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grain"></div>
+
+  <div class="layer" id="intro">
+    <div style="position:absolute;left:0;right:0;top:520px;text-align:center">
+      <img id="logo" src="story-assets/rutte-logo.png" alt="" style="width:320px;filter:drop-shadow(0 0 60px rgba(255,46,59,.55))" />
+      <div class="title" style="margin-top:60px;font-size:110px">Conheça a <span class="hl">Rutte</span></div>
+      <div style="margin-top:34px;font-size:44px;font-weight:600;color:rgba(255,255,255,.78)">Sua secretária digital<br/>tudo em um só app</div>
+    </div>
+  </div>
+
+  <div class="layer" id="capA"><div class="cap"><div class="n" id="nA"></div><div class="t" id="tA"></div><div class="s" id="sA"></div></div></div>
+  <div class="layer" id="capB"><div class="cap"><div class="n" id="nB"></div><div class="t" id="tB"></div><div class="s" id="sB"></div></div></div>
+
+  <div class="phone" id="phone"><div class="scr" id="scr"><div class="notch"></div></div></div>
+  <div class="dots" id="dots"></div>
+
+  <div class="layer" id="cta">
+    <div style="position:absolute;left:0;right:0;top:470px;text-align:center">
+      <img src="story-assets/rutte-logo.png" alt="" style="width:220px;filter:drop-shadow(0 0 50px rgba(255,46,59,.5))" />
+      <div class="title" style="margin-top:44px;font-size:92px">Tudo isso<br/>em um só lugar</div>
+      <div class="tags" id="tags"></div>
+      <div id="url" class="pill" style="margin-top:56px">rutte.vercel.app</div>
+    </div>
+    <div class="credit">by <b>era.</b> consultoria</div>
+  </div>
+</div>
+
+<input id="seek" type="range" min="0" max="34" step="0.01" value="0" style="position:fixed;left:-9999px" />
+<script>
+  const FEATURES = [
+    ['inicio', 'Seu dia <span class="hl">em um olhar</span>', 'Resumo, atrasados e a dica do dia'],
+    ['afazeres', '<span class="hl">Afazeres</span> organizados', 'Prioridade, prazos, subtarefas e Kanban'],
+    ['agenda', '<span class="hl">Agenda</span> e calendário', 'Veja a semana e encaixe o que importa'],
+    ['foco', 'Modo <span class="hl">foco</span>', 'Pomodoro para render sem distração'],
+    ['notas', 'Bloco de <span class="hl">notas</span>', 'Ideias, listas e lembretes em caixas'],
+    ['ia', '<span class="hl">Rutte IA</span>', 'Pergunte, pesquise e crie afazeres conversando'],
+    ['roda', '<span class="hl">Roda da Vida</span>', 'Equilíbrio entre as áreas da sua vida'],
+    ['academia', '<span class="hl">Academia</span>', 'Treinos, cargas e evolução mês a mês'],
+    ['gratidao', '<span class="hl">Gratidão</span>', 'Diário, meditações e orações'],
+    ['biblioteca', '<span class="hl">Biblioteca</span>', 'Livros, vídeos e podcasts por tema'],
+    ['grandes-nomes', 'Os <span class="hl">grandes nomes</span>', 'Mentores com foto, bio e podcasts'],
+  ];
+  const TAGS = ['Afazeres', 'Agenda', 'Foco', 'Notas', 'Rutte IA', 'Roda da Vida', 'Academia', 'Gratidão', 'Biblioteca', 'Login seguro'];
+  const INTRO = 2.4, STEP = 2.6, CTA = 3.4;
+  const T0 = INTRO, T1 = INTRO + FEATURES.length * STEP, DUR = +(T1 + CTA).toFixed(2);
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const inout = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+
+  // monta telas, bolinhas e tags
+  const imgs = FEATURES.map(([k]) => { const im = document.createElement('img'); im.src = `story-assets/${k === 'grandes-nomes' ? 'grandes-nomes' : 'app-' + k}.png`; im.alt = ''; $('scr').appendChild(im); return im; });
+  FEATURES.forEach(() => $('dots').appendChild(document.createElement('i')));
+  TAGS.forEach((x) => { const s = document.createElement('span'); s.textContent = x; $('tags').appendChild(s); });
+  const dots = [...$('dots').children], tags = [...$('tags').children];
+  $('seek').max = DUR;
+
+  function setCap(slot, i) {
+    const f = FEATURES[i];
+    $('n' + slot).textContent = String(i + 1).padStart(2, '0') + ' / ' + String(FEATURES.length).padStart(2, '0');
+    $('t' + slot).innerHTML = f[1];
+    $('s' + slot).textContent = f[2];
+  }
+
+  let t = 0;
+  function render() {
+    // abertura
+    const io = Math.min(1, 1 - prog(t, INTRO - .35, INTRO));
+    $('intro').style.opacity = io;
+    $('logo').style.transform = `scale(${0.7 + 0.3 * ease(prog(t, 0, 1))})`;
+
+    // celular: entra no fim da abertura, sai antes da chamada
+    const pin = ease(prog(t, INTRO - .3, INTRO + .3));
+    const pout = prog(t, T1 - .35, T1);
+    $('phone').style.opacity = pin * (1 - pout);
+    $('phone').style.transform = `translateY(${(1 - pin) * 120 + pout * 80}px) scale(${1 - pout * .05})`;
+    $('dots').style.opacity = pin * (1 - pout);
+
+    // tela atual e transição deslizando
+    const k = clamp(Math.floor((t - T0) / STEP), 0, FEATURES.length - 1);
+    const local = t - T0 - k * STEP;
+    const slide = k > 0 ? inout(prog(local, 0, .45)) : 1;
+    imgs.forEach((im, i) => {
+      let x = 100, op = 0;
+      if (i === k) { x = (1 - slide) * 100; op = 1; }
+      else if (i === k - 1 && slide < 1) { x = -slide * 35; op = 1 - slide * .6; }
+      im.style.opacity = op;
+      im.style.transform = `translateX(${x}%) translateY(${-clamp(local / STEP) * 40}px)`;
+      im.style.zIndex = i === k ? 2 : 1;
+    });
+    dots.forEach((d, i) => d.classList.toggle('on', i === k));
+
+    // legendas (duas camadas em cruz)
+    const cf = k > 0 ? prog(local, 0, .4) : 1;
+    const slotCur = k % 2 === 0 ? 'A' : 'B', slotPrev = slotCur === 'A' ? 'B' : 'A';
+    setCap(slotCur, k);
+    if (k > 0) setCap(slotPrev, k - 1);
+    const show = t >= T0 - .3 && t < T1;
+    const fadeIn = ease(prog(t, INTRO - .3, INTRO + .2));
+    $('cap' + slotCur).style.opacity = show ? cf * (k === 0 ? fadeIn : 1) * (1 - pout) : 0;
+    $('cap' + slotCur).style.transform = `translateY(${(1 - ease(cf)) * 30}px)`;
+    $('cap' + slotPrev).style.opacity = show && k > 0 ? (1 - cf) : 0;
+
+    // chamada final
+    const c = ease(prog(t, T1, T1 + .4));
+    $('cta').style.opacity = c;
+    $('cta').style.transform = `translateY(${(1 - c) * 50}px)`;
+    tags.forEach((s, i) => { const a = ease(prog(t, T1 + .3 + i * .07, T1 + .6 + i * .07)); s.style.opacity = a; s.style.transform = `scale(${0.8 + 0.2 * a})`; });
+    const u = ease(prog(t, T1 + 1.2, T1 + 1.7));
+    $('url').style.transform = `scale(${u * (1 + 0.04 * Math.sin(Math.max(0, t - T1 - 1.7) * 6))})`;
+  }
+
+  window.__seek = (x) => { t = x; render(); };
+  function fit() {
+    if (location.hash.includes('rec')) return;
+    const s = Math.min(innerWidth / 1080, innerHeight / 1920);
+    $('stage').style.transform = `translate(${(innerWidth - 1080 * s) / 2}px, 0) scale(${s})`;
+  }
+  addEventListener('resize', fit); fit();
+  if (!location.hash.includes('rec')) {
+    const start = performance.now();
+    (function loop(now) { t = ((now - start) / 1000) % (DUR + 1); render(); requestAnimationFrame(loop); })(start);
+  } else render();
+</script>
+</body>
+</html>
