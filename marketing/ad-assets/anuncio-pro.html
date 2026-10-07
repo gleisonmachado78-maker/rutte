@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Rutte — Anúncio</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --navy: #0b1020; --navy2: #111727; --red: #b91b1c; --red2: #e0393a; --neon: #ff2e3b;
+    --font: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Arial, sans-serif; --brand: 'Fraunces', Georgia, serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; color: #fff; font-family: var(--font); background: var(--navy); transform-origin: 0 0; }
+  .abs { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; opacity: 0; will-change: opacity, transform, clip-path, filter; }
+  /* a cena que sai fica por cima (revela a próxima por baixo); a chamada final entra por cima */
+  #s1 { z-index: 9; } #s2 { z-index: 8; } #s3 { z-index: 7; } #s4 { z-index: 6; } #s5 { z-index: 5; } #s6 { z-index: 4; } #s7 { z-index: 3; } #s8 { z-index: 10; }
+  .vignette { z-index: 20; } #black { z-index: 30; }
+
+  /* fundo vivo */
+  #bg { position: absolute; inset: 0; background: radial-gradient(1200px 800px at var(--bx, 70%) var(--by, 110%), rgba(185,27,28,.35), transparent 60%), radial-gradient(900px 700px at 10% -10%, rgba(127,29,28,.35), transparent 60%), linear-gradient(180deg, #0a0e1c, #111727 60%, #150e18); }
+  #grid { position: absolute; inset: -200px; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 80px 80px; mask-image: radial-gradient(closest-side, #000, transparent); }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,.7)); pointer-events: none; }
+
+  .brand { font-family: var(--brand); font-weight: 800; }
+  .hl { color: var(--neon); }
+  .eyebrow { font-weight: 800; font-size: 26px; letter-spacing: .32em; text-transform: uppercase; color: var(--red2); }
+
+  /* S1 logo */
+  #s1-sweep { position: absolute; top: -20%; bottom: -20%; width: 520px; background: linear-gradient(90deg, transparent, rgba(255,90,90,.22), rgba(255,255,255,.35), rgba(255,90,90,.22), transparent); transform: skewX(-18deg); filter: blur(10px); }
+  #s1-logo { position: absolute; left: 50%; top: 360px; width: 240px; margin-left: -120px; filter: drop-shadow(0 0 70px rgba(255,46,59,.55)); }
+  #s1-word { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 150px; line-height: 1; }
+  #s1-word span { display: inline-block; }
+  #s1-tag { position: absolute; left: 0; right: 0; top: 820px; text-align: center; font-size: 34px; color: rgba(255,255,255,.72); font-weight: 600; letter-spacing: .02em; }
+
+  /* S2 palavras */
+  #s2-word { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 210px; line-height: 1; transform: translateY(-55%); }
+  #s2-sub { position: absolute; left: 0; right: 0; top: 700px; text-align: center; font-size: 40px; color: rgba(255,255,255,.7); font-weight: 600; }
+
+  /* laptop */
+  .laptop { position: absolute; width: 1240px; }
+  .laptop .lid { position: relative; border-radius: 26px 26px 10px 10px; padding: 22px; background: linear-gradient(160deg, #2c3348, #0d111d); box-shadow: 0 60px 140px rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,.07); }
+  .laptop .scr { position: relative; aspect-ratio: 16/10; overflow: hidden; border-radius: 8px; background: #111727; }
+  .laptop .scr img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .laptop .base { height: 26px; margin: 0 -70px; border-radius: 0 0 30px 30px; background: linear-gradient(180deg, #3a425a, #151a28); box-shadow: 0 30px 60px rgba(0,0,0,.5); }
+  .laptop .base::after { content: ''; display: block; width: 220px; height: 10px; margin: 0 auto; border-radius: 0 0 12px 12px; background: rgba(0,0,0,.35); }
+
+  .cap { position: absolute; }
+  .cap .t { font-family: var(--brand); font-weight: 800; font-size: 84px; line-height: 1.02; letter-spacing: -.01em; }
+  .cap .s { margin-top: 18px; font-size: 32px; line-height: 1.35; color: rgba(255,255,255,.72); font-weight: 600; max-width: 560px; }
+  .cap .line { width: 90px; height: 6px; border-radius: 3px; background: var(--neon); box-shadow: 0 0 22px rgba(255,46,59,.8); margin-bottom: 26px; }
+
+  /* celular */
+  .phone { position: absolute; width: 360px; height: 760px; border-radius: 52px; padding: 14px; background: linear-gradient(160deg, #323a52, #0d111d 70%); box-shadow: 0 50px 120px rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,.08); }
+  .phone .scr { position: relative; width: 100%; height: 100%; border-radius: 40px; overflow: hidden; background: #111727; }
+  .phone .scr img { position: absolute; left: 0; top: 0; width: 100%; }
+  .phone .notch { position: absolute; left: 50%; top: 12px; width: 120px; height: 30px; border-radius: 15px; background: #000; transform: translateX(-50%); z-index: 5; }
+  .notif { position: absolute; left: 14px; right: 14px; top: 54px; z-index: 6; border-radius: 22px; padding: 16px 18px; background: rgba(28,32,46,.92); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 20px 40px rgba(0,0,0,.5); }
+  .notif .app { display: flex; align-items: center; gap: 8px; font-size: 15px; color: rgba(255,255,255,.6); font-weight: 600; }
+  .notif .app img { width: 22px; height: 22px; border-radius: 6px; position: static; }
+  .notif .ti { margin-top: 8px; font-size: 19px; font-weight: 800; }
+  .notif .bo { margin-top: 3px; font-size: 16px; color: rgba(255,255,255,.75); }
+
+  /* chat IA */
+  .bubble { position: absolute; max-width: 760px; padding: 24px 30px; border-radius: 28px; font-size: 32px; line-height: 1.4; font-weight: 600; box-shadow: 0 30px 60px rgba(0,0,0,.45); }
+  .bubble.me { right: 220px; top: 330px; background: linear-gradient(180deg, var(--red2), var(--red)); border-bottom-right-radius: 8px; }
+  .bubble.ai { left: 220px; top: 520px; background: rgba(30,36,54,.95); border: 1px solid rgba(255,255,255,.1); border-bottom-left-radius: 8px; }
+  .bubble.ai .who { display: flex; align-items: center; gap: 12px; font-size: 22px; color: var(--neon); font-weight: 800; margin-bottom: 10px; }
+  .bubble.ai .who img { width: 40px; }
+  .bubble li { margin-top: 6px; }
+  .cursor { display: inline-block; width: 3px; height: 36px; margin-left: 4px; vertical-align: -6px; background: #fff; }
+
+  /* carrossel */
+  #ring { position: absolute; left: 50%; top: 540px; width: 0; height: 0; transform-style: preserve-3d; }
+  .card { position: absolute; left: -310px; top: -200px; width: 620px; height: 420px; border-radius: 22px; overflow: hidden; backface-visibility: hidden; box-shadow: 0 40px 90px rgba(0,0,0,.6); border: 2px solid rgba(255,255,255,.08); background: #111727; }
+  .card img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .card .lb { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 26px; background: linear-gradient(transparent, rgba(5,7,13,.92)); font-size: 34px; font-weight: 800; }
+  .card .lb span { display: block; font-size: 20px; font-weight: 600; color: rgba(255,255,255,.7); margin-top: 4px; }
+
+  /* benefícios */
+  .benefit { position: absolute; top: 470px; width: 480px; text-align: center; }
+  .benefit .ic { width: 120px; height: 120px; margin: 0 auto; border-radius: 30px; display: grid; place-items: center; background: rgba(255,46,59,.12); border: 2px solid rgba(255,46,59,.45); box-shadow: 0 0 50px rgba(255,46,59,.25); font-size: 58px; }
+  .benefit .bt { margin-top: 30px; font-size: 40px; font-weight: 800; }
+  .benefit .bs { margin-top: 10px; font-size: 26px; color: rgba(255,255,255,.65); font-weight: 600; }
+
+  /* CTA */
+  #cta-bg { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #c4201f, #7f1d1c 45%, #0b1020 80%); }
+  #cta-btn { display: inline-block; margin-top: 60px; padding: 30px 70px; border-radius: 26px; background: #fff; color: var(--red); font-weight: 800; font-size: 56px; box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  #black { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div><div id="grid"></div>
+
+  <!-- S1: logo -->
+  <div class="scene" id="s1">
+    <div id="s1-sweep"></div>
+    <img id="s1-logo" src="rutte-logo.png" alt="" />
+    <div id="s1-word" class="brand"></div>
+    <div id="s1-tag">Sua secretária digital</div>
+  </div>
+
+  <!-- S2: palavras -->
+  <div class="scene" id="s2">
+    <div id="s2-word" class="brand"></div>
+    <div id="s2-sub"></div>
+  </div>
+
+  <!-- S3: laptop -->
+  <div class="scene" id="s3">
+    <div class="cap" id="s3-cap" style="left:120px; top:330px">
+      <div class="line"></div>
+      <div class="t" id="s3-t"></div>
+      <div class="s" id="s3-s"></div>
+    </div>
+    <div class="laptop" id="s3-lap" style="left:700px; top:190px">
+      <div class="lid"><div class="scr"><img id="s3-a" src="d-inicio.jpg" alt="" /><img id="s3-b" src="d-kanban.jpg" alt="" /></div></div>
+      <div class="base"></div>
+    </div>
+  </div>
+
+  <!-- S4: agenda + alerta -->
+  <div class="scene" id="s4">
+    <div class="cap" style="left:0; right:0; top:90px; text-align:center">
+      <div class="t" style="font-size:76px">Agenda + <span class="hl">alertas</span> que te encontram</div>
+    </div>
+    <div style="position:absolute; left:120px; top:300px; width:1180px; perspective:1800px">
+      <div id="s4-cal" class="laptop" style="position:relative; width:1080px">
+        <div class="lid"><div class="scr"><img src="d-agenda.jpg" alt="" /></div></div>
+      </div>
+    </div>
+    <div class="phone" id="s4-phone" style="left:1400px; top:270px">
+      <div class="scr"><div class="notch"></div><img src="app-inicio.png" alt="" />
+        <div class="notif" id="s4-notif"><div class="app"><img src="rutte-logo.png" alt="" /> Rutte · agora</div><div class="ti">⏰ Em 15 min: Reunião de alinhamento</div><div class="bo">Toque para abrir e entrar na reunião.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5: Rutte IA -->
+  <div class="scene" id="s5">
+    <img src="d-ia.jpg" alt="" class="abs" id="s5-bg" style="width:100%; height:100%; object-fit:cover; filter: blur(6px) brightness(.35)" />
+    <div class="cap" style="left:0; right:0; top:110px; text-align:center">
+      <div class="eyebrow">Rutte IA</div>
+      <div class="t" style="margin-top:14px; font-size:76px">Peça. Ela organiza.</div>
+    </div>
+    <div class="bubble me" id="s5-me"><span id="s5-type"></span><span class="cursor" id="s5-cur"></span></div>
+    <div class="bubble ai" id="s5-ai">
+      <div class="who"><img src="rutte-logo.png" alt="" /> Rutte</div>
+      Pronto! Seu amanhã ficou assim:
+      <ul style="margin:8px 0 0; padding-left:32px">
+        <li id="s5-l1">08:00 — Revisar proposta do cliente</li>
+        <li id="s5-l2">10:30 — Reunião de alinhamento</li>
+        <li id="s5-l3">18:00 — Treino de pernas 💪</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- S6: carrossel 3D -->
+  <div class="scene" id="s6" style="perspective:2200px">
+    <div class="cap" style="left:0; right:0; top:80px; text-align:center">
+      <div class="t" style="font-size:76px">E cuida de você <span class="hl">por inteiro</span></div>
+    </div>
+    <div id="ring"></div>
+  </div>
+
+  <!-- S7: benefícios -->
+  <div class="scene" id="s7">
+    <div class="cap" style="left:0; right:0; top:200px; text-align:center"><div class="t" style="font-size:80px">Feita para o seu dia a dia</div></div>
+    <div class="benefit" id="b1" style="left:180px"><div class="ic">🔐</div><div class="bt">Login seguro</div><div class="bs">Cada acesso aprovado</div></div>
+    <div class="benefit" id="b2" style="left:720px"><div class="ic">📱</div><div class="bt">Celular e computador</div><div class="bs">Instale como app</div></div>
+    <div class="benefit" id="b3" style="left:1260px"><div class="ic">📅</div><div class="bt">Google Agenda</div><div class="bs">Seus eventos juntos</div></div>
+  </div>
+
+  <!-- S8: chamada -->
+  <div class="scene" id="s8">
+    <div id="cta-bg"></div>
+    <div style="position:absolute; left:0; right:0; top:200px; text-align:center">
+      <img src="rutte-logo.png" alt="" id="s8-logo" style="width:200px; filter:drop-shadow(0 0 50px rgba(0,0,0,.5))" />
+      <div class="brand" id="s8-t" style="margin-top:40px; font-size:120px; line-height:1">Organize o dia.<br/><span style="font-style:italic; font-weight:600">Evolua</span> a vida.</div>
+      <div id="cta-btn">rutte.vercel.app</div>
+      <div id="s8-cred" style="margin-top:50px; font-size:30px; letter-spacing:.06em; color:rgba(255,255,255,.75)">by <b>era.</b> consultoria</div>
+    </div>
+  </div>
+
+  <div class="vignette"></div>
+  <div id="black"></div>
+</div>
+
+<input id="seek" type="range" min="0" max="33" step="0.01" value="0" style="position:fixed; left:-9999px" />
+<script>
+  const DUR = 33;
+  // cenas: [início, fim]
+  const S = { s1: [0, 3.4], s2: [3.2, 6.6], s3: [6.4, 11.4], s4: [11.2, 15.4], s5: [15.2, 20.0], s6: [19.6, 25.0], s7: [24.8, 29.3], s8: [28.4, 33] };
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(x)));
+  const outCubic = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const inOut = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const inCubic = (x) => clamp(x) ** 3;
+  const show = (id, on) => ($(id).style.opacity = on ? 1 : 0);
+
+  // monta conteúdos
+  'Rutte'.split('').forEach((c) => { const s = document.createElement('span'); s.textContent = c; $('s1-word').appendChild(s); });
+  const WORDS = [['Afazeres.', ''], ['Agenda.', ''], ['Alertas.', ''], ['Foco.', ''], ['Tudo em um só lugar.', 'Conheça a Rutte, a sua secretária digital.']];
+  const CARDS = [['d-roda.jpg', 'Roda da Vida', 'Equilíbrio entre as áreas'], ['d-academia.jpg', 'Academia', 'Treinos e evolução'], ['d-gratidao.jpg', 'Gratidão', 'Diário e meditações'], ['d-biblioteca.jpg', 'Biblioteca', 'Livros, podcasts e mentores'], ['d-notas.jpg', 'Notas', 'Ideias e listas'], ['d-foco.jpg', 'Foco', 'Pomodoro sem distração']];
+  const cards = CARDS.map(([src, l, s]) => { const d = document.createElement('div'); d.className = 'card'; d.innerHTML = `<img src="${src}" alt="" /><div class="lb">${l}<span>${s}</span></div>`; $('ring').appendChild(d); return d; });
+  const TYPE = 'Organiza meu dia de amanhã';
+
+  let t = 0;
+  function render() {
+    // fundo
+    $('bg').style.setProperty('--bx', `${60 + Math.sin(t * .3) * 20}%`);
+    $('bg').style.setProperty('--by', `${105 + Math.cos(t * .25) * 10}%`);
+    $('grid').style.transform = `translate(${(t * 12) % 80}px, ${(t * 6) % 80}px)`;
+
+    /* ---------- S1: logo + varredura de luz; sai com íris fechando ---------- */
+    {
+      const [a, b] = S.s1; const on = t >= a && t < b; show('s1', on);
+      if (on) {
+        $('s1-sweep').style.left = `${-600 + prog(t, 0.1, 1.6) * 2700}px`;
+        const lg = outExpo(prog(t, 0.2, 1.4));
+        $('s1-logo').style.transform = `scale(${0.75 + 0.25 * lg})`;
+        $('s1-logo').style.filter = `drop-shadow(0 0 70px rgba(255,46,59,.55)) blur(${(1 - lg) * 14}px)`;
+        $('s1-logo').style.opacity = lg;
+        [...$('s1-word').children].forEach((sp, i) => { const k = outExpo(prog(t, 0.7 + i * 0.07, 1.4 + i * 0.07)); sp.style.opacity = k; sp.style.transform = `translateY(${(1 - k) * 80}px)`; sp.style.filter = `blur(${(1 - k) * 8}px)`; });
+        const tg = outCubic(prog(t, 1.4, 2.0)); $('s1-tag').style.opacity = tg; $('s1-tag').style.letterSpacing = `${0.3 - tg * 0.28}em`;
+        // íris
+        const ir = inOut(prog(t, 2.7, 3.4)); const r = 1500 * (1 - ir);
+        $('s1').style.clipPath = ir > 0 ? `circle(${r}px at 50% 50%)` : 'none';
+      }
+    }
+
+    /* ---------- S2: palavras com desfoque; sai com zoom através do texto ---------- */
+    {
+      const [a, b] = S.s2; const on = t >= a && t < b; show('s2', on);
+      if (on) {
+        const ir = outCubic(prog(t, 3.2, 3.8)); $('s2').style.clipPath = ir < 1 ? `circle(${ir * 1400}px at 50% 50%)` : 'none';
+        const steps = [3.3, 3.9, 4.5, 5.1, 5.7];
+        let i = 0; for (let k = 0; k < steps.length; k++) if (t >= steps[k]) i = k;
+        const local = t - steps[i];
+        const inK = outExpo(local / 0.35);
+        const w = $('s2-word');
+        w.textContent = WORDS[i][0];
+        w.style.fontSize = i === 4 ? '140px' : '210px';
+        w.innerHTML = i === 4 ? 'Tudo em <span class="hl">um só</span> lugar.' : WORDS[i][0];
+        let sc = 0.92 + 0.08 * inK, bl = (1 - inK) * 18, op = inK;
+        if (i < 4) { const outK = inCubic((local - 0.42) / 0.18); sc += outK * 0.08; bl += outK * 16; op *= 1 - outK; }
+        // zoom final
+        const z = inCubic(prog(t, 6.15, 6.6));
+        sc *= 1 + z * 9; op *= 1 - z;
+        w.style.transform = `translateY(-55%) scale(${sc})`; w.style.filter = `blur(${bl}px)`; w.style.opacity = op;
+        const sub = $('s2-sub'); sub.textContent = WORDS[i][1]; sub.style.opacity = i === 4 ? outCubic((local - 0.2) / 0.4) * (1 - z) : 0;
+      }
+    }
+
+    /* ---------- S3: laptop (entra com o zoom), troca de tela; sai com corte diagonal ---------- */
+    {
+      const [a, b] = S.s3; const on = t >= a && t < b; show('s3', on);
+      if (on) {
+        const inK = outExpo(prog(t, 6.4, 7.4));
+        const push = prog(t, 6.4, 11.4);
+        $('s3-lap').style.transform = `translateY(${(1 - inK) * 120}px) scale(${(0.85 + 0.15 * inK) * (1 + push * 0.05)})`;
+        $('s3-lap').style.opacity = inK;
+        const swap = inOut(prog(t, 8.9, 9.6));
+        $('s3-b').style.clipPath = `inset(0 0 0 ${(1 - swap) * 100}%)`;
+        $('s3-a').style.transform = `translateX(${-swap * 8}%)`;
+        const first = t < 9.25;
+        $('s3-t').innerHTML = first ? 'Seu dia,<br/>em um <span class="hl">olhar</span>.' : 'Afazeres em<br/>lista ou <span class="hl">Kanban</span>.';
+        $('s3-s').textContent = first ? 'Prioridades, atrasados e a dica do dia logo ao abrir.' : 'Prazos, subtarefas, etiquetas e arrastar para mudar de etapa.';
+        const capIn = first ? outExpo(prog(t, 6.9, 7.7)) : outExpo(prog(t, 9.25, 9.9));
+        const capOut = first ? inCubic(prog(t, 8.9, 9.25)) : 0;
+        $('s3-cap').style.opacity = capIn * (1 - capOut);
+        $('s3-cap').style.transform = `translateX(${(1 - capIn) * -60 + capOut * -40}px)`;
+        // corte diagonal saindo (a cena seguinte aparece por baixo)
+        const d = inOut(prog(t, 10.9, 11.4));
+        $('s3').style.clipPath = d > 0 ? `polygon(0 0, ${100 - d * 140}% 0, ${100 - d * 140 - 25}% 100%, 0 100%)` : 'none';
+      }
+    }
+
+    /* ---------- S4: agenda em 3D + notificação no celular; sai com varredura rápida ---------- */
+    {
+      const [a, b] = S.s4; const on = t >= a && t < b; show('s4', on);
+      if (on) {
+        const inK = outExpo(prog(t, 11.2, 12.2));
+        $('s4-cal').style.transform = `rotateY(${18 - inK * 8}deg) rotateX(${4}deg) translateX(${(1 - inK) * -140}px)`;
+        $('s4-cal').style.opacity = inK;
+        const ph = outExpo(prog(t, 11.6, 12.6));
+        $('s4-phone').style.transform = `translateY(${(1 - ph) * 200}px) rotate(${(1 - ph) * 6}deg)`;
+        $('s4-phone').style.opacity = ph;
+        const n = prog(t, 12.8, 13.3);
+        const bounce = n < 1 ? outExpo(n) : 1;
+        $('s4-notif').style.transform = `translateY(${(1 - bounce) * -140}px) scale(${0.96 + 0.04 * bounce})`;
+        $('s4-notif').style.opacity = bounce;
+        const pulse = t > 13.3 ? Math.max(0, Math.sin((t - 13.3) * 9)) * Math.max(0, 1 - (t - 13.3) / 1.2) : 0;
+        $('s4-phone').style.boxShadow = `0 50px 120px rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,.08), 0 0 ${60 * pulse}px rgba(255,46,59,${0.8 * pulse})`;
+        // entrada: a partir do corte diagonal (fica por baixo)
+        // saída: varredura para a esquerda com desfoque de movimento
+        const w = inCubic(prog(t, 15.0, 15.4));
+        $('s4').style.transform = `translateX(${-w * 1920}px)`;
+        $('s4').style.filter = w > 0 ? `blur(${w * 30}px)` : 'none';
+      }
+    }
+
+    /* ---------- S5: Rutte IA com digitação; entra varrendo, sai abrindo para o carrossel ---------- */
+    {
+      const [a, b] = S.s5; const on = t >= a && t < b; show('s5', on);
+      if (on) {
+        const w = 1 - outExpo(prog(t, 15.2, 15.8));
+        $('s5').style.transform = `translateX(${w * 1920}px)`;
+        $('s5').style.filter = w > 0.02 ? `blur(${w * 30}px)` : 'none';
+        $('s5-bg').style.transform = `scale(${1.05 + prog(t, 15.2, 20) * 0.05})`;
+        const me = outExpo(prog(t, 15.8, 16.3)); $('s5-me').style.opacity = me; $('s5-me').style.transform = `translateY(${(1 - me) * 30}px)`;
+        const n = Math.round(prog(t, 16.2, 17.4) * TYPE.length); $('s5-type').textContent = TYPE.slice(0, n);
+        $('s5-cur').style.opacity = t < 17.6 && Math.floor(t * 3) % 2 === 0 ? 1 : 0;
+        const ai = outExpo(prog(t, 17.7, 18.2)); $('s5-ai').style.opacity = ai; $('s5-ai').style.transform = `translateY(${(1 - ai) * 30}px) scale(${0.97 + 0.03 * ai})`;
+        [['s5-l1', 18.1], ['s5-l2', 18.4], ['s5-l3', 18.7]].forEach(([id, s]) => { const k = outCubic(prog(t, s, s + 0.35)); $(id).style.opacity = k; $(id).style.transform = `translateX(${(1 - k) * 20}px)`; });
+        // saída: afasta e escurece enquanto o carrossel entra
+        const o = inOut(prog(t, 19.6, 20.0));
+        $('s5').style.opacity = 1 - o;
+        if (o > 0) $('s5').style.transform = `scale(${1 - o * 0.15})`;
+      }
+    }
+
+    /* ---------- S6: carrossel 3D ---------- */
+    {
+      const [a, b] = S.s6; const on = t >= a && t < b; show('s6', on);
+      if (on) {
+        const inK = outExpo(prog(t, 19.6, 20.6));
+        $('s6').style.opacity = inK * (1 - inOut(prog(t, 24.6, 25.0)));
+        const R = 640, n = cards.length;
+        // para um cartão de cada vez na frente: gira 60° e segura
+        const u = Math.max(0, (t - 20.2) / 1.05); const step = Math.floor(u), frac = u - step;
+        const rot = -60 * (step + inOut(Math.min(1, frac / 0.55))) + (1 - inK) * 50;
+        $('ring').style.transform = `translateZ(-${R}px) rotateX(-6deg) rotateY(${rot}deg)`;
+        cards.forEach((c, i) => {
+          const ang = (360 / n) * i;
+          c.style.transform = `rotateY(${ang}deg) translateZ(${R}px)`;
+          // destaque do cartão de frente
+          const rel = (((ang + rot) % 360) + 540) % 360 - 180;
+          const front = Math.max(0, 1 - Math.abs(rel) / 60);
+          c.style.filter = `brightness(${0.45 + 0.55 * front})`;
+          c.style.borderColor = `rgba(255,46,59,${0.7 * front})`;
+        });
+      }
+    }
+
+    /* ---------- S7: benefícios; sai com círculo vermelho expandindo ---------- */
+    {
+      const [a, b] = S.s7; const on = t >= a && t < b; show('s7', on);
+      if (on) {
+        const inK = outCubic(prog(t, 24.8, 25.3)); $('s7').style.opacity = inK;
+        [['b1', 25.2], ['b2', 25.45], ['b3', 25.7]].forEach(([id, s]) => { const k = outExpo(prog(t, s, s + 0.6)); $(id).style.opacity = k; $(id).style.transform = `translateY(${(1 - k) * 80}px) scale(${0.9 + 0.1 * k})`; });
+      }
+    }
+
+    /* ---------- S8: chamada final (entra com círculo vermelho) ---------- */
+    {
+      const [a, b] = S.s8; const on = t >= a && t <= b; show('s8', on);
+      if (on) {
+        const ir = inOut(prog(t, 28.4, 29.2));
+        $('s8').style.clipPath = ir < 1 ? `circle(${ir * 1300}px at 50% 55%)` : 'none';
+        const lg = outExpo(prog(t, 28.9, 29.7)); $('s8-logo').style.transform = `scale(${0.7 + 0.3 * lg})`; $('s8-logo').style.opacity = lg;
+        const tt = outExpo(prog(t, 29.2, 30.0)); $('s8-t').style.opacity = tt; $('s8-t').style.transform = `translateY(${(1 - tt) * 40}px)`;
+        const bt = outExpo(prog(t, 29.8, 30.5)); $('cta-btn').style.opacity = bt; $('cta-btn').style.transform = `scale(${(0.8 + 0.2 * bt) * (1 + Math.max(0, Math.sin((t - 30.5) * 5)) * 0.03 * (t > 30.5 ? 1 : 0))})`;
+        $('s8-cred').style.opacity = outCubic(prog(t, 30.4, 31));
+      }
+    }
+    $('black').style.opacity = inCubic(prog(t, 32.2, 33));
+  }
+
+  window.__seek = (x) => { t = x; render(); };
+  $('seek').max = DUR;
+  function fit() {
+    if (location.hash.includes('rec')) return;
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    $('stage').style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+  }
+  addEventListener('resize', fit); fit();
+  if (!location.hash.includes('rec')) {
+    const start = performance.now();
+    (function loop(now) { t = ((now - start) / 1000) % (DUR + 0.5); render(); requestAnimationFrame(loop); })(start);
+  } else render();
+</script>
+</body>
+</html>
