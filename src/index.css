@@ -18,8 +18,8 @@
 
   /* Contexto Empresa: azul com o mesmo tom (saturação/luminosidade) do vermelho */
   html[data-scope='BUSINESS'] {
-    --primary: 27 79 185;
-    --neon: 46 139 255;
+    --primary: 139 30 63;
+    --neon: 224 69 123;
   }
 
   .dark {

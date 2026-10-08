@@ -296,6 +296,8 @@ export interface Notebook {
   emoji: string;
   order: number;
   createdAt: string;
+  /** Pessoal (padrão) ou Empresa — separa as notas de trabalho */
+  scope?: Scope;
 }
 
 export interface NoteItem {

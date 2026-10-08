@@ -90,7 +90,7 @@ export function TaskCard({ task, variant = 'list', draggable }: Props) {
           {overdue && <OverdueBadge />}
           {variant !== 'kanban' && task.status !== 'NOT_STARTED' && <StatusBadge status={task.status} />}
           {scopeFilter === 'ALL' && (
-            <ColorBadge color={task.scope === 'BUSINESS' ? '#2E8BFF' : '#FF2E3B'} icon={task.scope === 'BUSINESS' ? Building : UserRound}>
+            <ColorBadge color={task.scope === 'BUSINESS' ? '#E0457B' : '#FF2E3B'} icon={task.scope === 'BUSINESS' ? Building : UserRound}>
               {task.scope === 'BUSINESS' ? 'Empresa' : 'Pessoal'}
             </ColorBadge>
           )}

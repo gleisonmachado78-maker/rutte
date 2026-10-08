@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ListChecks, Pencil, Plus, Search, StickyNote, Trash2, Type, X } from 'lucide-react';
+import { Briefcase, Check, ChevronDown, User, ListChecks, Pencil, Plus, Search, StickyNote, Trash2, Type, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -11,7 +11,8 @@ import { useCreateTask, useDeleteNote, useDeleteNotebook, useNotebooks, useNotes
 import { newItem, newNote, NOTEBOOK_EMOJIS, noteToText } from '@/lib/notes';
 import { todayISO } from '@/lib/task-utils';
 import { cn, uid } from '@/lib/utils';
-import type { NoteBox, Notebook } from '@/types';
+import { useUI } from '@/store/ui';
+import type { NoteBox, Notebook, Scope } from '@/types';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const LAST_KEY = 'rutte:notes-last';
@@ -43,7 +44,17 @@ export function NotesPage() {
   const [nbName, setNbName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
 
-  const current = notebooks.find((n) => n.id === active) ?? notebooks[0];
+  // Pessoal x Empresa: segue o seletor global quando ele aponta um dos dois
+  const globalScope = useUI((s) => s.scope);
+  const [side, setSide] = useState<Scope>(globalScope === 'BUSINESS' ? 'BUSINESS' : 'PERSONAL');
+  useEffect(() => {
+    if (globalScope !== 'ALL') setSide(globalScope);
+  }, [globalScope]);
+  const scopeOf = (nb?: Notebook) => nb?.scope ?? 'PERSONAL';
+  const nbs = useMemo(() => notebooks.filter((n) => scopeOf(n) === side), [notebooks, side]);
+  const notesIn = (sc: Scope) => notes.filter((n) => scopeOf(notebooks.find((b) => b.id === n.notebookId)) === sc).length;
+
+  const current = nbs.find((n) => n.id === active) ?? nbs[0];
   useEffect(() => {
     if (current && current.id !== active) setActive(current.id);
   }, [current, active]);
@@ -62,12 +73,13 @@ export function NotesPage() {
 
   const query = norm(q.trim());
   const visible = useMemo(() => {
-    const base = query ? notes.filter((n) => norm(noteToText(n)).includes(query)) : notes.filter((n) => n.notebookId === current?.id);
+    const base = query ? notes.filter((n) => scopeOf(notebooks.find((b) => b.id === n.notebookId)) === side && norm(noteToText(n)).includes(query)) : notes.filter((n) => n.notebookId === current?.id);
     const sorted = [...base].sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.order - b.order);
     if (!order) return sorted;
     const pos = new Map(order.map((id, i) => [id, i]));
     return [...sorted].sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
-  }, [notes, current?.id, query, order]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, notebooks, side, current?.id, query, order]);
 
   const startDrag = (e: ReactPointerEvent, id: string) => {
     if (query) return;
@@ -158,16 +170,16 @@ export function NotesPage() {
       status: 'NOT_STARTED',
       priority: 'MEDIUM',
       dueDate: todayISO(),
-      scope: 'PERSONAL',
+      scope: scopeOf(notebooks.find((b) => b.id === n.notebookId)),
       subtasks: n.kind === 'lista' ? n.items.filter((i) => i.text.trim()).map((i) => ({ id: uid('st'), title: i.text, isCompleted: i.done })) : [],
       links: [],
     });
   };
 
-  const createNotebook = () => {
-    const name = nbName.trim();
+  const createNotebook = (fixed?: string) => {
+    const name = (fixed ?? nbName).trim();
     if (!name) return setNewNbOpen(false);
-    const nb: Notebook = { id: uid('nb'), name, emoji: NOTEBOOK_EMOJIS[notebooks.length % NOTEBOOK_EMOJIS.length], order: notebooks.length, createdAt: new Date().toISOString() };
+    const nb: Notebook = { id: uid('nb'), name, emoji: fixed ? '💼' : NOTEBOOK_EMOJIS[notebooks.length % NOTEBOOK_EMOJIS.length], order: notebooks.length, createdAt: new Date().toISOString(), scope: side };
     saveNb.mutate(nb);
     setActive(nb.id);
     setNbName('');
@@ -176,13 +188,13 @@ export function NotesPage() {
 
   const removeNotebook = async (nb: Notebook) => {
     const count = notes.filter((n) => n.notebookId === nb.id).length;
-    if (notebooks.length <= 1) {
+    if (side === 'PERSONAL' && nbs.length <= 1) {
       toast('Você precisa ter pelo menos um bloco');
       return;
     }
     if (await askConfirm({ title: `Excluir o bloco “${nb.name}”?`, message: count ? `As ${count} notas dentro dele também serão excluídas.` : 'O bloco está vazio.', confirmLabel: 'Excluir bloco', danger: true })) {
       delNb.mutate(nb.id);
-      setActive(notebooks.find((n) => n.id !== nb.id)!.id);
+      setActive(nbs.find((n) => n.id !== nb.id)?.id ?? '');
     }
   };
 
@@ -256,9 +268,32 @@ export function NotesPage() {
         </DropdownMenu>
       </header>
 
+      {/* Pessoal x Empresa */}
+      <div role="radiogroup" aria-label="Notas pessoais ou de trabalho" className="inline-flex rounded-xl border border-border bg-card p-1">
+        {([
+          ['PERSONAL', 'Pessoal', User, 'bg-brand'],
+          ['BUSINESS', 'Empresa', Briefcase, 'bg-business'],
+        ] as const).map(([value, label, Icon, bg]) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={side === value}
+            onClick={() => {
+              setSide(value);
+              setQ('');
+            }}
+            className={cn('flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition-all duration-200', side === value ? cn(bg, 'text-white shadow-sm') : 'text-foreground/60 hover:text-foreground')}
+          >
+            <Icon className="size-4" aria-hidden /> {label}
+            <span className={cn('text-xs tabular-nums', side === value ? 'text-white/75' : 'text-foreground/40')}>{notesIn(value)}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Blocos */}
       <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none]" role="tablist" aria-label="Blocos de notas">
-        {notebooks.map((nb) => {
+        {nbs.map((nb) => {
           const on = nb.id === current?.id && !query;
           if (renaming === nb.id) {
             return (
@@ -322,7 +357,7 @@ export function NotesPage() {
               createNotebook();
             }}
           >
-            <input autoFocus value={nbName} onChange={(e) => setNbName(e.target.value)} onBlur={createNotebook} onKeyDown={(e) => e.key === 'Escape' && setNewNbOpen(false)} placeholder="Nome do bloco" aria-label="Nome do novo bloco" className="h-8 w-36 bg-transparent text-sm outline-none" />
+            <input autoFocus value={nbName} onChange={(e) => setNbName(e.target.value)} onBlur={() => createNotebook()} onKeyDown={(e) => e.key === 'Escape' && setNewNbOpen(false)} placeholder="Nome do bloco" aria-label="Nome do novo bloco" className="h-8 w-36 bg-transparent text-sm outline-none" />
             <button type="submit" className="grid size-7 place-items-center rounded-full text-primary" aria-label="Criar bloco">
               <Check className="size-4" />
             </button>
@@ -355,7 +390,18 @@ export function NotesPage() {
         </form>
       )}
 
-      {query && <p className="text-sm text-foreground/60">{visible.length ? `${visible.length} ${visible.length === 1 ? 'nota encontrada' : 'notas encontradas'} em todos os blocos` : 'Nenhuma nota encontrada.'}</p>}
+      {query && <p className="text-sm text-foreground/60">{visible.length ? `${visible.length} ${visible.length === 1 ? 'nota encontrada' : 'notas encontradas'} em ${side === 'BUSINESS' ? 'Empresa' : 'Pessoal'}` : 'Nenhuma nota encontrada.'}</p>}
+
+      {!query && !current && (
+        <div className="grid place-items-center rounded-2xl border border-dashed border-border px-6 py-14 text-center">
+          <Briefcase className="size-10 text-business/60" aria-hidden />
+          <p className="mt-3 font-semibold">Suas notas de trabalho ficam aqui</p>
+          <p className="mt-1 max-w-sm text-sm text-foreground/60">Separadas das pessoais: reuniões, clientes, ideias de projeto.</p>
+          <Button className="mt-4" onClick={() => createNotebook('Trabalho')}>
+            <Plus /> Criar bloco de trabalho
+          </Button>
+        </div>
+      )}
 
       {!query && visible.length === 0 && current && (
         <div className="grid place-items-center rounded-2xl border border-dashed border-border px-6 py-14 text-center">

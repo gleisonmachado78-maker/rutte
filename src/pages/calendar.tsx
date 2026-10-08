@@ -24,6 +24,8 @@ import { dueDateTime, isClosed, isOverdue, toISODate } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI } from '@/store/ui';
 import type { Task } from '@/types';
+import { LIFE_AREAS, LIFE_AREA_BY_ID } from '@/lib/life-areas';
+import type { CSSProperties } from 'react';
 import { useGoogleEvents, useGoogleStatus } from '@/hooks/use-google';
 import { connectGoogle, type GEvent } from '@/lib/google-calendar';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,10 +33,18 @@ import { toast } from 'sonner';
 
 const WEEK_OPTS = { weekStartsOn: 0 as const, locale: ptBR };
 
+/** Cor da área da vida do afazer (barra lateral + fundo suave + brilho ao passar o mouse). */
+function areaStyle(task: Task): CSSProperties | undefined {
+  const c = task.lifeAreaId ? LIFE_AREA_BY_ID[task.lifeAreaId]?.color : undefined;
+  if (!c) return undefined;
+  return { '--area': c, borderLeftColor: c, backgroundColor: `color-mix(in srgb, ${c} 24%, transparent)` } as CSSProperties;
+}
+
 function CalendarItem({ task, compact }: { task: Task; compact?: boolean }) {
   const openTask = useUI((s) => s.openTask);
   const overdue = isOverdue(task);
   const closed = isClosed(task);
+  const area = task.lifeAreaId ? LIFE_AREA_BY_ID[task.lifeAreaId] : undefined;
   return (
     <button
       type="button"
@@ -42,18 +52,16 @@ function CalendarItem({ task, compact }: { task: Task; compact?: boolean }) {
         e.stopPropagation();
         openTask(task.id);
       }}
-      title={task.title}
+      title={`${task.title}${area ? ` · ${area.short}` : ''}${overdue ? ' · atrasada' : ''}`}
+      style={areaStyle(task)}
       className={cn(
-        'flex w-full items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-left text-[11px] font-medium transition-all duration-200',
-        task.meetingUrl
-          ? 'bg-navy text-white dark:bg-white/15'
-          : overdue
-            ? 'bg-brand text-white'
-            : 'bg-muted text-foreground hover:bg-border',
+        'flex w-full items-center gap-1 truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-semibold text-foreground transition-all duration-200 hover:-translate-y-px',
+        area ? 'hover:shadow-[0_0_0_1px_var(--area),0_4px_12px_-4px_var(--area)]' : 'border-l-foreground/30 bg-muted hover:bg-border',
         closed && 'line-through opacity-50',
         !compact && 'py-1.5 text-xs',
       )}
     >
+      {overdue && !closed && <span className="size-1.5 shrink-0 rounded-full bg-brand shadow-[0_0_6px_rgb(var(--neon))]" aria-hidden />}
       {task.meetingUrl && <Video className="size-3 shrink-0" aria-label="Reunião" />}
       {task.deadlineTime && <span className="shrink-0 tabular-nums opacity-80">{task.deadlineTime}</span>}
       <span className="truncate">{task.title}</span>
@@ -109,8 +117,10 @@ function DayList({ date, tasks, events = [] }: { date: Date; tasks: Task[]; even
               <button
                 type="button"
                 onClick={() => openTask(t.id)}
+                style={areaStyle(t)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition-all duration-200 hover:bg-muted',
+                  'flex w-full items-center gap-3 rounded-xl border border-l-4 border-border p-3 text-left transition-all duration-200 hover:-translate-y-px',
+                  t.lifeAreaId ? 'hover:shadow-[0_6px_18px_-8px_var(--area)]' : 'border-l-foreground/25 hover:bg-muted',
                   isClosed(t) && 'opacity-60',
                 )}
               >
@@ -118,6 +128,14 @@ function DayList({ date, tasks, events = [] }: { date: Date; tasks: Task[]; even
                 <span className="min-w-0 flex-1">
                   <span className={cn('block truncate text-sm font-medium', isClosed(t) && 'line-through')}>{t.title}</span>
                   <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {t.lifeAreaId && LIFE_AREA_BY_ID[t.lifeAreaId] && (() => {
+                      const a = LIFE_AREA_BY_ID[t.lifeAreaId!];
+                      return (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: a.color }}>
+                          <a.icon className="size-3" aria-hidden /> {a.short}
+                        </span>
+                      );
+                    })()}
                     <PriorityBadge priority={t.priority} />
                     {t.meetingUrl && (
                       <span className="inline-flex items-center gap-1 text-xs text-foreground/60">
@@ -208,6 +226,7 @@ export function CalendarPage() {
 
   const weekdays = eachDayOfInterval({ start: startOfWeek(new Date(), WEEK_OPTS), end: addDays(startOfWeek(new Date(), WEEK_OPTS), 6) });
   const itemsFor = (d: Date) => byDay.get(toISODate(d)) ?? [];
+  const usedAreas = new Set(days.flatMap((d) => itemsFor(d).map((t) => t.lifeAreaId)).filter(Boolean));
 
   return (
     <div className="space-y-5">
@@ -258,9 +277,14 @@ export function CalendarPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-foreground/60" aria-label="Legenda">
-        <span className="inline-flex items-center gap-1.5"><span className="inline-flex size-4 items-center justify-center rounded bg-navy text-white dark:bg-white/15"><Video className="size-2.5" aria-hidden /></span> Reunião</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-brand" aria-hidden /> Atrasada</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-muted" aria-hidden /> Afazer</span>
+        {LIFE_AREAS.filter((a) => usedAreas.has(a.id)).map((a) => (
+          <span key={a.id} className="inline-flex items-center gap-1.5">
+            <span className="grid size-4 place-items-center rounded text-white" style={{ backgroundColor: a.color }}><a.icon className="size-2.5" aria-hidden /></span> {a.short}
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded border-l-[3px] border-foreground/30 bg-muted" aria-hidden /> Sem área</span>
+        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-brand" aria-hidden /> Atrasada</span>
+        <span className="inline-flex items-center gap-1.5"><Video className="size-3.5" aria-hidden /> Reunião</span>
         {g.connected && <span className="inline-flex items-center gap-1.5"><span className="size-4 rounded bg-sky-600" aria-hidden /> Google Agenda</span>}
       </div>
 
@@ -318,7 +342,8 @@ export function CalendarPage() {
                     {items.slice(0, 4).map((t) => (
                       <span
                         key={t.id}
-                        className={cn('size-1.5 rounded-full', t.meetingUrl ? 'bg-navy dark:bg-white' : isOverdue(t) ? 'bg-brand' : 'bg-foreground/40')}
+                        className={cn('size-1.5 rounded-full', !t.lifeAreaId && 'bg-foreground/40', isOverdue(t) && 'ring-1 ring-brand ring-offset-1 ring-offset-card')}
+                        style={t.lifeAreaId ? { backgroundColor: LIFE_AREA_BY_ID[t.lifeAreaId]?.color } : undefined}
                         aria-hidden
                       />
                     ))}
