@@ -208,7 +208,7 @@ function TaskForm({
                     'flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200',
                     scope === value
                       ? value === 'BUSINESS'
-                        ? 'bg-business text-white shadow-[0_0_16px_rgb(224_69_123_/_.45)]'
+                        ? 'bg-business text-white shadow-[0_0_16px_rgb(168_85_247_/_.45)]'
                         : 'bg-brand text-white shadow-neon-brand'
                       : 'text-foreground/60 hover:text-foreground',
                   )}

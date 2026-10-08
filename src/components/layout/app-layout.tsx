@@ -93,7 +93,7 @@ export function ScopeSwitcher({ collapsed, compact }: { collapsed?: boolean; com
   const scope = useUI((s) => s.scope);
   const setScope = useUI((s) => s.setScope);
   return (
-    <div role="radiogroup" aria-label="Contexto: pessoal ou empresa" className={cn('flex gap-0.5 rounded-lg bg-white/[0.06] p-0.5', collapsed && 'flex-col')}>
+    <div role="radiogroup" aria-label="Contexto: pessoal ou empresa" className={cn('flex shrink-0 gap-0.5 rounded-lg bg-white/[0.06] p-0.5', collapsed && 'flex-col')}>
       {SCOPES.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
@@ -105,6 +105,7 @@ export function ScopeSwitcher({ collapsed, compact }: { collapsed?: boolean; com
           onClick={() => setScope(value)}
           className={cn(
             'flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1.5 text-[11px] font-semibold transition-colors duration-200',
+            collapsed && 'flex-none',
             compact ? 'h-7' : 'h-8',
             scope === value
               ? value === 'PERSONAL'
@@ -134,7 +135,7 @@ function NavLinkItem({ entry, collapsed, onNavigate, badge }: { entry: NavEntry;
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          'relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-200',
+          'relative flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium [@media(max-height:820px)]:h-9 transition-colors duration-200',
           isActive ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-primary' : 'text-white/65 hover:bg-white/[0.06] hover:text-white',
           collapsed && 'justify-center px-0',
         )
@@ -346,8 +347,8 @@ export function AppLayout() {
       </a>
 
       {/* Menu lateral (computador) */}
-      <aside className={cn('fixed inset-y-0 left-0 z-30 hidden flex-col gap-5 bg-navy px-3 py-4 transition-all duration-200 md:flex', collapsed ? 'w-[72px]' : 'w-60')}>
-        <div className={cn('flex items-center gap-2.5 px-1', collapsed && 'flex-col')}>
+      <aside className={cn('fixed inset-y-0 left-0 z-30 hidden flex-col gap-5 bg-navy px-3 py-4 [@media(max-height:820px)]:gap-3 [@media(max-height:820px)]:py-3 transition-all duration-200 md:flex', collapsed ? 'w-[72px]' : 'w-60')}>
+        <div className={cn('flex shrink-0 items-center gap-2.5 px-1', collapsed && 'flex-col')}>
           <RutteLogo className="w-9 shrink-0" />
           {!collapsed && (
             <span className="font-brand min-w-0 flex-1 truncate text-xl font-bold text-white" title={BRAND.tagline}>
@@ -366,15 +367,18 @@ export function AppLayout() {
           </button>
         </div>
 
-        <Button onClick={() => openNewTask()} className={cn('h-10', collapsed && 'px-0')} aria-label="Novo afazer" title="Novo afazer (N)" data-tour="new-task">
+        <Button onClick={() => openNewTask()} className={cn('h-10 shrink-0', collapsed && 'px-0')} aria-label="Novo afazer" title="Novo afazer (N)" data-tour="new-task">
           <Plus className="!size-[18px]" /> {!collapsed && 'Novo afazer'}
         </Button>
 
         {modules.business && <ScopeSwitcher collapsed={collapsed} />}
 
-        <NavGroups collapsed={collapsed} />
+        {/* em telas baixas (notebook) a lista rola e o rodapé com as configurações fica sempre visível */}
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_.15)_transparent]">
+          <NavGroups collapsed={collapsed} />
+        </div>
 
-        <div className="mt-auto border-t border-white/10 pt-3">
+        <div className="shrink-0 border-t border-white/10 pt-3">
           <div data-tour="account">
             <AccountMenu collapsed={collapsed} />
           </div>

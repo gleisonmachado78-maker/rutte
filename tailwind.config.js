@@ -13,7 +13,7 @@ export default {
         neon: 'rgb(var(--neon) / <alpha-value>)',
         // Cores fixas (não mudam com o contexto)
         brand: { DEFAULT: '#B91B1C', neon: '#FF2E3B' },
-        business: { DEFAULT: '#8B1E3F', neon: '#E0457B' },
+        business: { DEFAULT: '#6D28D9', neon: '#A855F7' },
         surface: '#E5E7EB',
         white: '#FFFFFF',
         // Tokens semânticos (definidos em src/index.css para claro/escuro)
