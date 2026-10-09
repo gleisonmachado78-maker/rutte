@@ -8,6 +8,5 @@ const on = mode === 'on';
 const status = on
   ? { maintenance: true, until: new Date(Date.now() + Number(min) * 60_000).toISOString(), message: msg.join(' ') || 'A Rutte está em atualização' }
   : { maintenance: false };
-writeFileSync(new URL('../public/status.json', import.meta.url), JSON.stringify(status, null, 2) + '
-');
+writeFileSync(new URL('../public/status.json', import.meta.url), `${JSON.stringify(status, null, 2)}\n`);
 console.log(on ? `Modo atualização LIGADO até ${status.until}` : 'Modo atualização DESLIGADO');

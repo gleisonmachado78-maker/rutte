@@ -1,3 +1,5 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "until": "2026-10-09T18:32:23.787Z",
+  "message": "Teste do modo atualização"
 }
