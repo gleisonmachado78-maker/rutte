@@ -1,3 +1,5 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "until": "2026-10-09T18:41:48.385Z",
+  "message": "Adicionando a previsão de término"
 }
