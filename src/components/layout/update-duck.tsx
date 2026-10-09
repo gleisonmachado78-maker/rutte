@@ -9,7 +9,7 @@ const PHRASES = [
   'Atualizando com muito quack e carinho.',
 ];
 
-const CHECK_EVERY = 2 * 60_000;
+const CHECK_EVERY = 60_000;
 const isTyping = () => {
   const el = document.activeElement;
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable);
@@ -30,7 +30,11 @@ export function UpdateDuck() {
 
     const apply = () => {
       if (done) return;
-      if (busy() && document.visibilityState === 'visible') return; // tenta de novo no próximo ciclo
+      // aba escondida: espera a pessoa voltar para ela ver o pato; digitando ou com janela aberta: espera terminar
+      if (document.visibilityState !== 'visible' || busy()) {
+        window.setTimeout(apply, 4000);
+        return;
+      }
       done = true;
       setPhrase(PHRASES[Math.floor(Math.random() * PHRASES.length)]);
       window.setTimeout(() => location.reload(), 3200);
@@ -38,7 +42,7 @@ export function UpdateDuck() {
 
     const check = async () => {
       if (done) return;
-      if (pending) return apply();
+      if (pending) return; // já está esperando a hora certa de mostrar o pato
       try {
         const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
