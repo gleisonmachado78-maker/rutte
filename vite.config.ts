@@ -20,10 +20,23 @@ function inlineIcons(): Plugin {
   }
 }
 
+/** Identificador desta versão: o app compara com /version.json para saber quando há atualização. */
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now())
+
+function versionFile(): Plugin {
+  return {
+    name: 'version-file',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ id: BUILD_ID }) })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const single = mode === 'single'
   return {
-    plugins: [react(), ...(single ? [viteSingleFile(), inlineIcons()] : [])],
+    define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
+    plugins: [react(), ...(single ? [viteSingleFile(), inlineIcons()] : [versionFile()])],
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },

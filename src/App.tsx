@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { AppLayout } from '@/components/layout/app-layout';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { ConfirmHost } from '@/components/ui/confirm';
+import { UpdateDuck } from '@/components/layout/update-duck';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="*" element={<AuthGate><PrivateRoutes /></AuthGate>} />
       </Routes>
       <ConfirmHost />
+      <UpdateDuck />
       <Toaster
         theme={theme}
         position="top-center"
