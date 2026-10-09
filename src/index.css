@@ -287,3 +287,6 @@ html .duck-note { position: absolute; font-size: 28px; color: rgb(var(--neon)); 
 .duck-note-1 { left: -28px; top: 30px; }
 .duck-note-2 { right: -30px; top: 10px; animation-delay: .6s !important; }
 .duck-note-3 { left: 50%; top: -20px; animation-delay: 1.2s !important; }
+
+/* entrada suave de cartões (guia da meta) */
+.fade-up { animation: item-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }

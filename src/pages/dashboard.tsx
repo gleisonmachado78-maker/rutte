@@ -17,9 +17,11 @@ import {
   Video,
   type LucideIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RutteLogo } from '@/components/brand/rutte';
 import { TaskCard } from '@/components/tasks/task-card';
+import { GoalGuideDialog } from '@/components/goals/goal-guide';
 import { Button } from '@/components/ui/button';
 import { useModules, useScopedTasks, useTasks, useUser, useWheelAssessments } from '@/hooks/use-data';
 import { firstName, GOALS, tipOfTheDay } from '@/lib/onboarding';
@@ -329,52 +331,57 @@ function WheelSummary() {
   );
 }
 
-/** Objetivos escolhidos na personalização, com o andamento de cada um nesta semana. */
+/** Objetivos escolhidos na personalização: cada um abre um guia com dicas de livros e vídeos. */
 function GoalsSummary({ goals }: { goals: GoalId[] }) {
   const { data: tasks = [] } = useTasks();
-  const setFilters = useUI((s) => s.setFilters);
-  const resetFilters = useUI((s) => s.resetFilters);
-  const navigate = useNavigate();
+  const [open, setOpen] = useState<GoalId | null>(null);
   const weekAgo = Date.now() - 7 * 86_400_000;
+  const statsOf = (g: GoalId) => {
+    const related = tasks.filter((t) => t.lifeAreaId && GOALS[g].areas.includes(t.lifeAreaId));
+    const pending = related.filter((t) => !isClosed(t)).length;
+    const doneWeek = related.filter((t) => t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
+    return { pending, doneWeek, text: `${doneWeek} ${doneWeek === 1 ? 'feito' : 'feitos'} nesta semana · ${pending} ${pending === 1 ? 'aberto' : 'abertos'}` };
+  };
 
   return (
     <section aria-labelledby="goals-title" className="space-y-3">
-      <h2 id="goals-title" className="flex items-center gap-2 text-lg font-bold">
-        <Target className="size-5 text-primary icon-glow dark:text-neon" aria-hidden /> Seus objetivos
-      </h2>
+      <div className="flex items-end justify-between gap-3">
+        <h2 id="goals-title" className="flex items-center gap-2 text-lg font-bold">
+          <Target className="size-5 text-primary icon-glow dark:text-neon" aria-hidden /> Seus objetivos
+        </h2>
+        <span className="text-xs text-foreground/50">Toque para ver dicas e vídeos</span>
+      </div>
       <ul className={cn('grid grid-cols-1 gap-3', goals.length === 2 ? 'sm:grid-cols-2' : goals.length >= 3 ? 'sm:grid-cols-3' : '')}>
         {goals.map((g) => {
           const def = GOALS[g];
           const Icon = def.icon;
-          const related = tasks.filter((t) => t.lifeAreaId && def.areas.includes(t.lifeAreaId));
-          const open = related.filter((t) => !isClosed(t)).length;
-          const doneWeek = related.filter((t) => t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
+          const st = statsOf(g);
           return (
             <li key={g}>
               <button
                 type="button"
-                onClick={() => {
-                  resetFilters();
-                  setFilters({ lifeAreaIds: def.areas });
-                  navigate('/tasks');
-                }}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-neon hover:shadow-neon"
+                onClick={() => setOpen(g)}
+                className="group flex w-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary dark:text-neon">
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold leading-snug">{def.label}</span>
-                  <span className="block text-xs text-foreground/60">
-                    {doneWeek} {doneWeek === 1 ? 'feito' : 'feitos'} nesta semana · {open} {open === 1 ? 'aberto' : 'abertos'}
+                <span className="flex w-full items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white dark:text-neon">
+                    <Icon className="size-5" aria-hidden />
                   </span>
+                  <span className="min-w-0 flex-1 font-semibold leading-snug">{def.label}</span>
+                  <ArrowRight className="size-4 shrink-0 text-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
                 </span>
-                <ArrowRight className="size-4 shrink-0 text-foreground/40" aria-hidden />
+                <span className="flex w-full items-center justify-between gap-2 text-xs text-foreground/55">
+                  <span>
+                    <b className="font-semibold text-foreground/80">{st.doneWeek}</b> feitos · <b className="font-semibold text-foreground/80">{st.pending}</b> abertos
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium text-foreground/65">📖 Dicas · ▶ Vídeos</span>
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
+      <GoalGuideDialog goal={open} stats={open ? statsOf(open).text : undefined} onClose={() => setOpen(null)} />
     </section>
   );
 }
