@@ -52,6 +52,8 @@ const busy = () => isTyping() || !!document.querySelector('[role=dialog]');
 export function UpdateDuck() {
   const [phrase, setPhrase] = useState<string | null>(null);
   const [maint, setMaint] = useState<string | null>(null);
+  const [times, setTimes] = useState<{ start?: number; eta?: number }>({});
+  const [now, setNow] = useState(Date.now());
   const [mi, setMi] = useState(0);
 
   // Modo atualização: enquanto public/status.json disser "maintenance", a Rutte fica em pausa com o pato.
@@ -63,11 +65,12 @@ export function UpdateDuck() {
       try {
         const res = await fetch(`/status.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
-        const st = (await res.json()) as { maintenance?: boolean; until?: string; message?: string };
+        const st = (await res.json()) as { maintenance?: boolean; until?: string; message?: string; start?: string; eta?: string };
         const on = !!st.maintenance && (!st.until || new Date(st.until).getTime() > Date.now());
         if (on) {
           was = true;
           setMaint(st.message || 'A Rutte está em atualização');
+          setTimes({ start: st.start ? Date.parse(st.start) : undefined, eta: st.eta ? Date.parse(st.eta) : undefined });
         } else if (was) {
           location.reload();
         }
@@ -87,7 +90,11 @@ export function UpdateDuck() {
   useEffect(() => {
     if (!maint) return;
     const t = window.setInterval(() => setMi((n) => (n + 1) % MAINT_PHRASES.length), 4500);
-    return () => window.clearInterval(t);
+    const c = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      window.clearInterval(t);
+      window.clearInterval(c);
+    };
   }, [maint]);
 
   useEffect(() => {
@@ -156,7 +163,10 @@ export function UpdateDuck() {
 
   // prévia: abra o site com #pato para ver a tela
   useEffect(() => {
-    if (location.hash.endsWith('pato-off')) return setMaint('A Rutte está em atualização');
+    if (location.hash.endsWith('pato-off')) {
+      setTimes({ start: Date.now() - 3 * 60_000, eta: Date.now() + 7 * 60_000 });
+      return setMaint('A Rutte está em atualização');
+    }
     if (!location.hash.endsWith('pato')) return;
     setPhrase(PHRASES[0]);
     const t = window.setTimeout(() => setPhrase(null), 9000);
@@ -178,9 +188,42 @@ export function UpdateDuck() {
           </div>
           <p key={mi} className="fade-up font-brand mt-8 max-w-sm text-balance text-xl font-bold sm:text-2xl">{MAINT_PHRASES[mi]}</p>
           <p className="mt-2 max-w-xs text-sm text-white/60">{maint}. Assim que terminar, ela volta sozinha — seus dados continuam salvos.</p>
-          <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
-            <span className="duck-indet block h-full w-1/3 rounded-full bg-primary shadow-neon" />
-          </div>
+          {times.eta ? (() => {
+            const left = times.eta - now;
+            const total = times.start ? times.eta - times.start : 0;
+            const pct = total > 0 ? Math.min(97, Math.max(3, ((now - times.start!) / total) * 100)) : 50;
+            const mm = Math.floor(Math.max(0, left) / 60_000);
+            const ss = Math.floor((Math.max(0, left) % 60_000) / 1000);
+            const hora = new Date(times.eta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            return (
+              <div className="mt-6 w-full max-w-xs rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4">
+                {left > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Previsão de término</p>
+                    <p className="mt-1 text-3xl font-bold tabular-nums">{hora}</p>
+                    <p className="mt-0.5 text-sm text-white/65" aria-live="off">
+                      faltam <b className="tabular-nums text-white">{mm}:{String(ss).padStart(2, '0')}</b>
+                    </p>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <span className="block h-full rounded-full bg-primary shadow-neon transition-[width] duration-1000 ease-linear" style={{ width: `${pct}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold">Finalizando… só mais um instante</p>
+                    <p className="mt-0.5 text-xs text-white/55">Previsto para {hora} — estou dando os últimos retoques.</p>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <span className="duck-indet block h-full w-1/3 rounded-full bg-primary shadow-neon" />
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })() : (
+            <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
+              <span className="duck-indet block h-full w-1/3 rounded-full bg-primary shadow-neon" />
+            </div>
+          )}
         </div>
       </div>
     );
