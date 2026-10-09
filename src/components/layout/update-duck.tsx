@@ -10,6 +10,15 @@ const PHRASES = [
 ];
 
 const CHECK_EVERY = 60_000;
+const MAINT_EVERY = 15_000;
+/** Frases do modo atualização (sistema em pausa enquanto a Rutte é atualizada). */
+const MAINT_PHRASES = [
+  'Quack! Estou em atualização agora…',
+  'O pato está trabalhando nas novidades.',
+  'Dando um trato na Rutte para você. Volto já!',
+  'Arrumando as penas e as funções novas…',
+  'Só mais um pouquinho: o pato não para de dançar.',
+];
 const BUILD_KEY = 'rutte:build';
 const SHOWN_KEY = 'rutte:duck-shown';
 const store = {
@@ -42,6 +51,44 @@ const busy = () => isTyping() || !!document.querySelector('[role=dialog]');
  */
 export function UpdateDuck() {
   const [phrase, setPhrase] = useState<string | null>(null);
+  const [maint, setMaint] = useState<string | null>(null);
+  const [mi, setMi] = useState(0);
+
+  // Modo atualização: enquanto public/status.json disser "maintenance", a Rutte fica em pausa com o pato.
+  // Quando volta ao normal, recarrega já na versão nova. Expira sozinho em "until" (segurança).
+  useEffect(() => {
+    if (import.meta.env.DEV || import.meta.env.MODE === 'single' || location.protocol !== 'https:') return;
+    let was = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/status.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const st = (await res.json()) as { maintenance?: boolean; until?: string; message?: string };
+        const on = !!st.maintenance && (!st.until || new Date(st.until).getTime() > Date.now());
+        if (on) {
+          was = true;
+          setMaint(st.message || 'A Rutte está em atualização');
+        } else if (was) {
+          location.reload();
+        }
+      } catch {
+        /* sem internet */
+      }
+    };
+    poll();
+    const t = window.setInterval(poll, MAINT_EVERY);
+    const onVis = () => document.visibilityState === 'visible' && poll();
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+  useEffect(() => {
+    if (!maint) return;
+    const t = window.setInterval(() => setMi((n) => (n + 1) % MAINT_PHRASES.length), 4500);
+    return () => window.clearInterval(t);
+  }, [maint]);
 
   useEffect(() => {
     if (import.meta.env.DEV || import.meta.env.MODE === 'single' || location.protocol !== 'https:') return;
@@ -109,12 +156,35 @@ export function UpdateDuck() {
 
   // prévia: abra o site com #pato para ver a tela
   useEffect(() => {
+    if (location.hash.endsWith('pato-off')) return setMaint('A Rutte está em atualização');
     if (!location.hash.endsWith('pato')) return;
     setPhrase(PHRASES[0]);
     const t = window.setTimeout(() => setPhrase(null), 9000);
     return () => window.clearTimeout(t);
   }, []);
 
+  if (maint) {
+    return (
+      <div role="alert" aria-live="assertive" className="duck-screen fixed inset-0 z-[110] grid place-items-center bg-navy px-6 text-center text-white">
+        <div className="flex flex-col items-center">
+          <div className="relative">
+            <span className="duck-note duck-note-1" aria-hidden>♪</span>
+            <span className="duck-note duck-note-2" aria-hidden>♫</span>
+            <span className="duck-note duck-note-3" aria-hidden>♪</span>
+            <span className="duck-dance block select-none text-[96px] leading-none sm:text-[120px]" aria-hidden>
+              🦆
+            </span>
+            <span className="duck-shadow mx-auto mt-2 block h-2.5 w-20 rounded-full bg-black/40" aria-hidden />
+          </div>
+          <p key={mi} className="fade-up font-brand mt-8 max-w-sm text-balance text-xl font-bold sm:text-2xl">{MAINT_PHRASES[mi]}</p>
+          <p className="mt-2 max-w-xs text-sm text-white/60">{maint}. Assim que terminar, ela volta sozinha — seus dados continuam salvos.</p>
+          <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
+            <span className="duck-indet block h-full w-1/3 rounded-full bg-primary shadow-neon" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!phrase) return null;
   return (
     <div role="status" aria-live="assertive" className="duck-screen fixed inset-0 z-[100] grid place-items-center bg-navy/95 px-6 text-center text-white backdrop-blur-sm">

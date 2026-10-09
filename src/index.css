@@ -290,3 +290,6 @@ html .duck-note { position: absolute; font-size: 28px; color: rgb(var(--neon)); 
 
 /* entrada suave de cartões (guia da meta) */
 .fade-up { animation: item-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes duck-indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+html .duck-indet { animation: duck-indet 1.4s ease-in-out infinite !important; }
