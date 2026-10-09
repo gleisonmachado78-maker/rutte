@@ -1,5 +1,6 @@
 import type { GoalId } from '@/types';
 import { BOOKS } from './books';
+import type { Book, TopicId } from './library';
 
 /** Uma dica prática tirada de um livro. */
 export interface BookTip {
@@ -143,5 +144,52 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 export function tipBook(tip: BookTip) {
   return BOOKS.find((b) => norm(b.title).startsWith(norm(tip.book)));
 }
+
+/** Temas da Biblioteca que combinam com cada meta. */
+const GOAL_TOPICS: Record<GoalId, TopicId[]> = {
+  rotina: ['desenvolvimento', 'produtividade'],
+  produtividade: ['produtividade', 'desenvolvimento'],
+  empresa: ['lideranca', 'produtividade'],
+  saude: ['saude'],
+  emagrecer: ['saude'],
+  massa: ['saude'],
+  financas: ['financas'],
+  estudos: ['desenvolvimento'],
+  familia: ['relacionamentos'],
+  fe: ['proposito'],
+  mente: ['emocional'],
+};
+
+/** Livro indicado para a meta: da curadoria (com capa e estante) ou citado nas dicas. */
+export type GoalBook = { kind: 'catalog'; book: Book; from?: string } | { kind: 'cited'; title: string; author: string; from: string };
+
+export function goalBooks(goal: GoalId): GoalBook[] {
+  const out: GoalBook[] = [];
+  const seen = new Set<string>();
+  for (const t of GOAL_GUIDES[goal].tips) {
+    const key = norm(t.book);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const b = tipBook(t);
+    if (b) {
+      seen.add(b.googleId);
+      out.push({ kind: 'catalog', book: b, from: t.tip });
+    } else out.push({ kind: 'cited', title: t.book, author: t.author, from: t.tip });
+  }
+  for (const b of BOOKS.filter((x) => GOAL_TOPICS[goal].includes(x.topic))) {
+    if (!seen.has(b.googleId)) out.push({ kind: 'catalog', book: b });
+    seen.add(b.googleId);
+  }
+  return out;
+}
+
+export const bookSearchLinks = (title: string, author: string) => {
+  const q = encodeURIComponent(`${title} ${author.split(' e ')[0]}`);
+  return [
+    { label: 'Amazon', href: `https://www.amazon.com.br/s?k=${q}&i=stripbooks` },
+    { label: 'Estante Virtual', href: `https://www.estantevirtual.com.br/busca?q=${q}` },
+    { label: 'Google Livros', href: `https://www.google.com/search?tbm=bks&q=${q}` },
+  ];
+};
 
 export const youtubeSearchUrl = (q: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;

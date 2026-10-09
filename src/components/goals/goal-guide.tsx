@@ -1,12 +1,14 @@
-import { BookOpen, Check, ChevronLeft, ChevronRight, CirclePlay, ListPlus, ListTodo, Search, TvMinimalPlay } from 'lucide-react';
+import { BookMarked, BookOpen, Check, ExternalLink, ChevronLeft, ChevronRight, CirclePlay, ListPlus, ListTodo, Search, TvMinimalPlay } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { useCreateTask } from '@/hooks/use-data';
-import { GOAL_GUIDES, tipBook, youtubeSearchUrl } from '@/lib/goal-guides';
-import { coverUrl } from '@/lib/library';
+import { bookSearchLinks, GOAL_GUIDES, goalBooks, tipBook, youtubeSearchUrl } from '@/lib/goal-guides';
+import { BookCover } from '@/components/library/book-card';
+import { useBookShelf, useSetBookStatus } from '@/hooks/use-data';
+import { coverUrl, whereToFind } from '@/lib/library';
 import { GOALS } from '@/lib/onboarding';
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
@@ -23,7 +25,7 @@ const readDone = (): Record<string, boolean> => {
   }
 };
 
-type Tab = 'dicas' | 'videos';
+type Tab = 'dicas' | 'livros' | 'videos';
 
 /** Guia de uma meta: dicas de livros (uma por vez), vídeos para assistir ali mesmo e busca no YouTube. */
 export function GoalGuideDialog({ goal, stats, onClose }: { goal: GoalId | null; stats?: string; onClose: () => void }) {
@@ -108,9 +110,10 @@ function GoalGuide({ goal, stats, onClose }: { goal: GoalId; stats?: string; onC
       </header>
 
       {/* Abas */}
-      <div role="tablist" aria-label="Guia da meta" className="mx-5 mt-4 grid grid-cols-2 rounded-xl bg-muted p-1">
+      <div role="tablist" aria-label="Guia da meta" className="mx-5 mt-4 grid grid-cols-3 rounded-xl bg-muted p-1">
         {([
-          ['dicas', 'Dicas dos livros', BookOpen],
+          ['dicas', 'Dicas', BookOpen],
+          ['livros', 'Livros', BookMarked],
           ['videos', 'Vídeos', CirclePlay],
         ] as const).map(([id, label, TabIcon]) => (
           <button
@@ -126,7 +129,9 @@ function GoalGuide({ goal, stats, onClose }: { goal: GoalId; stats?: string; onC
         ))}
       </div>
 
-      {tab === 'dicas' ? (
+      {tab === 'livros' ? (
+        <GoalBooks goal={goal} />
+      ) : tab === 'dicas' ? (
         <section className="p-5" aria-live="polite">
           <div key={key} className="fade-up rounded-2xl border border-border bg-card p-5">
             <div className="flex items-start gap-4">
@@ -268,5 +273,63 @@ function GoalGuide({ goal, stats, onClose }: { goal: GoalId; stats?: string; onC
         <Button onClick={onClose}>Fechar</Button>
       </footer>
     </div>
+  );
+}
+
+/** Livros indicados para a meta: os citados nas dicas e os da curadoria da Biblioteca. */
+function GoalBooks({ goal }: { goal: GoalId }) {
+  const books = goalBooks(goal);
+  const { data: shelf = {} } = useBookShelf();
+  const setStatus = useSetBookStatus();
+  return (
+    <section className="space-y-3 p-5">
+      <p className="text-sm text-foreground/65">Leituras que ajudam nesta meta. Marque “Quero ler” para guardar na sua estante da Biblioteca.</p>
+      <ul className="space-y-3">
+        {books.map((g, n) => {
+          const title = g.kind === 'catalog' ? g.book.title.split(': ')[0] : g.title;
+          const author = g.kind === 'catalog' ? g.book.author : g.author;
+          const links = g.kind === 'catalog' ? whereToFind(g.book) : bookSearchLinks(g.title, g.author);
+          const saved = g.kind === 'catalog' ? shelf[g.book.googleId] : undefined;
+          return (
+            <li key={n} className="fade-up flex gap-3 rounded-xl border border-border bg-card p-3" style={{ animationDelay: `${n * 40}ms` }}>
+              <div className="w-14 shrink-0">
+                {g.kind === 'catalog' ? (
+                  <BookCover book={g.book} />
+                ) : (
+                  <div className="flex aspect-[2/3] flex-col justify-end rounded-md bg-gradient-to-br from-primary to-navy p-1.5 text-white shadow-md" role="img" aria-label={`Capa: ${title}`}>
+                    <span className="line-clamp-4 font-brand text-[9px] font-bold leading-tight">{title}</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold leading-snug">{title}</h4>
+                <p className="text-xs text-foreground/55">{author}</p>
+                <p className="mt-1 text-sm leading-snug text-foreground/80">
+                  {g.from ? <>Ensina: <b className="font-semibold">{g.from.toLowerCase()}</b>{g.kind === 'catalog' ? `. ${g.book.why}` : '.'}</> : g.kind === 'catalog' && g.book.why}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                  {g.kind === 'catalog' && (
+                    <button
+                      type="button"
+                      aria-pressed={!!saved}
+                      onClick={() => setStatus.mutate({ id: g.book.googleId, status: saved ? null : 'quero' })}
+                      className={cn('inline-flex h-7 items-center gap-1 rounded-full border px-2.5 font-semibold transition-colors', saved ? 'border-primary bg-primary text-white' : 'border-border hover:bg-muted')}
+                    >
+                      {saved ? <Check className="size-3" aria-hidden /> : <BookMarked className="size-3" aria-hidden />}
+                      {saved ? (saved === 'lido' ? 'Lido' : saved === 'lendo' ? 'Lendo' : 'Na estante') : 'Quero ler'}
+                    </button>
+                  )}
+                  {links.map((l) => (
+                    <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline dark:text-neon">
+                      {l.label} <ExternalLink className="size-3" aria-hidden />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
