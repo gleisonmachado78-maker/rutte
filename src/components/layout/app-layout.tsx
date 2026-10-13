@@ -70,7 +70,6 @@ const NAV: NavEntry[] = [
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
   { to: '/gratitude', label: 'Gratidão', icon: HandHeart, group: 'evoluir' },
   { to: '/library', label: 'Biblioteca', short: 'Livros', icon: Library, group: 'evoluir' },
-  { to: '/settings', label: 'Configurações', short: 'Ajustes', icon: Settings, group: 'ajustes' },
 ];
 
 const GROUP_LABEL = { organizar: 'Organizar', evoluir: 'Evoluir', ajustes: 'Ajustes' } as const;
@@ -209,7 +208,7 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
             <>
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block truncate text-sm font-semibold">{firstName(name)}</span>
-                <span className="block text-[11px] text-white/45">Configurações</span>
+                <span className="block text-[11px] text-white/45">Perfil e configurações</span>
               </span>
               <Settings className="size-4 shrink-0 text-white/45" aria-hidden />
             </>
