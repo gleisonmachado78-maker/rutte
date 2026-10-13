@@ -45,6 +45,7 @@ import {
 import type { Exercise, GymData, MuscleGroup, Restriction, TrainingProfile, WorkoutDay } from '@/types';
 import { BmiBadge } from './body-stats';
 import { ExerciseGuideDialog } from './exercise-guide-dialog';
+import { ExerciseHologram } from './exercise-hologram';
 import { Hologram } from './hologram';
 
 const DEFAULT_PROFILE: TrainingProfile = {
@@ -137,10 +138,10 @@ function EditableDay({
       <ul className="space-y-1.5">
         {day.exercises.map((pe, i) => (
           <li key={`${pe.exerciseId}-${i}`} className="flex items-center gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 text-primary dark:text-neon"
+            {/* personagem mostrando o movimento (toque para ver o passo a passo) */}
+            <button
+              type="button"
+              className="w-16 shrink-0"
               aria-label="Ver como fazer"
               title="Ver como fazer"
               onClick={() => {
@@ -148,8 +149,11 @@ function EditableDay({
                 if (ex) onHowTo(ex, `${pe.sets}×${pe.reps}`);
               }}
             >
-              <ScanEye />
-            </Button>
+              {(() => {
+                const ex = library.find((x) => x.id === pe.exerciseId);
+                return ex ? <ExerciseHologram exercise={ex} compact className="rounded-md" /> : <ScanEye className="mx-auto size-5 text-primary" />;
+              })()}
+            </button>
             <div className="min-w-0 flex-1">
               <Select value={pe.exerciseId} onChange={(e) => set(i, { exerciseId: e.target.value })} aria-label="Trocar exercício" className="h-9 text-sm">
                 {options}

@@ -1,6 +1,7 @@
 import type { Exercise, MuscleGroup } from '@/types';
 import { MUSCLE_FALLBACK, type MotionKey } from './exercise-motion';
 import { MUSCLE_LABEL } from './gym';
+import { CATALOG_MOTION, guessMotion } from './exercise-catalog-motion';
 
 export type Load = 'barbell' | 'dumbbell' | 'none';
 
@@ -275,6 +276,18 @@ function fallback(muscle: MuscleGroup): ExerciseGuide {
   };
 }
 
-export function guideFor(ex: Pick<Exercise, 'id' | 'muscle'>): ExerciseGuide {
-  return EXERCISE_GUIDE[ex.id] ?? fallback(ex.muscle);
+/** Guia montado a partir do movimento: aproveita o passo a passo de um exercício parecido. */
+function fromMotion(motion: MotionKey, load: Load, muscle: MuscleGroup): ExerciseGuide {
+  const like = Object.values(EXERCISE_GUIDE).find((x) => x.motion === motion);
+  const base = like ?? fallback(muscle);
+  return { ...base, motion, load, target: like?.target ?? MUSCLE_LABEL[muscle] };
+}
+
+export function guideFor(ex: Pick<Exercise, 'id' | 'muscle'> & { name?: string }): ExerciseGuide {
+  const known = EXERCISE_GUIDE[ex.id];
+  if (known) return known;
+  // exercício do catálogo: movimento definido; cadastrado pela pessoa: adivinha pelo nome
+  const cat = ex.id.startsWith('cx_') ? CATALOG_MOTION[ex.id.slice(3)] : undefined;
+  const guess = cat ?? (ex.name ? guessMotion(ex.name) : undefined);
+  return guess ? fromMotion(guess[0], guess[1], ex.muscle) : fallback(ex.muscle);
 }

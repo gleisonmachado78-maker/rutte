@@ -6,6 +6,7 @@ import { matchExercise } from '@/lib/exercise-catalog';
 import { MUSCLE_LABEL } from '@/lib/gym';
 import { cn } from '@/lib/utils';
 import { withCatalog } from '@/lib/workout-generator';
+import { ExerciseHologram } from './exercise-hologram';
 import type { Exercise, GymData, MuscleGroup } from '@/types';
 
 /**
@@ -19,12 +20,16 @@ export function ExercisePicker({ gym, onPick, label = '+ Adicionar exercício', 
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
   const [newMuscle, setNewMuscle] = useState<MuscleGroup>('peito');
+  const [hover, setHover] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const mine = useMemo(() => new Set(gym.exercises.map((e) => e.id)), [gym.exercises]);
   const all = useMemo(() => withCatalog(gym.exercises), [gym.exercises]);
-  const list = all.filter((e) => (muscle === 'ALL' || e.muscle === muscle) && matchExercise(e, q.trim()));
+  const found = all.filter((e) => (muscle === 'ALL' || e.muscle === muscle) && matchExercise(e, q.trim()));
+  // cada linha tem o personagem animado: limita a quantidade de uma vez (a busca filtra o resto)
+  const LIMIT = 60;
+  const list = found.slice(0, LIMIT);
   const groups = (Object.keys(MUSCLE_LABEL) as MuscleGroup[]).map((m) => ({ m, items: list.filter((e) => e.muscle === m) })).filter((g) => g.items.length);
 
   useEffect(() => {
@@ -109,8 +114,20 @@ export function ExercisePicker({ gym, onPick, label = '+ Adicionar exercício', 
               <div key={g.m}>
                 <p className="sticky top-0 bg-card/95 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-foreground/45 backdrop-blur">{MUSCLE_LABEL[g.m]}</p>
                 {g.items.map((x) => (
-                  <button key={x.id} type="button" onClick={() => pick(x)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
-                    <span className="min-w-0 flex-1 truncate">{x.name}</span>
+                  <button
+                    key={x.id}
+                    type="button"
+                    onClick={() => pick(x)}
+                    onPointerEnter={() => setHover(x.id)}
+                    onPointerLeave={() => setHover((h) => (h === x.id ? null : h))}
+                    onFocus={() => setHover(x.id)}
+                    className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-sm hover:bg-muted"
+                  >
+                    {/* personagem mostrando o movimento (anima ao passar o mouse) */}
+                    <span className="w-16 shrink-0">
+                      <ExerciseHologram exercise={x} compact playing={hover === x.id} className="rounded-md" />
+                    </span>
+                    <span className="min-w-0 flex-1 leading-snug">{x.name}</span>
                     {mine.has(x.id) && (
                       <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                         <Check className="size-3" aria-hidden /> seu
@@ -120,6 +137,7 @@ export function ExercisePicker({ gym, onPick, label = '+ Adicionar exercício', 
                 ))}
               </div>
             ))}
+            {found.length > LIMIT && <p className="px-3 py-2 text-xs text-foreground/50">Mostrando {LIMIT} de {found.length}. Digite ou escolha um grupo para ver o resto.</p>}
             {q.trim() && (
               <div className="m-2 rounded-lg border border-dashed border-border p-2.5">
                 <p className="text-xs text-foreground/60">{list.length ? 'Não é nenhum desses?' : 'Não encontrei esse exercício.'} Cadastre o seu:</p>

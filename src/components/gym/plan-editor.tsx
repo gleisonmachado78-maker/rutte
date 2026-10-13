@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Moon, Plus, Save, ScanEye, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Moon, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import type { Exercise, GymData, MuscleGroup, PlannedExercise, WorkoutDay } from '@/types';
 import { ExerciseGuideDialog } from './exercise-guide-dialog';
 import { ExercisePicker } from './exercise-picker';
+import { ExerciseHologram } from './exercise-hologram';
+import { exerciseById } from '@/lib/workout-generator';
 
 function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo: (e: Exercise, target: string) => void }) {
   const save = useSavePlanDay();
@@ -34,7 +36,7 @@ function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo
       return next;
     });
 
-  const exName = (id: string) => gym.exercises.find((e) => e.id === id)?.name ?? id;
+  const exName = (id: string) => exerciseById(gym.exercises, id)?.name ?? id;
 
   return (
     <article className={cn('flex flex-col rounded-xl border bg-card p-4', isToday ? 'border-neon shadow-neon' : 'border-border')}>
@@ -62,42 +64,49 @@ function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo
       ) : (
         <ul className="mt-3 space-y-1.5">
           {items.map((it, i) => (
-            <li key={`${it.exerciseId}-${i}`} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border px-2 py-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const ex = gym.exercises.find((x) => x.id === it.exerciseId);
-                  if (ex) onHowTo(ex, `${it.sets}×${it.reps}`);
-                }}
-                className="flex min-w-0 basis-full items-start gap-1 text-left text-sm font-medium leading-snug hover:text-primary"
-                title="Ver como fazer"
-              >
-                <ScanEye className="mt-0.5 size-3.5 shrink-0 text-primary dark:text-neon" aria-hidden />
-                <span>{exName(it.exerciseId)}</span>
-              </button>
-              <input
-                aria-label={`Séries de ${exName(it.exerciseId)}`}
-                inputMode="numeric"
-                value={it.sets}
-                onChange={(e) => change((xs) => xs.map((x, j) => (j === i ? { ...x, sets: Math.max(1, Number(e.target.value) || 1) } : x)))}
-                className="h-8 w-10 rounded-md border border-border bg-background text-center text-sm tabular-nums"
-              />
-              <span className="text-xs text-foreground/50">×</span>
-              <input
-                aria-label={`Repetições de ${exName(it.exerciseId)}`}
-                value={it.reps}
-                onChange={(e) => change((xs) => xs.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))}
-                className="h-8 w-14 rounded-md border border-border bg-background text-center text-sm tabular-nums"
-              />
-              <Button variant="ghost" size="icon-sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Subir">
-                <ChevronUp />
-              </Button>
-              <Button variant="ghost" size="icon-sm" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label="Descer">
-                <ChevronDown />
-              </Button>
-              <Button variant="ghost" size="icon-sm" onClick={() => change((xs) => xs.filter((_, j) => j !== i))} aria-label="Remover" className="hover:text-primary">
-                <Trash2 />
-              </Button>
+            <li key={`${it.exerciseId}-${i}`} className="flex gap-2.5 rounded-xl border border-border p-2">
+              {(() => {
+                const ex = exerciseById(gym.exercises, it.exerciseId);
+                const howTo = () => ex && onHowTo(ex, `${it.sets}×${it.reps}`);
+                return (
+                  <>
+                    {/* personagem mostrando o movimento (toque para ver o passo a passo) */}
+                    <button type="button" onClick={howTo} className="w-[68px] shrink-0 self-start" title="Ver como fazer" aria-label={`Ver como fazer: ${exName(it.exerciseId)}`}>
+                      {ex && <ExerciseHologram exercise={ex} compact className="rounded-lg" />}
+                    </button>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <button type="button" onClick={howTo} className="text-left text-sm font-semibold leading-snug hover:text-primary" title="Ver como fazer">
+                        {exName(it.exerciseId)}
+                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <input
+                          aria-label={`Séries de ${exName(it.exerciseId)}`}
+                          inputMode="numeric"
+                          value={it.sets}
+                          onChange={(e) => change((xs) => xs.map((x, j) => (j === i ? { ...x, sets: Math.max(1, Number(e.target.value) || 1) } : x)))}
+                          className="h-8 w-9 shrink-0 rounded-md border border-border bg-background text-center text-sm tabular-nums"
+                        />
+                        <span className="text-xs text-foreground/50">×</span>
+                        <input
+                          aria-label={`Repetições de ${exName(it.exerciseId)}`}
+                          value={it.reps}
+                          onChange={(e) => change((xs) => xs.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))}
+                          className="mr-auto h-8 w-12 shrink-0 rounded-md border border-border bg-background text-center text-sm tabular-nums"
+                        />
+                        <Button variant="ghost" size="icon-sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Subir">
+                          <ChevronUp />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label="Descer">
+                          <ChevronDown />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => change((xs) => xs.filter((_, j) => j !== i))} aria-label="Remover" className="hover:text-primary">
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </li>
           ))}
         </ul>
