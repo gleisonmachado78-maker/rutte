@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-13T18:28:40.448Z",
+  "eta": "2026-10-13T18:38:40.448Z",
+  "until": "2026-10-13T18:58:40.448Z",
+  "message": "Arrumando o menu lateral"
 }
