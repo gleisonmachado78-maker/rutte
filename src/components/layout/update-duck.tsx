@@ -163,13 +163,23 @@ export function UpdateDuck() {
 
   // prévia: abra o site com #pato para ver a tela
   useEffect(() => {
+    // a prévia fecha sozinha e tira o #pato do endereço (senão ficaria presa ao recarregar)
+    const clear = () => history.replaceState(null, '', location.pathname + location.search);
     if (location.hash.endsWith('pato-off')) {
       setTimes({ start: Date.now() - 3 * 60_000, eta: Date.now() + 7 * 60_000 });
-      return setMaint('A Rutte está em atualização');
+      setMaint('A Rutte está em atualização');
+      const t = window.setTimeout(() => {
+        setMaint(null);
+        clear();
+      }, 12_000);
+      return () => window.clearTimeout(t);
     }
     if (!location.hash.endsWith('pato')) return;
     setPhrase(PHRASES[0]);
-    const t = window.setTimeout(() => setPhrase(null), 9000);
+    const t = window.setTimeout(() => {
+      setPhrase(null);
+      clear();
+    }, 9000);
     return () => window.clearTimeout(t);
   }, []);
 

@@ -13,14 +13,14 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, MapPin, Plus, Video } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, MapPin, Plus, Repeat, Video } from 'lucide-react';
 import { RouteLinks } from '@/components/tasks/location-field';
 import { shortPlace } from '@/lib/maps';
 import { useMemo, useState } from 'react';
 import { PriorityBadge } from '@/components/tasks/badges';
 import { Button } from '@/components/ui/button';
 import { useScopedTasks } from '@/hooks/use-data';
-import { dueDateTime, isClosed, isOverdue, toISODate } from '@/lib/task-utils';
+import { dueDateTime, isClosed, isOverdue, recurrenceLabel, toISODate, upcomingOccurrences } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import { useUI } from '@/store/ui';
 import type { Task } from '@/types';
@@ -40,10 +40,10 @@ function areaStyle(task: Task): CSSProperties | undefined {
   return { '--area': c, borderLeftColor: c, backgroundColor: `color-mix(in srgb, ${c} 24%, transparent)` } as CSSProperties;
 }
 
-function CalendarItem({ task, compact }: { task: Task; compact?: boolean }) {
+function CalendarItem({ task, compact, projected }: { task: Task; compact?: boolean; projected?: boolean }) {
   const openTask = useUI((s) => s.openTask);
-  const overdue = isOverdue(task);
-  const closed = isClosed(task);
+  const overdue = !projected && isOverdue(task);
+  const closed = !projected && isClosed(task);
   const area = task.lifeAreaId ? LIFE_AREA_BY_ID[task.lifeAreaId] : undefined;
   return (
     <button
@@ -58,10 +58,12 @@ function CalendarItem({ task, compact }: { task: Task; compact?: boolean }) {
         'flex w-full items-center gap-1 truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-semibold text-foreground transition-all duration-200 hover:-translate-y-px',
         area ? 'hover:shadow-[0_0_0_1px_var(--area),0_4px_12px_-4px_var(--area)]' : 'border-l-foreground/30 bg-muted hover:bg-border',
         closed && 'line-through opacity-50',
+        projected && 'border-dashed opacity-75 hover:opacity-100',
         !compact && 'py-1.5 text-xs',
       )}
     >
       {overdue && !closed && <span className="size-1.5 shrink-0 rounded-full bg-brand shadow-[0_0_6px_rgb(var(--neon))]" aria-hidden />}
+      {projected && <Repeat className="size-3 shrink-0 opacity-70" aria-label="Repetição" />}
       {task.meetingUrl && <Video className="size-3 shrink-0" aria-label="Reunião" />}
       {task.deadlineTime && <span className="shrink-0 tabular-nums opacity-80">{task.deadlineTime}</span>}
       <span className="truncate">{task.title}</span>
@@ -78,7 +80,7 @@ function GoogleItem({ ev }: { ev: GEvent }) {
   );
 }
 
-function DayList({ date, tasks, events = [] }: { date: Date; tasks: Task[]; events?: GEvent[] }) {
+function DayList({ date, tasks, projected = [], events = [] }: { date: Date; tasks: Task[]; projected?: Task[]; events?: GEvent[] }) {
   const openTask = useUI((s) => s.openTask);
   const openNewTask = useUI((s) => s.openNewTask);
   return (
@@ -108,7 +110,29 @@ function DayList({ date, tasks, events = [] }: { date: Date; tasks: Task[]; even
           ))}
         </ul>
       )}
-      {tasks.length === 0 && events.length === 0 ? (
+      {projected.length > 0 && (
+        <ul className="mt-3 space-y-2" aria-label="Repetições previstas">
+          {projected.map((t) => (
+            <li key={'p' + t.id}>
+              <button
+                type="button"
+                onClick={() => openTask(t.id)}
+                style={areaStyle(t)}
+                className="flex w-full items-center gap-3 rounded-xl border border-l-4 border-dashed border-border p-3 text-left opacity-80 transition-all duration-200 hover:opacity-100"
+              >
+                <span className="w-12 shrink-0 text-sm font-bold tabular-nums">{t.deadlineTime ?? 'Dia'}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{t.title}</span>
+                  <span className="mt-0.5 flex items-center gap-1 text-xs text-foreground/60">
+                    <Repeat className="size-3" aria-hidden /> Repetição prevista · {recurrenceLabel(t.recurrenceRule)?.toLowerCase()}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {tasks.length === 0 && events.length === 0 && projected.length === 0 ? (
         <p className="mt-3 text-sm text-foreground/60">Nada agendado neste dia.</p>
       ) : tasks.length === 0 ? null : (
         <ul className="mt-3 space-y-2">
@@ -189,6 +213,18 @@ export function CalendarPage() {
     });
   }, [cursor, mode]);
 
+  // Repetições futuras dos afazeres recorrentes (a próxima tarefa real só nasce ao concluir a atual)
+  const projByDay = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    const until = toISODate(days[days.length - 1]);
+    for (const t of tasks) {
+      if (!t.recurrenceRule || isClosed(t)) continue;
+      for (const d of upcomingOccurrences(t.dueDate, t.recurrenceRule, until)) map.set(d, [...(map.get(d) ?? []), t]);
+    }
+    return map;
+  }, [tasks, days]);
+  const projFor = (d: Date) => projByDay.get(toISODate(d)) ?? [];
+
   const g = useGoogleStatus();
   const qc = useQueryClient();
   const gq = useGoogleEvents(days[0], addDays(days[days.length - 1], 1));
@@ -226,7 +262,7 @@ export function CalendarPage() {
 
   const weekdays = eachDayOfInterval({ start: startOfWeek(new Date(), WEEK_OPTS), end: addDays(startOfWeek(new Date(), WEEK_OPTS), 6) });
   const itemsFor = (d: Date) => byDay.get(toISODate(d)) ?? [];
-  const usedAreas = new Set(days.flatMap((d) => itemsFor(d).map((t) => t.lifeAreaId)).filter(Boolean));
+  const usedAreas = new Set(days.flatMap((d) => [...itemsFor(d), ...projFor(d)].map((t) => t.lifeAreaId)).filter(Boolean));
 
   return (
     <div className="space-y-5">
@@ -277,6 +313,7 @@ export function CalendarPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-foreground/60" aria-label="Legenda">
+        <span className="inline-flex items-center gap-1.5"><Repeat className="size-3.5" aria-hidden /> Repetição prevista</span>
         {LIFE_AREAS.filter((a) => usedAreas.has(a.id)).map((a) => (
           <span key={a.id} className="inline-flex items-center gap-1.5">
             <span className="grid size-4 place-items-center rounded text-white" style={{ backgroundColor: a.color }}><a.icon className="size-2.5" aria-hidden /></span> {a.short}
@@ -301,6 +338,7 @@ export function CalendarPage() {
           <div className="grid grid-cols-7" role="grid" aria-label="Dias">
             {days.map((d) => {
               const items = itemsFor(d);
+              const proj = projFor(d);
               const gev = gFor(d);
               const outside = mode === 'month' && !isSameMonth(d, cursor);
               const isSel = isSameDay(d, selected);
@@ -312,7 +350,7 @@ export function CalendarPage() {
                   role="gridcell"
                   tabIndex={0}
                   aria-selected={isSel}
-                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + gev.length} itens`}
+                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + proj.length + gev.length} itens`}
                   onClick={() => setSelected(d)}
                   onDoubleClick={() => openNewTask({ dueDate: toISODate(d) })}
                   onKeyDown={(e) => {
@@ -347,6 +385,9 @@ export function CalendarPage() {
                         aria-hidden
                       />
                     ))}
+                    {proj.slice(0, 3).map((t) => (
+                      <span key={'p' + t.id} className={cn('size-1.5 rounded-full opacity-50', !t.lifeAreaId && 'bg-foreground/40')} style={t.lifeAreaId ? { backgroundColor: LIFE_AREA_BY_ID[t.lifeAreaId]?.color } : undefined} aria-hidden />
+                    ))}
                     {hasOverdue && <span className="sr-only">Possui atrasadas</span>}
                   </div>
                   <div className={'hidden flex-col gap-1 sm:flex'}>
@@ -354,8 +395,11 @@ export function CalendarPage() {
                     {items.slice(0, Math.max(0, max - gev.length)).map((t) => (
                       <CalendarItem key={t.id} task={t} compact />
                     ))}
-                    {items.length + gev.length > max && (
-                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length + gev.length - max} mais</span>
+                    {proj.slice(0, Math.max(0, max - gev.length - items.length)).map((t) => (
+                      <CalendarItem key={'p' + t.id} task={t} compact projected />
+                    ))}
+                    {items.length + proj.length + gev.length > max && (
+                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length + proj.length + gev.length - max} mais</span>
                     )}
                   </div>
                 </div>
@@ -364,7 +408,7 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <DayList date={selected} tasks={itemsFor(selected)} events={gFor(selected)} />
+        <DayList date={selected} tasks={itemsFor(selected)} projected={projFor(selected)} events={gFor(selected)} />
       </div>
       <p className="hidden text-xs text-foreground/50 sm:block">Dica: dê um duplo clique em um dia para criar um afazer nele.</p>
     </div>

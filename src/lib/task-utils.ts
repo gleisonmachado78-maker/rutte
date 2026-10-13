@@ -152,6 +152,22 @@ export function nextOccurrence(dateISO: string, rule: string): string | null {
   }
 }
 
+/**
+ * Próximas datas de um afazer recorrente (depois do prazo atual) até "untilISO".
+ * Cada data é calculada a partir do prazo original (31/01 → 28/02 → 31/03, sem "escorregar").
+ */
+export function upcomingOccurrences(dateISO: string, rule: string, untilISO: string, max = 400): string[] {
+  const parts = Object.fromEntries(rule.split(';').map((p) => p.split('=') as [string, string]));
+  const interval = Math.max(1, Number(parts.INTERVAL ?? 1) || 1);
+  const out: string[] = [];
+  for (let n = 1; n <= max; n++) {
+    const next = nextOccurrence(dateISO, `FREQ=${parts.FREQ};INTERVAL=${interval * n}`);
+    if (!next || next > untilISO) break;
+    out.push(next);
+  }
+  return out;
+}
+
 export function recurrenceLabel(rule?: string) {
   if (!rule) return null;
   return RECURRENCE_OPTIONS.find((o) => o.value === rule)?.label ?? rule;

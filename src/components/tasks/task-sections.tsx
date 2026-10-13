@@ -329,6 +329,8 @@ export function LinksAndFilesSection({ control, register, errors }: Ctl) {
               addLink();
             }
           }}
+          // digitou e saiu do campo (ex.: clicou em Salvar) sem apertar "+ Link": adiciona assim mesmo
+          onBlur={() => url.trim() && addLink()}
           placeholder="https://…"
           aria-label="URL do novo link"
         />

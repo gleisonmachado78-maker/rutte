@@ -1,4 +1,5 @@
 import { askConfirm } from '@/components/ui/confirm';
+import { toast } from 'sonner';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Building,
@@ -142,12 +143,29 @@ function TaskForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
 
-  const submit = handleSubmit(async (values) => {
-    const input = toTaskInput(values);
-    if (isNew) await create.mutateAsync(input);
-    else await update.mutateAsync({ id: task.id, patch: input });
-    onDone();
-  });
+  const submit = handleSubmit(
+    async (values) => {
+      const input = toTaskInput(values);
+      if (isNew) await create.mutateAsync(input);
+      else await update.mutateAsync({ id: task.id, patch: input });
+      onDone();
+    },
+    // algo impediu de salvar: avisa em vez de falhar em silêncio
+    (errs) => {
+      const first = (function find(e: unknown): string | undefined {
+        if (!e || typeof e !== 'object') return undefined;
+        const o = e as { message?: unknown };
+        if (typeof o.message === 'string') return o.message;
+        for (const [k, v] of Object.entries(e)) {
+          if (k === 'ref') continue; // elemento da tela, não é erro
+          const m = find(v);
+          if (m) return m;
+        }
+        return undefined;
+      })(errs);
+      toast.error('Não foi possível salvar', { description: first ?? 'Confira os campos destacados.' });
+    },
+  );
 
   const completeNow = () => {
     setValue('status', status === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED', { shouldDirty: true });
