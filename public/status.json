@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-13T14:26:00.916Z",
+  "eta": "2026-10-13T14:41:00.916Z",
+  "until": "2026-10-13T15:01:00.916Z",
+  "message": "Corrigindo links e recorrência mensal"
 }
