@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-13T20:19:54.128Z",
+  "eta": "2026-10-13T20:49:54.128Z",
+  "until": "2026-10-13T21:09:54.128Z",
+  "message": "Colocando a demonstração em cada exercício"
 }
