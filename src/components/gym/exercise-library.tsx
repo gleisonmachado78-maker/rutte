@@ -2,7 +2,7 @@ import { ScanEye, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MUSCLE_LABEL } from '@/lib/gym';
 import { cn } from '@/lib/utils';
-import { EXTRA_EXERCISES } from '@/lib/workout-generator';
+import { withCatalog } from '@/lib/workout-generator';
 import type { Exercise, GymData, MuscleGroup } from '@/types';
 import { ExerciseGuideDialog } from './exercise-guide-dialog';
 import { ExerciseHologram } from './exercise-hologram';
@@ -15,10 +15,7 @@ export function ExerciseLibrary({ gym }: { gym: GymData }) {
   const [muscle, setMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
   const [open, setOpen] = useState<Exercise | null>(null);
 
-  const all = useMemo(() => {
-    const have = new Set(gym.exercises.map((e) => e.id));
-    return [...gym.exercises, ...EXTRA_EXERCISES.filter((e) => !have.has(e.id))];
-  }, [gym.exercises]);
+  const all = useMemo(() => withCatalog(gym.exercises), [gym.exercises]);
 
   const list = all.filter((e) => (muscle === 'ALL' || e.muscle === muscle) && (!q || norm(e.name).includes(norm(q))));
   const groups = (Object.keys(MUSCLE_LABEL) as MuscleGroup[])

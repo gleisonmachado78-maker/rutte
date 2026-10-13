@@ -299,6 +299,15 @@ export const api = {
     persist();
     return delay(day);
   },
+  /** Traz um exercício do catálogo para a lista da pessoa (mesmo id). */
+  async adoptExercise(ex: Exercise): Promise<Exercise> {
+    const list = load().gym.exercises;
+    if (!list.some((x) => x.id === ex.id)) {
+      list.push({ id: ex.id, name: ex.name, muscle: ex.muscle });
+      persist();
+    }
+    return delay(ex);
+  },
   async createExercise(data: Omit<Exercise, 'id'>): Promise<Exercise> {
     const item = { ...data, id: uid('ex') };
     load().gym.exercises.push(item);

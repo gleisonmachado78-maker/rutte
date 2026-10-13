@@ -32,7 +32,7 @@ import { isClosed } from '@/lib/task-utils';
 import { habitsFor, type TrainingHabit } from '@/lib/training-habits';
 import { cn } from '@/lib/utils';
 import {
-  EXTRA_EXERCISES,
+  withCatalog,
   findExercise,
   generatePlan,
   GOALS,
@@ -233,10 +233,7 @@ export function WorkoutGenerator({ gym, onApplied }: { gym: GymData; onApplied: 
   const { data: tasks = [] } = useTasks();
   const { categories } = useLookups();
 
-  const library = useMemo(() => {
-    const have = new Set(gym.exercises.map((e) => e.id));
-    return [...gym.exercises, ...EXTRA_EXERCISES.filter((e) => !have.has(e.id))];
-  }, [gym.exercises]);
+  const library = useMemo(() => withCatalog(gym.exercises), [gym.exercises]);
 
   const set = (patch: Partial<TrainingProfile>) => setProfile((p) => ({ ...p, ...patch }));
 

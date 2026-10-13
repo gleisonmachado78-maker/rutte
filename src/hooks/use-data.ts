@@ -242,6 +242,15 @@ export function useSavePlanDay() {
   });
 }
 
+export function useAdoptExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.adoptExercise,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.gym }),
+    onError: errorToast,
+  });
+}
+
 export function useCreateExercise() {
   const qc = useQueryClient();
   return useMutation({

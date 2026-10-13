@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-13T20:07:43.602Z",
-  "eta": "2026-10-13T20:37:43.602Z",
-  "until": "2026-10-13T20:57:43.602Z",
-  "message": "Ampliando o catálogo de exercícios"
+  "maintenance": false
 }

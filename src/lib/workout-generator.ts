@@ -15,6 +15,7 @@ import type {
   WorkoutDay,
 } from '@/types';
 import { DEFAULT_EXERCISES, MUSCLE_LABEL, WEEKDAYS } from './gym';
+import { EXERCISE_CATALOG, mergeCatalog, PLACES_BY_WHERE } from './exercise-catalog';
 
 /* --------------------------- Metadados dos exercícios --------------------------- */
 
@@ -87,8 +88,14 @@ const META: Record<string, ExerciseMeta> = {
   ex_burpee: { places: ['halteres', 'corpo'], stress: ['joelho'] },
 };
 
-const LIBRARY: Exercise[] = [...DEFAULT_EXERCISES, ...EXTRA_EXERCISES];
+for (const c of EXERCISE_CATALOG) META[c.id] ??= { places: PLACES_BY_WHERE[c.where], stress: c.stress, compound: c.compound };
+
+const LIBRARY: Exercise[] = mergeCatalog(DEFAULT_EXERCISES, EXTRA_EXERCISES);
 export const findExercise = (id: string) => LIBRARY.find((e) => e.id === id);
+/** Lista completa para escolher: os exercícios da pessoa primeiro e depois todo o catálogo. */
+export const withCatalog = (mine: Exercise[]) => mergeCatalog(mine, DEFAULT_EXERCISES, EXTRA_EXERCISES);
+/** Nome/dados de um exercício, esteja ele na lista da pessoa ou no catálogo. */
+export const exerciseById = (mine: Exercise[], id: string) => mine.find((e) => e.id === id) ?? findExercise(id);
 
 /** Exercícios permitidos para um grupo, dado o local e as restrições (multiarticulares primeiro). */
 export function poolFor(muscle: MuscleGroup, place: TrainingPlace, restrictions: Restriction[]) {

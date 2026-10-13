@@ -11,6 +11,7 @@ import { topReps } from '@/lib/workout-generator';
 import type { Exercise, GymData, WorkoutEntry, WorkoutSession } from '@/types';
 import { ExerciseGuideDialog } from './exercise-guide-dialog';
 import { ExerciseHologram } from './exercise-hologram';
+import { ExercisePicker } from './exercise-picker';
 
 /** Linha de série em edição (strings para permitir campo vazio enquanto digita). */
 interface DraftSet {
@@ -69,7 +70,6 @@ export function WorkoutLogger({
   const [entries, setEntries] = useState<DraftEntry[]>([]);
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
-  const [adding, setAdding] = useState('');
   const [howTo, setHowTo] = useState<{ exercise: Exercise; target?: string } | null>(null);
 
   const exById = useMemo(() => new Map(gym.exercises.map((e) => [e.id, e])), [gym.exercises]);
@@ -108,7 +108,7 @@ export function WorkoutLogger({
     const last = lastEntry(gym.sessions, id, date);
     const kg = last ? String(Math.max(...last.entry.sets.map((s) => s.kg))) : '';
     setEntries((es) => [...es, { exerciseId: id, sets: [{ reps: '10', kg }, { reps: '10', kg }, { reps: '10', kg }] }]);
-    setAdding('');
+
   };
 
   const onSave = () => {
@@ -314,17 +314,8 @@ export function WorkoutLogger({
 
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
-          <Label htmlFor="g-add">Adicionar exercício</Label>
-          <Select id="g-add" value={adding} onChange={(e) => addExercise(e.target.value)}>
-            <option value="">Escolha um exercício…</option>
-            {Object.entries(MUSCLE_LABEL).map(([m, label]) => (
-              <optgroup key={m} label={label}>
-                {gym.exercises.filter((x) => x.muscle === m).map((x) => (
-                  <option key={x.id} value={x.id}>{x.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </Select>
+          <Label>Adicionar exercício</Label>
+          <ExercisePicker gym={gym} label="Escolha ou busque um exercício" onPick={addExercise} />
         </div>
       </div>
 

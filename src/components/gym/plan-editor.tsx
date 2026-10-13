@@ -8,6 +8,7 @@ import { MUSCLE_LABEL, WEEKDAYS, WEEK_ORDER } from '@/lib/gym';
 import { cn } from '@/lib/utils';
 import type { Exercise, GymData, MuscleGroup, PlannedExercise, WorkoutDay } from '@/types';
 import { ExerciseGuideDialog } from './exercise-guide-dialog';
+import { ExercisePicker } from './exercise-picker';
 
 function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo: (e: Exercise, target: string) => void }) {
   const save = useSavePlanDay();
@@ -61,18 +62,18 @@ function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo
       ) : (
         <ul className="mt-3 space-y-1.5">
           {items.map((it, i) => (
-            <li key={`${it.exerciseId}-${i}`} className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1.5">
+            <li key={`${it.exerciseId}-${i}`} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border px-2 py-1.5">
               <button
                 type="button"
                 onClick={() => {
                   const ex = gym.exercises.find((x) => x.id === it.exerciseId);
                   if (ex) onHowTo(ex, `${it.sets}×${it.reps}`);
                 }}
-                className="inline-flex min-w-0 flex-1 items-center gap-1 text-left text-sm font-medium hover:text-primary"
+                className="flex min-w-0 basis-full items-start gap-1 text-left text-sm font-medium leading-snug hover:text-primary"
                 title="Ver como fazer"
               >
-                <ScanEye className="size-3.5 shrink-0 text-primary dark:text-neon" aria-hidden />
-                <span className="truncate">{exName(it.exerciseId)}</span>
+                <ScanEye className="mt-0.5 size-3.5 shrink-0 text-primary dark:text-neon" aria-hidden />
+                <span>{exName(it.exerciseId)}</span>
               </button>
               <input
                 aria-label={`Séries de ${exName(it.exerciseId)}`}
@@ -102,21 +103,7 @@ function DayCard({ day, gym, onHowTo }: { day: WorkoutDay; gym: GymData; onHowTo
         </ul>
       )}
 
-      <Select
-        aria-label={`Adicionar exercício em ${WEEKDAYS[day.weekday]}`}
-        value=""
-        onChange={(e) => e.target.value && change((xs) => [...xs, { exerciseId: e.target.value, sets: 3, reps: '10' }])}
-        className="mt-3"
-      >
-        <option value="">+ Adicionar exercício</option>
-        {Object.entries(MUSCLE_LABEL).map(([m, label]) => (
-          <optgroup key={m} label={label}>
-            {gym.exercises.filter((x) => x.muscle === m).map((x) => (
-              <option key={x.id} value={x.id}>{x.name}</option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
+      <ExercisePicker gym={gym} className="mt-3" onPick={(id) => change((xs) => [...xs, { exerciseId: id, sets: 3, reps: '10' }])} />
 
       <div className="mt-auto pt-3">
         <Button
