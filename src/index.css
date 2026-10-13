@@ -293,3 +293,31 @@ html .duck-note { position: absolute; font-size: 28px; color: rgb(var(--neon)); 
 
 @keyframes duck-indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 html .duck-indet { animation: duck-indet 1.4s ease-in-out infinite !important; }
+
+/* ---------- Rutte trabalhando no computador (tela de atualização) ---------- */
+@keyframes rw-head { 0%, 100% { transform: rotate(-2deg); } 30% { transform: rotate(4deg) translateX(2px); } 55% { transform: rotate(5deg) translateX(3px) translateY(1px); } 80% { transform: rotate(0deg); } }
+@keyframes rw-hand { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes rw-line { 0% { transform: scaleX(0); opacity: 1; } 18%, 80% { transform: scaleX(1); opacity: 1; } 95%, 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes rw-check { 0%, 10% { transform: scale(0); } 18% { transform: scale(1.25); } 24%, 85% { transform: scale(1); } 95%, 100% { transform: scale(0); } }
+@keyframes rw-gear { to { transform: rotate(360deg); } }
+@keyframes rw-progress { 0% { transform: scaleX(0.05); } 85%, 100% { transform: scaleX(1); } }
+@keyframes rw-cursor { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes rw-steam { 0% { transform: translateY(4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-12px); opacity: 0; } }
+@keyframes rw-spark { 0%, 100% { transform: scale(0.4); opacity: 0.2; } 50% { transform: scale(1); opacity: 1; } }
+html .rw-head { animation: rw-head 3.6s ease-in-out infinite !important; }
+html .rw-hand { animation: rw-hand 0.32s ease-in-out infinite !important; transform-box: fill-box; }
+html .rw-hand-2 { animation-delay: 0.16s !important; }
+html .rw-line { animation: rw-line 4.4s ease-out infinite !important; }
+html .rw-check { animation: rw-check 4.4s ease-out infinite !important; }
+html .rw-gear { animation: rw-gear 3s linear infinite !important; }
+html .rw-progress { animation: rw-progress 4.4s ease-in-out infinite !important; }
+html .rw-cursor { animation: rw-cursor 0.9s steps(1) infinite !important; }
+html .rw-steam { animation: rw-steam 2.2s ease-out infinite !important; transform-box: fill-box; }
+html .rw-spark { animation: rw-spark 2.4s ease-in-out infinite !important; transform-box: fill-box; transform-origin: center; }
+html .rw-line, html .rw-check, html .rw-steam, html .rw-spark { animation-delay: var(--d, 0s) !important; }
+@keyframes rw-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes rw-look { 0%, 35%, 100% { transform: translateX(0); } 45%, 75% { transform: translateX(2.5px) translateY(-0.5px); } }
+@keyframes rw-plant { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+html .rw-blink { animation: rw-blink 4s ease-in-out infinite !important; }
+html .rw-look { animation: rw-look 3.6s ease-in-out infinite !important; }
+html .rw-plant { animation: rw-plant 5s ease-in-out infinite !important; }

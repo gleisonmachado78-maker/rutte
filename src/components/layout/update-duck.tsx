@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react';
+import { RutteWorking } from '@/components/brand/rutte-working';
 
-/** Frases que aparecem enquanto o pato dança e a nova versão carrega. */
+/** Frases que aparecem enquanto a Rutte trabalha e a nova versão carrega. */
 const PHRASES = [
-  'Quack! Estou trazendo novidades para você…',
-  'Segura aí: a Rutte está trocando de roupa!',
-  'O pato está instalando as melhorias. Já volta!',
+  'Estou trazendo novidades para você…',
+  'Segura aí: estou deixando tudo em ordem!',
+  'Instalando as melhorias. Já volto!',
   'Arrumando a casa para você render ainda mais…',
-  'Atualizando com muito quack e carinho.',
+  'Atualizando tudo com muito carinho.',
 ];
 
 const CHECK_EVERY = 60_000;
 const MAINT_EVERY = 15_000;
 /** Frases do modo atualização (sistema em pausa enquanto a Rutte é atualizada). */
 const MAINT_PHRASES = [
-  'Quack! Estou em atualização agora…',
-  'O pato está trabalhando nas novidades.',
+  'Estou ajustando umas coisinhas aqui…',
+  'Organizando as novidades para você.',
   'Dando um trato na Rutte para você. Volto já!',
-  'Arrumando as penas e as funções novas…',
-  'Só mais um pouquinho: o pato não para de dançar.',
+  'Conferindo cada detalhe antes de liberar…',
+  'Só mais um pouquinho, já está quase pronto!',
 ];
 const BUILD_KEY = 'rutte:build';
 const SHOWN_KEY = 'rutte:duck-shown';
@@ -47,7 +48,7 @@ const busy = () => isTyping() || !!document.querySelector('[role=dialog]');
 
 /**
  * Confere de tempos em tempos se saiu uma versão nova do site (version.json gerado no build).
- * Quando sai, mostra o pato dançando com uma frase e recarrega — sem interromper quem está digitando.
+ * Quando sai, mostra a Rutte trabalhando com uma frase e recarrega — sem interromper quem está digitando.
  */
 export function UpdateDuck() {
   const [phrase, setPhrase] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export function UpdateDuck() {
   const [now, setNow] = useState(Date.now());
   const [mi, setMi] = useState(0);
 
-  // Modo atualização: enquanto public/status.json disser "maintenance", a Rutte fica em pausa com o pato.
+  // Modo atualização: enquanto public/status.json disser "maintenance", a Rutte fica em pausa com a Rutte trabalhando no computador.
   // Quando volta ao normal, recarrega já na versão nova. Expira sozinho em "until" (segurança).
   useEffect(() => {
     if (import.meta.env.DEV || import.meta.env.MODE === 'single' || location.protocol !== 'https:') return;
@@ -104,20 +105,20 @@ export function UpdateDuck() {
 
     const apply = () => {
       if (done) return;
-      // aba escondida: espera a pessoa voltar para ela ver o pato; digitando ou com janela aberta: espera terminar
+      // aba escondida: espera a pessoa voltar para ela ver a animação; digitando ou com janela aberta: espera terminar
       if (document.visibilityState !== 'visible' || busy()) {
         window.setTimeout(apply, 4000);
         return;
       }
       done = true;
       setPhrase(PHRASES[Math.floor(Math.random() * PHRASES.length)]);
-      store.set(SHOWN_KEY, '1', true); // depois do recarregamento não repete o pato
+      store.set(SHOWN_KEY, '1', true); // depois do recarregamento não repete a animação
       window.setTimeout(() => location.reload(), 3200);
     };
 
     const check = async () => {
       if (done) return;
-      if (pending) return; // já está esperando a hora certa de mostrar o pato
+      if (pending) return; // já está esperando a hora certa de mostrar a animação
       try {
         const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
@@ -144,7 +145,7 @@ export function UpdateDuck() {
     };
   }, []);
 
-  // Abriu a Rutte pela primeira vez depois de uma atualização (ela saiu enquanto o site estava fechado): o pato aparece rapidinho
+  // Abriu a Rutte pela primeira vez depois de uma atualização (ela saiu enquanto o site estava fechado): a animação aparece rapidinho
   useEffect(() => {
     if (import.meta.env.DEV || import.meta.env.MODE === 'single' || location.protocol !== 'https:') return;
     const last = store.get(BUILD_KEY);
@@ -156,7 +157,7 @@ export function UpdateDuck() {
     // quem já usava a Rutte antes deste aviso existir também vê
     const returning = last ? last !== __BUILD_ID__ : !!store.get('secretaria:ui');
     if (!returning) return;
-    setPhrase('Quack! Novidades instaladas para você ✨');
+    setPhrase('Pronto! Novidades instaladas para você ✨');
     const t = window.setTimeout(() => setPhrase(null), 3600);
     return () => window.clearTimeout(t);
   }, []);
@@ -187,16 +188,8 @@ export function UpdateDuck() {
     return (
       <div role="alert" aria-live="assertive" className="duck-screen fixed inset-0 z-[110] grid place-items-center bg-navy px-6 text-center text-white">
         <div className="flex flex-col items-center">
-          <div className="relative">
-            <span className="duck-note duck-note-1" aria-hidden>♪</span>
-            <span className="duck-note duck-note-2" aria-hidden>♫</span>
-            <span className="duck-note duck-note-3" aria-hidden>♪</span>
-            <span className="duck-dance block select-none text-[96px] leading-none sm:text-[120px]" aria-hidden>
-              🦆
-            </span>
-            <span className="duck-shadow mx-auto mt-2 block h-2.5 w-20 rounded-full bg-black/40" aria-hidden />
-          </div>
-          <p key={mi} className="fade-up font-brand mt-8 max-w-sm text-balance text-xl font-bold sm:text-2xl">{MAINT_PHRASES[mi]}</p>
+          <RutteWorking className="w-[min(88vw,420px)] drop-shadow-[0_10px_30px_rgb(0_0_0_/_.35)]" />
+          <p key={mi} className="fade-up font-brand mt-4 max-w-sm text-balance text-xl font-bold sm:text-2xl">{MAINT_PHRASES[mi]}</p>
           <p className="mt-2 max-w-xs text-sm text-white/60">{maint}. Assim que terminar, ela volta sozinha — seus dados continuam salvos.</p>
           {times.eta ? (() => {
             const left = times.eta - now;
@@ -242,16 +235,8 @@ export function UpdateDuck() {
   return (
     <div role="status" aria-live="assertive" className="duck-screen fixed inset-0 z-[100] grid place-items-center bg-navy/95 px-6 text-center text-white backdrop-blur-sm">
       <div className="flex flex-col items-center">
-        <div className="relative">
-          <span className="duck-note duck-note-1" aria-hidden>♪</span>
-          <span className="duck-note duck-note-2" aria-hidden>♫</span>
-          <span className="duck-note duck-note-3" aria-hidden>♪</span>
-          <span className="duck-dance block select-none text-[96px] leading-none sm:text-[120px]" aria-hidden>
-            🦆
-          </span>
-          <span className="duck-shadow mx-auto mt-2 block h-2.5 w-20 rounded-full bg-black/40" aria-hidden />
-        </div>
-        <p className="font-brand mt-8 max-w-sm text-balance text-xl font-bold sm:text-2xl">{phrase}</p>
+          <RutteWorking className="w-[min(88vw,420px)] drop-shadow-[0_10px_30px_rgb(0_0_0_/_.35)]" />
+        <p className="font-brand mt-4 max-w-sm text-balance text-xl font-bold sm:text-2xl">{phrase}</p>
         <p className="mt-2 text-sm text-white/60">{phrase.includes('instaladas') ? 'Rutte atualizada' : 'Nova versão da Rutte chegando'} · seus dados continuam salvos</p>
         <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
           <span className="duck-bar block h-full rounded-full bg-primary shadow-neon" />

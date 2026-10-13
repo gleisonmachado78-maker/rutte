@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-13T14:33:27.876Z",
-  "eta": "2026-10-13T14:58:27.876Z",
-  "until": "2026-10-13T15:18:27.876Z",
-  "message": "Preparando uma animação nova"
+  "maintenance": false
 }
