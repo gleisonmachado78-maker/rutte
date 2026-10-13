@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-13T14:43:48.903Z",
+  "eta": "2026-10-13T14:48:48.903Z",
+  "until": "2026-10-13T15:08:48.903Z",
+  "message": "Teste da nova animação"
 }
