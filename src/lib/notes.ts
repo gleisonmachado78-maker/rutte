@@ -2,15 +2,15 @@ import type { NoteBox, NoteColor } from '@/types';
 import { uid } from './utils';
 
 /** Cores das caixas (classes literais para o Tailwind encontrar). */
-export const NOTE_COLORS: { id: NoteColor; label: string; dot: string; card: string }[] = [
+export const NOTE_COLORS: { id: NoteColor; label: string; dot: string; card: string; bar?: string }[] = [
   { id: 'padrao', label: 'Padrão', dot: 'bg-foreground/25', card: 'bg-card border-border' },
-  { id: 'vermelho', label: 'Vermelho', dot: 'bg-red-500', card: 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30' },
-  { id: 'laranja', label: 'Laranja', dot: 'bg-orange-500', card: 'bg-orange-50 border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/30' },
-  { id: 'amarelo', label: 'Amarelo', dot: 'bg-amber-400', card: 'bg-amber-50 border-amber-200 dark:bg-amber-400/10 dark:border-amber-400/30' },
-  { id: 'verde', label: 'Verde', dot: 'bg-emerald-500', card: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30' },
-  { id: 'azul', label: 'Azul', dot: 'bg-sky-500', card: 'bg-sky-50 border-sky-200 dark:bg-sky-500/10 dark:border-sky-500/30' },
-  { id: 'roxo', label: 'Roxo', dot: 'bg-violet-500', card: 'bg-violet-50 border-violet-200 dark:bg-violet-500/10 dark:border-violet-500/30' },
-  { id: 'rosa', label: 'Rosa', dot: 'bg-pink-500', card: 'bg-pink-50 border-pink-200 dark:bg-pink-500/10 dark:border-pink-500/30' },
+  { id: 'vermelho', label: 'Vermelho', dot: 'bg-red-500', card: 'bg-red-100 border-red-300 dark:bg-red-500/[0.18] dark:border-red-500/50', bar: 'bg-red-500' },
+  { id: 'laranja', label: 'Laranja', dot: 'bg-orange-500', card: 'bg-orange-100 border-orange-300 dark:bg-orange-500/[0.18] dark:border-orange-500/50', bar: 'bg-orange-500' },
+  { id: 'amarelo', label: 'Amarelo', dot: 'bg-amber-400', card: 'bg-amber-100 border-amber-300 dark:bg-amber-400/[0.18] dark:border-amber-400/50', bar: 'bg-amber-400' },
+  { id: 'verde', label: 'Verde', dot: 'bg-emerald-500', card: 'bg-emerald-100 border-emerald-300 dark:bg-emerald-500/[0.18] dark:border-emerald-500/50', bar: 'bg-emerald-500' },
+  { id: 'azul', label: 'Azul', dot: 'bg-sky-500', card: 'bg-sky-100 border-sky-300 dark:bg-sky-500/[0.18] dark:border-sky-500/50', bar: 'bg-sky-500' },
+  { id: 'roxo', label: 'Roxo', dot: 'bg-violet-500', card: 'bg-violet-100 border-violet-300 dark:bg-violet-500/[0.18] dark:border-violet-500/50', bar: 'bg-violet-500' },
+  { id: 'rosa', label: 'Rosa', dot: 'bg-pink-500', card: 'bg-pink-100 border-pink-300 dark:bg-pink-500/[0.18] dark:border-pink-500/50', bar: 'bg-pink-500' },
 ];
 export const NOTE_COLOR_BY_ID = Object.fromEntries(NOTE_COLORS.map((c) => [c.id, c])) as Record<NoteColor, (typeof NOTE_COLORS)[number]>;
 

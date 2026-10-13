@@ -146,6 +146,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
         dragging && 'z-10 scale-[1.02] opacity-80 shadow-xl ring-2 ring-primary',
       )}
     >
+      {color.bar && <span className={cn('pointer-events-none absolute inset-x-0 top-0 h-1.5 rounded-t-2xl', color.bar)} aria-hidden />}
       <header className="flex items-start gap-1">
         {!editor && onDragStart && (
           <button

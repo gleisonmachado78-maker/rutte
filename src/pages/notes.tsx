@@ -227,7 +227,7 @@ export function NotesPage() {
   );
 
   return (
-    <div className={cn('space-y-4', dragId && 'select-none')}>
+    <div data-scope-local={side} className={cn('space-y-4', dragId && 'select-none')}>
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">

@@ -17,7 +17,8 @@
   }
 
   /* Contexto Empresa: azul com o mesmo tom (saturação/luminosidade) do vermelho */
-  html[data-scope='BUSINESS'] {
+  html[data-scope='BUSINESS'],
+  [data-scope-local='BUSINESS'] {
     --primary: 109 40 217;
     --neon: 168 85 247;
   }

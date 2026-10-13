@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-13T18:21:28.245Z",
-  "eta": "2026-10-13T18:36:28.245Z",
-  "until": "2026-10-13T18:56:28.245Z",
-  "message": "Ajustando as cores das notas"
+  "maintenance": false
 }
