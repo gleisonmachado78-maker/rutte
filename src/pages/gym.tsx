@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { CalendarCheck, ChartLine, Check, ChevronDown, ClipboardList, SlidersHorizontal, Dumbbell, Headphones, History, Pencil, ScanEye, Sparkles, Trash2, Trophy } from 'lucide-react';
 import { WorkoutPlaylist } from '@/components/gym/workout-playlist';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { BarChart, LineChart } from '@/components/gym/charts';
 import { BodyStats } from '@/components/gym/body-stats';
 import { PlanEditor } from '@/components/gym/plan-editor';
@@ -33,10 +34,10 @@ const TABS: { id: Tab; label: string; icon: typeof Dumbbell }[] = [
   { id: 'today', label: 'Treino do dia', icon: Dumbbell },
   { id: 'generator', label: 'Gerar treino', icon: Sparkles },
   { id: 'plan', label: 'Plano semanal', icon: ClipboardList },
+  { id: 'music', label: 'Playlist', icon: Headphones },
 ];
 /** Áreas extras, abertas pelo filtro "Mais áreas". */
 const MORE: { id: Tab; label: string; desc: string; icon: typeof Dumbbell }[] = [
-  { id: 'music', label: 'Playlist', desc: 'Músicas para treinar no seu estilo', icon: Headphones },
   { id: 'library', label: 'Exercícios', desc: 'Catálogo com o passo a passo animado', icon: ScanEye },
   { id: 'progress', label: 'Evolução & PRs', desc: 'Gráficos, recordes e medidas', icon: ChartLine },
   { id: 'history', label: 'Histórico', desc: 'Todos os treinos registrados', icon: History },
@@ -329,7 +330,16 @@ function HistoryList({ gym, onEdit }: { gym: GymData; onEdit: (date: string) => 
 
 export function GymPage() {
   const { data: gym, isLoading } = useGym();
-  const [tab, setTab] = useState<Tab>('today');
+  // ?tab=music (vindo do aviso de novidade) abre direto na aba
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = new URLSearchParams(location.search).get('tab') as Tab | null;
+    return t && [...TABS, ...MORE].some((x) => x.id === t) ? t : 'today';
+  });
+  const { search } = useLocation();
+  useEffect(() => {
+    const t = new URLSearchParams(search).get('tab') as Tab | null;
+    if (t && [...TABS, ...MORE].some((x) => x.id === t)) setTab(t);
+  }, [search]);
   const [date, setDate] = useState(todayISO());
 
   const pickDate = (d: string) => {

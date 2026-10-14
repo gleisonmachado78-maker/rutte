@@ -48,6 +48,7 @@ import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 import { useAlertsRunner } from '@/hooks/use-alerts';
+import { NewsPopup } from './news-popup';
 import { SYNC_LABEL, useSyncState } from '@/hooks/use-sync-state';
 
 interface NavEntry {
@@ -419,6 +420,7 @@ export function AppLayout() {
       <main id="main" className={cn('pb-28 transition-all duration-200 md:pb-10', collapsed ? 'md:pl-[72px]' : 'md:pl-60')}>
         <div key={location.pathname} className="mx-auto w-full max-w-6xl animate-page-in px-4 py-5 sm:px-6 sm:py-8">
           <Outlet />
+          <NewsPopup />
         </div>
       </main>
 
