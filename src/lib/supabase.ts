@@ -52,10 +52,10 @@ const sessionStore = {
     }, undefined),
 };
 /**
- * Dados na nuvem: só com VITE_SUPABASE_SYNC=1. Por padrão o Supabase cuida apenas do login (a lista de quem
- * se cadastrou fica no painel) e os dados de cada conta ficam só no aparelho, separados por conta.
+ * Dados na nuvem (padrão): os dados de cada conta ficam guardados pelo login (e-mail) e aparecem em qualquer
+ * aparelho. Para manter tudo só no aparelho, use VITE_SUPABASE_SYNC=off.
  */
-export const cloudData = cloudEnabled && import.meta.env.VITE_SUPABASE_SYNC === '1';
+export const cloudData = cloudEnabled && import.meta.env.VITE_SUPABASE_SYNC !== 'off';
 /** Botão "Continuar com Google" (só se o provedor Google estiver ligado no Supabase). */
 export const googleEnabled = cloudEnabled && import.meta.env.VITE_SUPABASE_GOOGLE === '1';
 

@@ -9,7 +9,8 @@ import { currentDb, readLocalDb, replaceLocalDb, setPersistListener, setStorageN
 import { createEmpty } from './seed';
 
 const TABLE = 'rutte_data';
-export type SyncState = 'saved' | 'saving' | 'offline' | 'error';
+export type SyncState = 'saved' | 'saving' | 'offline' | 'error' | 'local';
+let cloudOff = false;
 
 let userId: string | null = null;
 let timer = 0;
@@ -38,7 +39,7 @@ const setVal = (name: string, v: string) => {
 async function push() {
   window.clearTimeout(timer);
   timer = 0;
-  if (!supabase || !userId || !cloudData) return;
+  if (!supabase || !userId || !cloudData || cloudOff) return;
   if (!navigator.onLine) {
     setState('offline');
     return;
@@ -84,11 +85,19 @@ export async function startSync(uid: string): Promise<void> {
   // Só login: os dados da conta ficam neste aparelho (cada conta no seu espaço), nada vai para a nuvem.
   if (!cloudData) {
     replaceLocalDb(local ?? createEmpty());
-    setState('saved');
+    setState('local');
     return;
   }
 
   const { data, error } = await supabase.from(TABLE).select('data, updated_at').eq('user_id', uid).maybeSingle();
+  // a tabela da nuvem ainda não foi criada no Supabase: segue só com o aparelho (não bloqueia o login)
+  if (error && /PGRST205|42P01|schema cache|does not exist/i.test(`${error.code} ${error.message}`)) {
+    cloudOff = true;
+    replaceLocalDb(local ?? createEmpty());
+    setState('local');
+    return;
+  }
+  cloudOff = false;
   if (error) {
     // sem conexão: usa o que já está no aparelho (se houver)
     if (!local) throw new Error(navigator.onLine ? `Não foi possível carregar seus dados (${error.message}).` : 'Sem internet para carregar seus dados pela primeira vez.');
@@ -100,6 +109,14 @@ export async function startSync(uid: string): Promise<void> {
       replaceLocalDb(local);
       await push(); // mudanças feitas offline vencem
     } else {
+      // cópia de segurança do que havia neste aparelho antes de trazer os dados da nuvem
+      if (local && JSON.stringify(local) !== JSON.stringify(data.data)) {
+        try {
+          localStorage.setItem(k('backup'), JSON.stringify({ at: new Date().toISOString(), db: local }));
+        } catch {
+          /* sem espaço: segue */
+        }
+      }
       replaceLocalDb(data.data);
       setVal('dirty', '0');
       setVal('remote', String(remoteTs));

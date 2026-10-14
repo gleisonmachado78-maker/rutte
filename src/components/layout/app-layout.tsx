@@ -1,4 +1,7 @@
 import {
+  Cloud,
+  CloudOff,
+  RefreshCw,
   Building,
   CalendarDays,
   ChartPie,
@@ -45,6 +48,7 @@ import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
 import { useUI, type ScopeFilter } from '@/store/ui';
 import { useAlertsRunner } from '@/hooks/use-alerts';
+import { SYNC_LABEL, useSyncState } from '@/hooks/use-sync-state';
 
 interface NavEntry {
   to: string;
@@ -179,6 +183,7 @@ function NavGroups({ collapsed, onNavigate, only }: { collapsed?: boolean; onNav
 
 /** Nome da pessoa + menu de configurações (tema, personalizar, backup, exemplos). */
 function AccountMenu({ collapsed }: { collapsed?: boolean }) {
+  const sync = useSyncState();
   const { data: user } = useUser();
   const theme = useUI((s) => s.theme);
   const toggleTheme = useUI((s) => s.toggleTheme);
@@ -208,7 +213,10 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
             <>
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block truncate text-sm font-semibold">{firstName(name)}</span>
-                <span className="block text-[11px] text-white/45">Perfil e configurações</span>
+                <span className={cn('flex items-center gap-1 text-[11px]', sync === 'error' ? 'text-amber-300' : 'text-white/45')} title="Seus dados ficam guardados no seu login e aparecem em qualquer aparelho">
+                  {sync !== 'local' && (sync === 'saved' ? <Cloud className="size-3" aria-hidden /> : sync === 'saving' ? <RefreshCw className="size-3 animate-spin" aria-hidden /> : <CloudOff className="size-3" aria-hidden />)}
+                  {SYNC_LABEL[sync]}
+                </span>
               </span>
               <Settings className="size-4 shrink-0 text-white/45" aria-hidden />
             </>

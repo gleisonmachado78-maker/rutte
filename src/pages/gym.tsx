@@ -1,7 +1,8 @@
 import { askConfirm } from '@/components/ui/confirm';
 import { addDays, format, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarCheck, ChartLine, Check, ClipboardList, Dumbbell, History, Pencil, ScanEye, Sparkles, Trash2, Trophy } from 'lucide-react';
+import { CalendarCheck, ChartLine, Check, ClipboardList, Dumbbell, Headphones, History, Pencil, ScanEye, Sparkles, Trash2, Trophy } from 'lucide-react';
+import { WorkoutPlaylist } from '@/components/gym/workout-playlist';
 import { useMemo, useState } from 'react';
 import { BarChart, LineChart } from '@/components/gym/charts';
 import { BodyStats } from '@/components/gym/body-stats';
@@ -26,13 +27,14 @@ import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
 import type { GymData } from '@/types';
 
-type Tab = 'today' | 'generator' | 'plan' | 'library' | 'progress' | 'history';
+type Tab = 'today' | 'generator' | 'plan' | 'library' | 'music' | 'progress' | 'history';
 
 const TABS: { id: Tab; label: string; icon: typeof Dumbbell }[] = [
   { id: 'today', label: 'Treino do dia', icon: Dumbbell },
   { id: 'generator', label: 'Gerar treino', icon: Sparkles },
   { id: 'plan', label: 'Plano semanal', icon: ClipboardList },
   { id: 'library', label: 'Exercícios', icon: ScanEye },
+  { id: 'music', label: 'Playlist', icon: Headphones },
   { id: 'progress', label: 'Evolução & PRs', icon: ChartLine },
   { id: 'history', label: 'Histórico', icon: History },
 ];
@@ -310,6 +312,7 @@ export function GymPage() {
             {tab === 'generator' && <WorkoutGenerator gym={gym} onApplied={() => setTab('plan')} />}
             {tab === 'plan' && <PlanEditor gym={gym} />}
             {tab === 'library' && <ExerciseLibrary gym={gym} />}
+            {tab === 'music' && <WorkoutPlaylist />}
             {tab === 'progress' && <Progress gym={gym} />}
             {tab === 'history' && <HistoryList gym={gym} onEdit={pickDate} />}
           </div>
