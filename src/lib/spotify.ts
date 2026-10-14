@@ -3,7 +3,7 @@
  * cai para o site (open.spotify.com), que no celular também oferece abrir o app.
  */
 
-export type SpotifyKind = 'show' | 'episode' | 'audiobook' | 'search';
+export type SpotifyKind = 'show' | 'episode' | 'audiobook' | 'playlist' | 'search';
 
 export const spotifyWebUrl = (kind: SpotifyKind, id: string) =>
   kind === 'search' ? `https://open.spotify.com/search/${encodeURIComponent(id)}` : `https://open.spotify.com/${kind}/${id}`;
