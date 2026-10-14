@@ -7,6 +7,7 @@
 import { cloudData, supabase } from '@/lib/supabase';
 import { currentDb, readLocalDb, replaceLocalDb, setPersistListener, setStorageNamespace } from './api';
 import { createEmpty } from './seed';
+import { contentSize, mergeValue } from './merge-db';
 
 const TABLE = 'rutte_data';
 export type SyncState = 'saved' | 'saving' | 'offline' | 'error' | 'local';
@@ -48,6 +49,8 @@ async function push() {
   const stamp = new Date().toISOString();
   const { error } = await supabase.from(TABLE).upsert({ user_id: userId, data: currentDb(), updated_at: stamp });
   if (error) {
+    console.warn('[Rutte] não salvou na nuvem:', error.message);
+    setVal('lastError', `${new Date().toISOString()} ${error.message}`);
     setState(navigator.onLine ? 'error' : 'offline');
     return;
   }
@@ -104,24 +107,28 @@ export async function startSync(uid: string): Promise<void> {
     setState('offline');
   } else if (data) {
     const remoteTs = Date.parse(data.updated_at);
-    const localNewer = local && getNum('dirty') && getNum('local') > remoteTs;
-    if (localNewer) {
-      replaceLocalDb(local);
-      await push(); // mudanças feitas offline vencem
-    } else {
-      // cópia de segurança do que havia neste aparelho antes de trazer os dados da nuvem
-      if (local && JSON.stringify(local) !== JSON.stringify(data.data)) {
-        try {
-          localStorage.setItem(k('backup'), JSON.stringify({ at: new Date().toISOString(), db: local }));
-        } catch {
-          /* sem espaço: segue */
-        }
+    const firstLink = !getNum('remote'); // este aparelho nunca sincronizou esta conta
+    const dirty = !!getNum('dirty');
+    const differs = local && JSON.stringify(local) !== JSON.stringify(data.data);
+    if (local && differs) {
+      // cópia de segurança do que havia neste aparelho antes de mexer
+      try {
+        localStorage.setItem(k('backup'), JSON.stringify({ at: new Date().toISOString(), db: local }));
+      } catch {
+        /* sem espaço: segue */
       }
+    }
+    if (local && differs && (firstLink || dirty)) {
+      // primeira vez neste aparelho (ou mudanças feitas sem internet): junta os dois lados, sem perder nada
+      replaceLocalDb(mergeValue(local, data.data) as Parameters<typeof replaceLocalDb>[0]);
+      await push();
+    } else {
       replaceLocalDb(data.data);
       setVal('dirty', '0');
       setVal('remote', String(remoteTs));
       setState('saved');
     }
+    await recoverBackup();
   } else {
     // primeiro login: conta começa vazia (ou com o que já existia neste aparelho para esta conta)
     replaceLocalDb(local ?? createEmpty());
@@ -131,6 +138,28 @@ export async function startSync(uid: string): Promise<void> {
   setPersistListener(schedule);
   window.addEventListener('online', onOnline);
   document.addEventListener('visibilitychange', onHide);
+}
+
+/**
+ * Recupera (uma única vez) a cópia de segurança deste aparelho, juntando-a com os dados atuais.
+ * Corrige o caso em que outro aparelho, sem dados, chegou primeiro à nuvem e "escondeu" os daqui.
+ */
+async function recoverBackup() {
+  if (localStorage.getItem(k('backup-merged'))) return;
+  const raw = localStorage.getItem(k('backup'));
+  setVal('backup-merged', '1');
+  if (!raw) return;
+  try {
+    const { db } = JSON.parse(raw) as { db: unknown };
+    const cur = currentDb();
+    if (contentSize(db) === 0) return;
+    const merged = mergeValue(db, cur) as typeof cur;
+    if (JSON.stringify(merged) === JSON.stringify(cur)) return;
+    replaceLocalDb(merged);
+    await push();
+  } catch {
+    /* cópia ilegível: ignora */
+  }
 }
 
 /** Envia o que estiver pendente (antes de sair). */
