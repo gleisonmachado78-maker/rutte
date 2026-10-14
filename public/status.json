@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-14T12:07:30.276Z",
+  "eta": "2026-10-14T12:47:30.276Z",
+  "until": "2026-10-14T13:07:30.276Z",
+  "message": "Salvando seus dados na nuvem e criando playlists de treino"
 }
