@@ -1,9 +1,9 @@
 import { askConfirm } from '@/components/ui/confirm';
 import { addDays, format, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarCheck, ChartLine, Check, ClipboardList, Dumbbell, Headphones, History, Pencil, ScanEye, Sparkles, Trash2, Trophy } from 'lucide-react';
+import { CalendarCheck, ChartLine, Check, ChevronDown, ClipboardList, SlidersHorizontal, Dumbbell, Headphones, History, Pencil, ScanEye, Sparkles, Trash2, Trophy } from 'lucide-react';
 import { WorkoutPlaylist } from '@/components/gym/workout-playlist';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart, LineChart } from '@/components/gym/charts';
 import { BodyStats } from '@/components/gym/body-stats';
 import { PlanEditor } from '@/components/gym/plan-editor';
@@ -33,11 +33,74 @@ const TABS: { id: Tab; label: string; icon: typeof Dumbbell }[] = [
   { id: 'today', label: 'Treino do dia', icon: Dumbbell },
   { id: 'generator', label: 'Gerar treino', icon: Sparkles },
   { id: 'plan', label: 'Plano semanal', icon: ClipboardList },
-  { id: 'library', label: 'Exercícios', icon: ScanEye },
-  { id: 'music', label: 'Playlist', icon: Headphones },
-  { id: 'progress', label: 'Evolução & PRs', icon: ChartLine },
-  { id: 'history', label: 'Histórico', icon: History },
 ];
+/** Áreas extras, abertas pelo filtro "Mais áreas". */
+const MORE: { id: Tab; label: string; desc: string; icon: typeof Dumbbell }[] = [
+  { id: 'music', label: 'Playlist', desc: 'Músicas para treinar no seu estilo', icon: Headphones },
+  { id: 'library', label: 'Exercícios', desc: 'Catálogo com o passo a passo animado', icon: ScanEye },
+  { id: 'progress', label: 'Evolução & PRs', desc: 'Gráficos, recordes e medidas', icon: ChartLine },
+  { id: 'history', label: 'Histórico', desc: 'Todos os treinos registrados', icon: History },
+];
+
+/** Filtro "Mais áreas": abre um painel com as outras seções (Playlist, Exercícios, Evolução, Histórico). */
+function MoreAreas({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
+  const [open, setOpen] = useState(false);
+  const active = MORE.find((m) => m.id === tab);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const Icon = active?.icon ?? SlidersHorizontal;
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200',
+          active ? 'btn-neon text-white' : 'border border-dashed border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 dark:text-neon',
+        )}
+      >
+        <Icon className="size-4" aria-hidden /> {active ? active.label : 'Mais áreas'}
+        <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+      {open && (
+        <div role="menu" className="fade-up absolute right-0 top-full z-40 mt-2 grid w-[min(20rem,calc(100vw-2rem))] gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+          {MORE.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onPick(m.id);
+                setOpen(false);
+              }}
+              className={cn('flex items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-muted', tab === m.id && 'bg-primary/10')}
+            >
+              <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', tab === m.id ? 'bg-primary text-white' : 'bg-primary/10 text-primary dark:text-neon')}>
+                <m.icon className="size-5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{m.label}</span>
+                <span className="block text-xs text-foreground/55">{m.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Faixa da semana atual: o que está planejado e o que já foi feito. */
 function WeekStrip({ gym, onPick }: { gym: GymData; onPick: (date: string) => void }) {
@@ -289,7 +352,8 @@ export function GymPage() {
         <>
           <WeekStrip gym={gym} onPick={pickDate} />
 
-          <div role="tablist" aria-label="Seções da academia" className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none]">
+          <div className="flex items-center gap-2">
+          <div role="tablist" aria-label="Seções da academia" className="-ml-4 flex min-w-0 flex-1 gap-2 overflow-x-auto pl-4 sm:ml-0 sm:pl-0 [scrollbar-width:none]">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -305,6 +369,8 @@ export function GymPage() {
                 <Icon className="size-4" aria-hidden /> {label}
               </button>
             ))}
+          </div>
+            <MoreAreas tab={tab} onPick={setTab} />
           </div>
 
           <div role="tabpanel">

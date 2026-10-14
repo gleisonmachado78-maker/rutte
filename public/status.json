@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-14T13:51:31.592Z",
-  "eta": "2026-10-14T14:31:31.592Z",
-  "until": "2026-10-14T14:51:31.592Z",
-  "message": "Organizando a Academia e trazendo mais playlists"
+  "maintenance": false
 }
