@@ -1,13 +1,12 @@
 import { ChevronLeft, ChevronRight, ExternalLink, Headphones, Play, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DEEZER_PLAYLISTS } from '@/lib/workout-playlists-data';
+import { SPOTIFY_PLAYLISTS } from '@/lib/spotify-playlists-data';
 import { cn } from '@/lib/utils';
 
 /**
  * Playlists de treino: ao abrir, todos os gêneros aparecem, cada um com uma fileira de playlists para escolher.
- * - Destaque Spotify: playlists oficiais (IDs conferidos pelo oEmbed em 14/10/2026).
- * - Demais: playlists reais do Deezer (API pública), com capa. Tocar abre o player flutuante.
+ * Todas são playlists do Spotify conferidas no oEmbed oficial (título e capa do próprio Spotify). Tocar abre o player flutuante.
  */
 interface Genre {
   id: string;
@@ -56,16 +55,16 @@ const readSaved = (): Item | null => {
 };
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+/** Playlists do Spotify do gênero (conferidas no oEmbed oficial; as oficiais do Spotify vêm primeiro). */
 function itemsOf(g: Genre): Item[] {
-  const list: Item[] = (DEEZER_PLAYLISTS[g.id] ?? []).map((p) => ({
-    kind: 'deezer',
+  return (SPOTIFY_PLAYLISTS[g.id] ?? []).map((p) => ({
+    kind: 'spotify',
     id: p.id,
     title: p.title,
     cover: p.cover,
-    meta: `${p.tracks} músicas${p.editor ? ' · Editorial' : ''}`,
+    meta: p.editorial ? 'Oficial do Spotify' : 'Playlist do Spotify',
     genre: g.id,
   }));
-  return g.spotify ? [{ kind: 'spotify', id: g.spotify.id, title: g.spotify.title, meta: 'Oficial do Spotify', genre: g.id }, ...list] : list;
 }
 
 export function WorkoutPlaylist() {
@@ -214,15 +213,15 @@ function Cover({ item, emoji, active, onClick }: { item: Item; emoji: string; ac
             {emoji}
           </span>
         )}
-        <span className={cn('absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow', item.kind === 'spotify' ? 'bg-[#1DB954]' : 'bg-black/55 backdrop-blur')}>
-          {item.kind === 'spotify' ? 'Spotify' : 'Deezer'}
+        <span className={cn('absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow', item.meta.startsWith('Oficial') ? 'bg-[#1DB954]' : 'bg-black/60 backdrop-blur')}>
+          {item.meta.startsWith('Oficial') ? 'Oficial' : 'Spotify'}
         </span>
         <span className={cn('absolute bottom-2 right-2 grid size-10 place-items-center rounded-full bg-primary text-white shadow-lg transition-all duration-200', active ? 'opacity-100' : 'translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100')}>
           <Play className="size-4 fill-current" aria-hidden />
         </span>
         {active && <span className="absolute inset-x-0 bottom-0 h-1 bg-primary" aria-hidden />}
       </span>
-      <span className="mt-2 line-clamp-2 block text-sm font-semibold leading-snug">{item.title}</span>
+      <span className="mt-2 line-clamp-2 text-sm font-semibold leading-snug" title={item.title}>{item.title}</span>
       <span className="block text-xs text-foreground/55">{item.meta}</span>
     </button>
   );
@@ -247,11 +246,11 @@ function MiniPlayer({ item, onClose }: { item: Item; onClose: () => void }) {
         </button>
       </div>
       {item.kind === 'spotify' ? (
-        <iframe key={item.id} title={`Spotify: ${item.title}`} src={`https://open.spotify.com/embed/playlist/${item.id}?utm_source=generator&theme=0`} className="block h-[232px] w-full" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" />
+        <iframe key={item.id} title={`Spotify: ${item.title}`} src={`https://open.spotify.com/embed/playlist/${item.id}?utm_source=generator&theme=0`} className="block h-[152px] w-full" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" />
       ) : (
         <iframe key={item.id} title={`Deezer: ${item.title}`} src={`https://widget.deezer.com/widget/dark/playlist/${item.id}?tracklist=true`} className="block h-[232px] w-full" allow="encrypted-media; clipboard-write" />
       )}
-      <p className="px-3 py-1.5 text-[10px] text-foreground/45">Sem login tocam prévias de 30 s · entre no Spotify/Deezer ou abra no app para ouvir inteira.</p>
+      <p className="px-3 py-1.5 text-[10px] text-foreground/45">Sem login no Spotify tocam prévias de 30 s · entre na sua conta ou abra no app para ouvir inteira.</p>
     </div>
   );
 }
