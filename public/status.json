@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-15T18:29:46.399Z",
-  "eta": "2026-10-15T18:44:46.399Z",
-  "until": "2026-10-15T19:04:46.399Z",
-  "message": "Organizando os vídeos dos exercícios"
+  "maintenance": false
 }
