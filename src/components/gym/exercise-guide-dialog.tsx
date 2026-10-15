@@ -1,7 +1,8 @@
-import { Box, CircleAlert, Gauge, ListOrdered, Pause, Play, RotateCw, Square, Target, Wind } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { Box, CircleAlert, ExternalLink, Gauge, ListOrdered, Pause, Play, RotateCw, Sparkles, Square, Target, TvMinimalPlay, Wind } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { guideFor } from '@/lib/exercise-guide';
+import { EXERCISE_VIDEOS } from '@/lib/exercise-videos-data';
 import { MUSCLE_LABEL } from '@/lib/gym';
 import { cn } from '@/lib/utils';
 import type { Exercise } from '@/types';
@@ -21,9 +22,14 @@ export function ExerciseGuideDialog({
 }) {
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
-  const [mode, setMode] = useState<'3d' | '2d'>('3d');
+  const [mode, setMode] = useState<'render' | '3d' | '2d' | 'video'>('render');
+  const [vid, setVid] = useState(0);
+  useEffect(() => setVid(0), [exercise?.id]);
   const [spin, setSpin] = useState(true);
   const guide = exercise ? guideFor(exercise) : null;
+  const videos = exercise ? EXERCISE_VIDEOS[exercise.id] ?? [] : [];
+  const ytSearch = exercise ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${exercise.name.replace(/\((seg|min)\)/g, '')} execução correta`)}` : '';
+  const video = videos[Math.min(vid, Math.max(0, videos.length - 1))];
 
   return (
     <Dialog open={!!exercise} onOpenChange={(o) => !o && onClose()}>
@@ -31,13 +37,55 @@ export function ExerciseGuideDialog({
         {exercise && guide && (
           <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
             <div className="bg-navy p-3">
-              {mode === '3d' ? (
+              {mode === 'video' ? (
+                video ? (
+                  <div className="overflow-hidden rounded-xl bg-black">
+                    <div className="aspect-video">
+                      <iframe
+                        key={video.id}
+                        src={`https://www.youtube-nocookie.com/embed/${video.id}?rel=0&modestbranding=1`}
+                        title={video.title}
+                        className="size-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid aspect-video place-items-center rounded-xl bg-white/5 p-4 text-center text-sm text-white/70">Ainda não há vídeo selecionado para este exercício. Use o botão abaixo para buscar no YouTube.</div>
+                )
+              ) : mode === 'render' || mode === '3d' ? (
                 <Suspense fallback={<ExerciseHologram exercise={exercise} playing={playing} speed={speed} />}>
-                  <ExerciseHologram3D exercise={exercise} playing={playing} speed={speed} autoRotate={spin} />
+                  <ExerciseHologram3D exercise={exercise} playing={playing} speed={speed} autoRotate={spin} look={mode === 'render' ? 'render' : 'holo'} />
                 </Suspense>
               ) : (
                 <ExerciseHologram exercise={exercise} playing={playing} speed={speed} />
               )}
+              {mode === 'video' ? (
+                <div className="mt-2 space-y-1.5">
+                  {videos.map((v, i) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setVid(i)}
+                      className={cn('flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors', i === vid ? 'bg-white/15' : 'hover:bg-white/10')}
+                    >
+                      <span className="relative block aspect-video w-24 shrink-0 overflow-hidden rounded-md bg-black">
+                        <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="size-full object-cover" />
+                        <span className="absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[10px] font-semibold text-white">{v.len}</span>
+                      </span>
+                      <span className="min-w-0 text-white">
+                        <span className="line-clamp-2 text-xs font-semibold leading-snug">{v.title}</span>
+                        <span className="block truncate text-[11px] text-white/55">{v.channel}</span>
+                      </span>
+                    </button>
+                  ))}
+                  <a href={ytSearch} target="_blank" rel="noreferrer" className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#FF0033] px-3 text-sm font-semibold text-white hover:opacity-90">
+                    <TvMinimalPlay className="size-4" aria-hidden /> Mais vídeos no YouTube <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                </div>
+              ) : (
               <div className="mt-2 flex items-center justify-between gap-2">
                 <button
                   type="button"
@@ -64,12 +112,15 @@ export function ExerciseGuideDialog({
                   ))}
                 </div>
               </div>
+              )}
               <div className="mt-2 flex items-center justify-between gap-2">
-                <div role="radiogroup" aria-label="Tipo de holograma" className="flex items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
+                <div role="radiogroup" aria-label="Tipo de demonstração" className="flex flex-wrap items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
                   {(
                     [
-                      ['3d', 'Holograma 3D', Box],
-                      ['2d', 'Vista 2D', Square],
+                      ['render', 'Personagem 3D', Sparkles],
+                      ['3d', 'Holograma', Box],
+                      ['2d', '2D', Square],
+                      ['video', `Vídeos${videos.length ? ` (${videos.length})` : ''}`, TvMinimalPlay],
                     ] as const
                   ).map(([id, label, Icon]) => (
                     <button
@@ -84,7 +135,7 @@ export function ExerciseGuideDialog({
                     </button>
                   ))}
                 </div>
-                {mode === '3d' && (
+                {(mode === 'render' || mode === '3d') && (
                   <button
                     type="button"
                     aria-pressed={spin}
@@ -96,7 +147,13 @@ export function ExerciseGuideDialog({
                 )}
               </div>
               <p className="mt-2 text-center text-[11px] text-white/50">
-                {mode === '3d' ? 'Arraste o holograma para ver de qualquer ângulo. As silhuetas tênues mostram o início e o fim do movimento.' : 'As silhuetas tênues mostram as posições inicial e final.'}
+                {mode === 'render'
+                  ? 'Arraste o personagem para ver de qualquer ângulo.'
+                  : mode === '3d'
+                    ? 'Arraste o holograma para ver de qualquer ângulo. As silhuetas tênues mostram o início e o fim do movimento.'
+                    : mode === 'video'
+                      ? 'Vídeos do YouTube em português mostrando a execução.'
+                      : 'As silhuetas tênues mostram as posições inicial e final.'}
               </p>
             </div>
 

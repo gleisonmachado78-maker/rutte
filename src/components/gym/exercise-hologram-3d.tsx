@@ -65,6 +65,8 @@ const CYL = new THREE.CylinderGeometry(1, 1, 1, 14, 1);
 const SPHERE = new THREE.SphereGeometry(1, 18, 14);
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 const DISC = new THREE.CylinderGeometry(1, 1, 1, 24, 1);
+const CYL_HQ = new THREE.CylinderGeometry(1, 1, 1, 32, 1);
+const SPHERE_HQ = new THREE.SphereGeometry(1, 36, 26);
 
 /** Posiciona um cilindro unitário entre a e b. */
 function placeBone(mesh: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3, r: number) {
@@ -85,18 +87,28 @@ class Figure {
   private chest: THREE.Mesh;
   private pelvis: THREE.Mesh;
 
-  constructor(mat: THREE.Material) {
-    const mk = (g: THREE.BufferGeometry) => {
-      const m = new THREE.Mesh(g, mat);
-      this.group.add(m);
-      return m;
+  private hair?: THREE.Mesh;
+
+  /** outfit: no modo "render" cada parte do corpo tem seu material (pele, camiseta, short, tênis, cabelo). */
+  constructor(mat: THREE.Material, outfit?: { shirt: THREE.Material; shorts: THREE.Material; shoes: THREE.Material; hair: THREE.Material }) {
+    const hq = !!outfit;
+    const cyl = hq ? CYL_HQ : CYL;
+    const sph = hq ? SPHERE_HQ : SPHERE;
+    const mk = (g: THREE.BufferGeometry, m: THREE.Material = mat) => {
+      const mesh = new THREE.Mesh(g, m);
+      mesh.castShadow = hq;
+      this.group.add(mesh);
+      return mesh;
     };
-    for (let i = 0; i < 10; i++) this.bones.push(mk(CYL));
-    for (let i = 0; i < 12; i++) this.joints.push(mk(SPHERE));
-    this.head = mk(SPHERE);
-    this.torso = mk(CYL);
-    this.chest = mk(CYL);
-    this.pelvis = mk(CYL);
+    // por lado: braço, antebraço, coxa (short), canela, pé (tênis)
+    for (let i = 0; i < 10; i++) this.bones.push(mk(cyl, outfit ? [mat, mat, outfit.shorts, mat, outfit.shoes][i % 5] : mat));
+    // por lado: ombro (camiseta), cotovelo, mão, joelho, tornozelo (tênis), quadril (short)
+    for (let i = 0; i < 12; i++) this.joints.push(mk(sph, outfit ? [outfit.shirt, mat, mat, mat, outfit.shoes, outfit.shorts][i % 6] : mat));
+    this.head = mk(sph);
+    this.torso = mk(cyl, outfit?.shirt);
+    this.chest = mk(cyl, outfit?.shirt);
+    this.pelvis = mk(cyl, outfit?.shorts);
+    if (outfit) this.hair = mk(sph, outfit.hair);
   }
 
   update(s: Skel3) {
@@ -120,6 +132,13 @@ class Figure {
     placeBone(this.pelvis, s.hips[0], s.hips[1], 0.46);
     this.head.position.copy(s.head);
     this.head.scale.set(SEG.headR * U, SEG.headR * U * 1.12, SEG.headR * U);
+    if (this.hair) {
+      // cabelo: calota um pouco acima da cabeça, acompanhando a inclinação do tronco
+      const up = s.head.clone().sub(s.neck).normalize();
+      this.hair.position.copy(s.head).addScaledVector(up, SEG.headR * U * 0.28);
+      this.hair.scale.set(SEG.headR * U * 1.06, SEG.headR * U * 0.86, SEG.headR * U * 1.06);
+      this.hair.quaternion.setFromUnitVectors(UP, up);
+    }
   }
 }
 
@@ -325,6 +344,7 @@ export function ExerciseHologram3D({
   autoRotate = true,
   freezeAt,
   angle,
+  look = 'holo',
 }: {
   exercise: Pick<Exercise, 'id' | 'muscle' | 'name'>;
   className?: string;
@@ -335,6 +355,8 @@ export function ExerciseHologram3D({
   freezeAt?: number;
   /** ângulo inicial da câmera (radianos) */
   angle?: number;
+  /** "render": personagem 3D com materiais, luz de estúdio e sombra; "holo": holograma neon */
+  look?: 'render' | 'holo';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const live = useRef({ playing, speed, autoRotate });
@@ -349,7 +371,14 @@ export function ExerciseHologram3D({
     const motion: Motion = motion3DFor(motionKey);
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+    const render = look === 'render';
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: render ? 'high-performance' : 'low-power' });
+    if (render) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
     el.appendChild(renderer.domElement);
@@ -384,18 +413,67 @@ export function ExerciseHologram3D({
 
     const projector = makeProjector(color, Math.max(4.2, size * 0.42));
     projector.group.position.set(center.x, 0, 0);
-    if (motion.floor !== false) scene.add(projector.group);
+    if (motion.floor !== false && !render) scene.add(projector.group);
 
-    const figure = new Figure(mat);
+    // Modo render: materiais "de Blender" (pele, roupa, metal) + luz de estúdio e sombra suave no chão
+    const skin = new THREE.MeshPhysicalMaterial({ color: '#e2ac86', roughness: 0.52, sheen: 0.35, sheenColor: new THREE.Color('#ffd9c2'), clearcoat: 0.06 });
+    const outfit = render
+      ? {
+          shirt: new THREE.MeshPhysicalMaterial({ color: color.clone().multiplyScalar(0.78), roughness: 0.68, sheen: 0.6, sheenColor: color.clone() }),
+          shorts: new THREE.MeshStandardMaterial({ color: '#1a2136', roughness: 0.82 }),
+          shoes: new THREE.MeshStandardMaterial({ color: '#f1f3f7', roughness: 0.45 }),
+          hair: new THREE.MeshStandardMaterial({ color: '#2b1d14', roughness: 0.7 }),
+        }
+      : undefined;
+    const metal = new THREE.MeshStandardMaterial({ color: '#b9c1ce', metalness: 0.9, roughness: 0.28 });
+    const equip = new THREE.MeshStandardMaterial({ color: '#2c3347', metalness: 0.35, roughness: 0.55 });
+
+    const figure = new Figure(render ? skin : mat, outfit);
     scene.add(figure.group);
-    const ghosts = [new Figure(ghostMat), new Figure(ghostMat)];
-    ghosts[0].update(skeleton3D(motion, 0));
-    ghosts[1].update(skeleton3D(motion, 1));
+    const ghosts = render ? [] : [new Figure(ghostMat), new Figure(ghostMat)];
+    ghosts[0]?.update(skeleton3D(motion, 0));
+    ghosts[1]?.update(skeleton3D(motion, 1));
     ghosts.forEach((g) => scene.add(g.group));
-    const load = new LoadMesh(guide.load, mat);
+    const load = new LoadMesh(guide.load, render ? metal : mat);
     scene.add(load.group);
-    const props = new PropsMesh(motion, propMat);
+    const props = new PropsMesh(motion, render ? equip : propMat);
     scene.add(props.group);
+    if (render) {
+      load.group.traverse((o) => ((o as THREE.Mesh).castShadow = true));
+      props.group.traverse((o) => {
+        (o as THREE.Mesh).castShadow = true;
+        (o as THREE.Mesh).receiveShadow = true;
+      });
+      scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x1a1f2e, 0.95));
+      const key = new THREE.DirectionalLight(0xffffff, 2.1);
+      key.position.set(center.x + size * 0.7, size * 1.4, size * 1.1);
+      key.target.position.copy(center);
+      key.castShadow = true;
+      key.shadow.mapSize.set(1024, 1024);
+      key.shadow.radius = 4;
+      key.shadow.bias = -0.0004;
+      const sc = key.shadow.camera as THREE.OrthographicCamera;
+      sc.left = -size;
+      sc.right = size;
+      sc.top = size;
+      sc.bottom = -size;
+      sc.near = 0.1;
+      sc.far = size * 5;
+      scene.add(key, key.target);
+      const rim = new THREE.DirectionalLight(color, 1.4);
+      rim.position.set(center.x - size * 0.8, size * 0.9, -size * 1.2);
+      scene.add(rim);
+      const fill = new THREE.DirectionalLight(0x9db4ff, 0.45);
+      fill.position.set(center.x - size, size * 0.4, size * 0.6);
+      scene.add(fill);
+      if (motion.floor !== false) {
+        const floorDisc = new THREE.Mesh(new THREE.CircleGeometry(size * 0.9, 64), new THREE.MeshStandardMaterial({ color: '#202739', roughness: 0.95 }));
+        floorDisc.rotation.x = -Math.PI / 2;
+        floorDisc.position.set(center.x, -0.01, 0);
+        floorDisc.receiveShadow = true;
+        scene.add(floorDisc);
+      }
+    }
 
     // Partículas subindo pelo feixe
     const N = 70;
@@ -405,7 +483,7 @@ export function ExerciseHologram3D({
     pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
     const pMat = new THREE.PointsMaterial({ color, size: 0.09, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
     const particles = new THREE.Points(pGeo, pMat);
-    if (motion.floor !== false) scene.add(particles);
+    if (motion.floor !== false && !render) scene.add(particles);
 
     // Tamanho acompanha o contêiner
     const resize = () => {
@@ -488,7 +566,7 @@ export function ExerciseHologram3D({
       controls.dispose();
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (m.geometry && ![CYL, SPHERE, BOX, DISC].includes(m.geometry as never)) m.geometry.dispose();
+        if (m.geometry && ![CYL, SPHERE, BOX, DISC, CYL_HQ, SPHERE_HQ].includes(m.geometry as never)) m.geometry.dispose();
         const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
         mats.forEach((x) => x.dispose());
       });
@@ -496,20 +574,26 @@ export function ExerciseHologram3D({
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [motionKey, guide.load, ok, freezeAt, angle]);
+  }, [motionKey, guide.load, ok, freezeAt, angle, look]);
 
   if (!ok) return <ExerciseHologram exercise={exercise} playing={playing} speed={speed} className={className} />;
 
   return (
     <div
-      className={cn('relative cursor-grab overflow-hidden rounded-xl border border-neon/40 bg-[radial-gradient(ellipse_at_50%_85%,rgb(var(--neon)/0.18),transparent_60%),linear-gradient(#0b1020,#111727)] active:cursor-grabbing', className)}
+      className={cn(
+        'relative cursor-grab overflow-hidden rounded-xl border active:cursor-grabbing',
+        look === 'render'
+          ? 'border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#46516e,#1a2133_62%,#10141f)]'
+          : 'border-neon/40 bg-[radial-gradient(ellipse_at_50%_85%,rgb(var(--neon)/0.18),transparent_60%),linear-gradient(#0b1020,#111727)]',
+        className,
+      )}
       role="img"
       aria-label={`Demonstração 3D animada: ${exercise.name}. Arraste para girar.`}
     >
       <div ref={host} className="w-full" />
-      <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent_0_3px,rgb(255_255_255/0.025)_3px_4px)]" aria-hidden />
-      <span className="pointer-events-none absolute left-2.5 top-2 font-mono text-[10px] tracking-widest text-neon/90">
-        RUTTE · HOLOGRAMA 3D · {(MOTIONS[motionKey] as Motion).hold ? 'SEGURE A POSIÇÃO' : 'EXECUÇÃO'}
+      {look !== 'render' && <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent_0_3px,rgb(255_255_255/0.025)_3px_4px)]" aria-hidden />}
+      <span className={cn('pointer-events-none absolute left-2.5 top-2 font-mono text-[10px] tracking-widest', look === 'render' ? 'text-white/70' : 'text-neon/90')}>
+        RUTTE · {look === 'render' ? 'PERSONAGEM 3D' : 'HOLOGRAMA 3D'} · {(MOTIONS[motionKey] as Motion).hold ? 'SEGURE A POSIÇÃO' : 'EXECUÇÃO'}
       </span>
       <span className="pointer-events-none absolute bottom-2 right-2.5 rounded-full bg-black/40 px-2 py-0.5 text-[10px] text-white/70">↻ arraste para girar</span>
     </div>
