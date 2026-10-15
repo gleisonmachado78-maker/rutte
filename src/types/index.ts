@@ -186,6 +186,8 @@ export interface TrainingProfile {
   place: TrainingPlace;
   restrictions: Restriction[];
   preferredTime?: string;
+  /** Gênero (define o personagem 3D que mostra os exercícios) */
+  sex?: 'masculino' | 'feminino';
   /** Peso atual (kg) e altura (cm) */
   weightKg?: number;
   heightCm?: number;

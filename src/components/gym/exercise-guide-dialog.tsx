@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/sheet';
 import { guideFor } from '@/lib/exercise-guide';
 import { EXERCISE_VIDEOS } from '@/lib/exercise-videos-data';
+import { useGym } from '@/hooks/use-data';
+import type { AvatarKind } from './avatar-3d';
 import { MUSCLE_LABEL } from '@/lib/gym';
 import { cn } from '@/lib/utils';
 import type { Exercise } from '@/types';
@@ -26,6 +28,24 @@ export function ExerciseGuideDialog({
   const [vid, setVid] = useState(0);
   useEffect(() => setVid(0), [exercise?.id]);
   const [spin, setSpin] = useState(true);
+  // personagem: escolha feita aqui (guardada no aparelho) ou o gênero do questionário de treino
+  const { data: gym } = useGym();
+  const [picked, setPicked] = useState<AvatarKind | null>(() => {
+    try {
+      return (localStorage.getItem('rutte:avatar') as AvatarKind | null) ?? null;
+    } catch {
+      return null;
+    }
+  });
+  const avatar: AvatarKind = picked ?? gym?.profile?.sex ?? 'masculino';
+  const pickAvatar = (a: AvatarKind) => {
+    setPicked(a);
+    try {
+      localStorage.setItem('rutte:avatar', a);
+    } catch {
+      /* sem armazenamento */
+    }
+  };
   const guide = exercise ? guideFor(exercise) : null;
   const videos = exercise ? EXERCISE_VIDEOS[exercise.id] ?? [] : [];
   const ytSearch = exercise ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${exercise.name.replace(/\((seg|min)\)/g, '')} execução correta`)}` : '';
@@ -39,7 +59,7 @@ export function ExerciseGuideDialog({
             <div className="bg-navy p-3">
               {mode === 'render' || mode === '3d' ? (
                 <Suspense fallback={<ExerciseHologram exercise={exercise} playing={playing} speed={speed} />}>
-                  <ExerciseHologram3D exercise={exercise} playing={playing} speed={speed} autoRotate={spin} look={mode === 'render' ? 'render' : 'holo'} />
+                  <ExerciseHologram3D exercise={exercise} playing={playing} speed={speed} autoRotate={spin} look={mode === 'render' ? 'render' : 'holo'} avatar={avatar} />
                 </Suspense>
               ) : (
                 <ExerciseHologram exercise={exercise} playing={playing} speed={speed} />
@@ -102,6 +122,27 @@ export function ExerciseGuideDialog({
                   </button>
                 )}
               </div>
+              {mode === 'render' && (
+                <div role="radiogroup" aria-label="Personagem" className="mt-2 flex items-center justify-center gap-1 rounded-lg bg-white/10 p-1 text-white">
+                  {(
+                    [
+                      ['masculino', '👨 Homem'],
+                      ['feminino', '👩 Mulher'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={avatar === id}
+                      onClick={() => pickAvatar(id)}
+                      className={cn('h-7 flex-1 rounded-md px-2 text-xs font-semibold', avatar === id ? 'bg-white text-navy' : 'text-white/70 hover:text-white')}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="mt-2 text-center text-[11px] text-white/50">
                 {mode === 'render'
                   ? 'Arraste o personagem para ver de qualquer ângulo.'

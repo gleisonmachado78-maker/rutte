@@ -7,6 +7,7 @@ import { ease, frameFor, MOTIONS, SEG, type Motion, type P } from '@/lib/exercis
 import { cn } from '@/lib/utils';
 import type { Exercise } from '@/types';
 import { ExerciseHologram } from './exercise-hologram';
+import { Avatar, type AvatarKind } from './avatar-3d';
 
 /*
  * Holograma 3D do exercício (three.js). Reaproveita as poses 2D de `exercise-motion.ts`:
@@ -345,6 +346,7 @@ export function ExerciseHologram3D({
   freezeAt,
   angle,
   look = 'holo',
+  avatar,
 }: {
   exercise: Pick<Exercise, 'id' | 'muscle' | 'name'>;
   className?: string;
@@ -357,6 +359,8 @@ export function ExerciseHologram3D({
   angle?: number;
   /** "render": personagem 3D com materiais, luz de estúdio e sombra; "holo": holograma neon */
   look?: 'render' | 'holo';
+  /** personagem realista no modo render (homem ou mulher) */
+  avatar?: AvatarKind;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const live = useRef({ playing, speed, autoRotate });
@@ -430,6 +434,21 @@ export function ExerciseHologram3D({
 
     const figure = new Figure(render ? skin : mat, outfit);
     scene.add(figure.group);
+    // personagem realista: carrega o modelo e, quando chegar, substitui o boneco (sem modelo, fica o boneco)
+    let person: Avatar | null = null;
+    let disposed = false;
+    if (render && avatar) {
+      Avatar.create(avatar)
+        .then((a) => {
+          if (disposed) return a.dispose();
+          person = a;
+          scene.add(a.group);
+          figure.group.visible = false;
+        })
+        .catch(() => {
+          /* sem o arquivo do modelo (ex.: app offline): segue com o boneco */
+        });
+    }
     const ghosts = render ? [] : [new Figure(ghostMat), new Figure(ghostMat)];
     ghosts[0]?.update(skeleton3D(motion, 0));
     ghosts[1]?.update(skeleton3D(motion, 1));
@@ -534,7 +553,8 @@ export function ExerciseHologram3D({
       if (play && !reduced) phase = (phase + (dt * sp) / motion.dur) % 1;
       const k = freezeAt ?? (reduced ? 0.5 : ease(phase));
       const s = skeleton3D(motion, k);
-      figure.update(s);
+      if (person) person.update(s);
+      else figure.update(s);
       load.update(s);
       props.update(s);
 
@@ -558,6 +578,8 @@ export function ExerciseHologram3D({
     raf = requestAnimationFrame(tick);
 
     return () => {
+      disposed = true;
+      (person as Avatar | null)?.dispose();
       cancelAnimationFrame(raf);
       window.clearTimeout(idleTimer);
       ro.disconnect();
@@ -574,7 +596,7 @@ export function ExerciseHologram3D({
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [motionKey, guide.load, ok, freezeAt, angle, look]);
+  }, [motionKey, guide.load, ok, freezeAt, angle, look, avatar]);
 
   if (!ok) return <ExerciseHologram exercise={exercise} playing={playing} speed={speed} className={className} />;
 

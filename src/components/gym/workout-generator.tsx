@@ -382,6 +382,14 @@ export function WorkoutGenerator({ gym, onApplied }: { gym: GymData; onApplied: 
             {step === 0 && (
               <fieldset className="space-y-4">
                 <legend className="mb-2 font-semibold">Seu corpo hoje <span className="font-normal text-foreground/50">(opcional, mas deixa tudo mais preciso)</span></legend>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium">Você é</p>
+                  <div className="grid max-w-sm grid-cols-2 gap-2">
+                    <OptionCard active={profile.sex === 'masculino'} onClick={() => set({ sex: 'masculino' })} title="Homem" emoji="👨" desc="Personagem masculino" />
+                    <OptionCard active={profile.sex === 'feminino'} onClick={() => set({ sex: 'feminino' })} title="Mulher" emoji="👩" desc="Personagem feminino" />
+                  </div>
+                  <p className="mt-1 text-xs text-foreground/50">O personagem 3D que mostra os exercícios acompanha a sua escolha.</p>
+                </div>
                 <div className="grid max-w-sm grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="gen-w">Peso (kg)</Label>
