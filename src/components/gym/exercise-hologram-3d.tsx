@@ -381,7 +381,7 @@ export function ExerciseHologram3D({
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
+      renderer.toneMappingExposure = 1.35;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
@@ -442,6 +442,7 @@ export function ExerciseHologram3D({
         .then((a) => {
           if (disposed) return a.dispose();
           person = a;
+          a.grip(guide.load !== 'none');
           scene.add(a.group);
           figure.group.visible = false;
         })
@@ -463,8 +464,8 @@ export function ExerciseHologram3D({
         (o as THREE.Mesh).castShadow = true;
         (o as THREE.Mesh).receiveShadow = true;
       });
-      scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x1a1f2e, 0.95));
-      const key = new THREE.DirectionalLight(0xffffff, 2.1);
+      scene.add(new THREE.HemisphereLight(0xf2f5ff, 0x3a4256, 1.6));
+      const key = new THREE.DirectionalLight(0xffffff, 2.8);
       key.position.set(center.x + size * 0.7, size * 1.4, size * 1.1);
       key.target.position.copy(center);
       key.castShadow = true;
@@ -482,7 +483,12 @@ export function ExerciseHologram3D({
       const rim = new THREE.DirectionalLight(color, 1.4);
       rim.position.set(center.x - size * 0.8, size * 0.9, -size * 1.2);
       scene.add(rim);
-      const fill = new THREE.DirectionalLight(0x9db4ff, 0.45);
+      // luz frontal que acompanha a câmera: rosto e corpo sempre bem iluminados
+      const front = new THREE.DirectionalLight(0xffffff, 1.1);
+      camera.add(front);
+      front.position.set(0, 0.3, 1);
+      scene.add(camera);
+      const fill = new THREE.DirectionalLight(0x9db4ff, 0.7);
       fill.position.set(center.x - size, size * 0.4, size * 0.6);
       scene.add(fill);
       if (motion.floor !== false) {
@@ -553,8 +559,12 @@ export function ExerciseHologram3D({
       if (play && !reduced) phase = (phase + (dt * sp) / motion.dur) % 1;
       const k = freezeAt ?? (reduced ? 0.5 : ease(phase));
       const s = skeleton3D(motion, k);
-      if (person) person.update(s);
-      else figure.update(s);
+      if (person) {
+        person.update(s);
+        // barra, halteres e cabos acompanham as mãos de verdade do personagem
+        const hands = person.handPositions();
+        if (hands) s.hands = hands;
+      } else figure.update(s);
       load.update(s);
       props.update(s);
 
