@@ -1,3 +1,7 @@
 {
-  "maintenance": false
+  "maintenance": true,
+  "start": "2026-10-15T18:54:01.899Z",
+  "eta": "2026-10-15T19:34:01.899Z",
+  "until": "2026-10-15T19:54:01.899Z",
+  "message": "Trocando o personagem masculino"
 }
