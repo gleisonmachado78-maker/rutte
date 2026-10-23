@@ -20,6 +20,19 @@ export interface TaskLink {
   url: string;
 }
 
+/** Link de uma área da vida (portal da faculdade, banco, plano de saúde…). */
+export interface LifeLink {
+  id: string;
+  title: string;
+  url: string;
+  area: LifeAreaId;
+  /** calendário do portal em formato iCal (.ics): entregas e provas aparecem no Calendário */
+  icsUrl?: string;
+  note?: string;
+  order: number;
+  createdAt: string;
+}
+
 /** Extensão do contrato: arquivos anexados (guardados como data URL no localStorage). */
 export interface TaskAttachment {
   id: string;

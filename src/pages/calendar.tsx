@@ -27,6 +27,8 @@ import type { Task } from '@/types';
 import { LIFE_AREAS, LIFE_AREA_BY_ID } from '@/lib/life-areas';
 import type { CSSProperties } from 'react';
 import { useGoogleEvents, useGoogleStatus } from '@/hooks/use-google';
+import { useLinkFeeds, type LinkEvent } from '@/hooks/use-link-feeds';
+import { Link2 } from 'lucide-react';
 import { connectGoogle, type GEvent } from '@/lib/google-calendar';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -80,7 +82,27 @@ function GoogleItem({ ev }: { ev: GEvent }) {
   );
 }
 
-function DayList({ date, tasks, projected = [], events = [] }: { date: Date; tasks: Task[]; projected?: Task[]; events?: GEvent[] }) {
+/** Entrega/compromisso vindo do calendário de um portal (aba Links). */
+function PortalItem({ ev }: { ev: LinkEvent }) {
+  const color = LIFE_AREA_BY_ID[ev.link.area]?.color ?? '#64748b';
+  return (
+    <a
+      href={ev.url || ev.link.url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      title={`${ev.link.title}: ${ev.title}`}
+      style={{ borderLeftColor: color, backgroundColor: `color-mix(in srgb, ${color} 22%, transparent)` }}
+      className="flex w-full items-center gap-1 truncate rounded-md border-l-[3px] border-dashed px-1.5 py-0.5 text-left text-[11px] font-semibold text-foreground hover:brightness-110"
+    >
+      <Link2 className="size-3 shrink-0 opacity-70" aria-hidden />
+      {ev.time && <span className="shrink-0 tabular-nums opacity-80">{ev.time}</span>}
+      <span className="truncate">{ev.title}</span>
+    </a>
+  );
+}
+
+function DayList({ date, tasks, projected = [], events = [], portal = [] }: { date: Date; tasks: Task[]; projected?: Task[]; events?: GEvent[]; portal?: LinkEvent[] }) {
   const openTask = useUI((s) => s.openTask);
   const openNewTask = useUI((s) => s.openNewTask);
   return (
@@ -110,6 +132,27 @@ function DayList({ date, tasks, projected = [], events = [] }: { date: Date; tas
           ))}
         </ul>
       )}
+      {portal.length > 0 && (
+        <ul className="mt-3 space-y-2" aria-label="Portais (Links)">
+          {portal.map((ev) => {
+            const color = LIFE_AREA_BY_ID[ev.link.area]?.color ?? '#64748b';
+            return (
+              <li key={ev.link.id + ev.uid}>
+                <a href={ev.url || ev.link.url} target="_blank" rel="noreferrer" style={{ borderLeftColor: color }} className="flex items-center gap-3 rounded-xl border border-l-4 border-border p-3 transition-colors hover:bg-muted">
+                  <span className="w-12 shrink-0 text-sm font-bold tabular-nums">{ev.time ?? 'Dia'}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{ev.title}</span>
+                    <span className="mt-0.5 flex items-center gap-1 text-xs text-foreground/60">
+                      <Link2 className="size-3" aria-hidden /> {ev.link.title}{ev.todo ? ' · entrega' : ''}
+                    </span>
+                  </span>
+                  <ExternalLink className="size-4 shrink-0 text-foreground/40" aria-hidden />
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {projected.length > 0 && (
         <ul className="mt-3 space-y-2" aria-label="Repetições previstas">
           {projected.map((t) => (
@@ -132,7 +175,7 @@ function DayList({ date, tasks, projected = [], events = [] }: { date: Date; tas
           ))}
         </ul>
       )}
-      {tasks.length === 0 && events.length === 0 && projected.length === 0 ? (
+      {tasks.length === 0 && events.length === 0 && projected.length === 0 && portal.length === 0 ? (
         <p className="mt-3 text-sm text-foreground/60">Nada agendado neste dia.</p>
       ) : tasks.length === 0 ? null : (
         <ul className="mt-3 space-y-2">
@@ -234,6 +277,15 @@ export function CalendarPage() {
     return map;
   }, [gq.data]);
   const gFor = (d: Date) => gByDay.get(toISODate(d)) ?? [];
+  // calendários dos portais (aba Links)
+  const feeds = useLinkFeeds();
+  const pByDay = useMemo(() => {
+    const map = new Map<string, LinkEvent[]>();
+    for (const e of feeds.events) map.set(e.date, [...(map.get(e.date) ?? []), e]);
+    for (const list of map.values()) list.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
+    return map;
+  }, [feeds.events]);
+  const pFor = (d: Date) => pByDay.get(toISODate(d)) ?? [];
   const connectG = async () => {
     try {
       await connectGoogle(true);
@@ -314,6 +366,7 @@ export function CalendarPage() {
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-foreground/60" aria-label="Legenda">
         <span className="inline-flex items-center gap-1.5"><Repeat className="size-3.5" aria-hidden /> Repetição prevista</span>
+        {feeds.events.length > 0 && <span className="inline-flex items-center gap-1.5"><Link2 className="size-3.5" aria-hidden /> Portais (Links)</span>}
         {LIFE_AREAS.filter((a) => usedAreas.has(a.id)).map((a) => (
           <span key={a.id} className="inline-flex items-center gap-1.5">
             <span className="grid size-4 place-items-center rounded text-white" style={{ backgroundColor: a.color }}><a.icon className="size-2.5" aria-hidden /></span> {a.short}
@@ -340,6 +393,7 @@ export function CalendarPage() {
               const items = itemsFor(d);
               const proj = projFor(d);
               const gev = gFor(d);
+              const pev = pFor(d);
               const outside = mode === 'month' && !isSameMonth(d, cursor);
               const isSel = isSameDay(d, selected);
               const hasOverdue = items.some((t) => isOverdue(t));
@@ -350,7 +404,7 @@ export function CalendarPage() {
                   role="gridcell"
                   tabIndex={0}
                   aria-selected={isSel}
-                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + proj.length + gev.length} itens`}
+                  aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + proj.length + gev.length + pev.length} itens`}
                   onClick={() => setSelected(d)}
                   onDoubleClick={() => openNewTask({ dueDate: toISODate(d) })}
                   onKeyDown={(e) => {
@@ -377,6 +431,7 @@ export function CalendarPage() {
                   {/* Mobile: pontos; telas maiores: títulos */}
                   <div className={'flex flex-wrap justify-center gap-0.5 sm:hidden'}>
                     {gev.slice(0, 2).map((e) => <span key={e.id} className="size-1.5 rounded-full bg-sky-500" aria-hidden />)}
+                    {pev.slice(0, 2).map((e) => <span key={e.link.id + e.uid} className="size-1.5 rounded-sm" style={{ backgroundColor: LIFE_AREA_BY_ID[e.link.area]?.color }} aria-hidden />)}
                     {items.slice(0, 4).map((t) => (
                       <span
                         key={t.id}
@@ -392,14 +447,15 @@ export function CalendarPage() {
                   </div>
                   <div className={'hidden flex-col gap-1 sm:flex'}>
                     {gev.slice(0, max).map((e) => <GoogleItem key={e.id} ev={e} />)}
-                    {items.slice(0, Math.max(0, max - gev.length)).map((t) => (
+                    {pev.slice(0, Math.max(0, max - gev.length)).map((e) => <PortalItem key={e.link.id + e.uid} ev={e} />)}
+                    {items.slice(0, Math.max(0, max - gev.length - pev.length)).map((t) => (
                       <CalendarItem key={t.id} task={t} compact />
                     ))}
-                    {proj.slice(0, Math.max(0, max - gev.length - items.length)).map((t) => (
+                    {proj.slice(0, Math.max(0, max - gev.length - pev.length - items.length)).map((t) => (
                       <CalendarItem key={'p' + t.id} task={t} compact projected />
                     ))}
-                    {items.length + proj.length + gev.length > max && (
-                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length + proj.length + gev.length - max} mais</span>
+                    {items.length + proj.length + gev.length + pev.length > max && (
+                      <span className="px-1 text-[11px] font-semibold text-foreground/60">+{items.length + proj.length + gev.length + pev.length - max} mais</span>
                     )}
                   </div>
                 </div>
@@ -408,7 +464,7 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <DayList date={selected} tasks={itemsFor(selected)} projected={projFor(selected)} events={gFor(selected)} />
+        <DayList date={selected} tasks={itemsFor(selected)} projected={projFor(selected)} events={gFor(selected)} portal={pFor(selected)} />
       </div>
       <p className="hidden text-xs text-foreground/50 sm:block">Dica: dê um duplo clique em um dia para criar um afazer nele.</p>
     </div>

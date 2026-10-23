@@ -25,6 +25,7 @@ export const qk = {
   relationship: ['relationship'] as const,
   notebooks: ['notebooks'] as const,
   notes: ['notes'] as const,
+  links: ['links'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -498,6 +499,25 @@ export function useSetRelationship() {
 /* -------------------------------------- Notas -------------------------------------- */
 
 export const useNotebooks = () => useQuery({ queryKey: qk.notebooks, queryFn: api.listNotebooks });
+
+/* ------------------------------------ Links ------------------------------------ */
+export const useLinks = () => useQuery({ queryKey: qk.links, queryFn: api.listLinks });
+export function useSaveLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveLink,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.links }),
+    onError: errorToast,
+  });
+}
+export function useDeleteLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteLink,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.links }),
+    onError: errorToast,
+  });
+}
 export const useNotes = () => useQuery({ queryKey: qk.notes, queryFn: api.listNotes });
 
 /** Atualização otimista de uma lista no cache (a tela muda na hora). */

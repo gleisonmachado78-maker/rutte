@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { LifeAreaId, Priority, Scope, TaskStatus } from '@/types';
+import type { LifeAreaId, Priority, Scope, TaskStatus, TaskLink } from '@/types';
 
 export type DateFilter = 'ALL' | 'TODAY' | 'TOMORROW' | 'OVERDUE' | 'WEEK';
 
@@ -30,6 +30,8 @@ export interface TaskDefaults {
   dueDate?: string;
   scope?: Scope;
   lifeAreaId?: LifeAreaId;
+  title?: string;
+  links?: TaskLink[];
 }
 
 export type ScopeFilter = 'ALL' | Scope;

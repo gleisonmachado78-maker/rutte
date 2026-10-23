@@ -19,6 +19,7 @@ import { LibraryPage } from '@/pages/library';
 import { GratitudePage } from '@/pages/gratitude';
 import { LifePage } from '@/pages/life';
 import { NotesPage } from '@/pages/notes';
+import { LinksPage } from '@/pages/links';
 import { TasksPage } from '@/pages/tasks';
 import { useUI } from '@/store/ui';
 
@@ -49,6 +50,7 @@ function PrivateRoutes() {
         <Route path="focus" element={<FocusPage />} />
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="notes" element={<NotesPage />} />
+        <Route path="links" element={<LinksPage />} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="gratitude" element={<GratitudePage />} />
         <Route path="admin" element={<AdminPage />} />

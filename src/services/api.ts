@@ -5,6 +5,7 @@
 import type {
   NoteBox,
   Notebook,
+  LifeLink,
   Category,
   Contact,
   Exercise,
@@ -432,6 +433,24 @@ export const api = {
     const db = load();
     if (status) db.relationship = status;
     else delete db.relationship;
+    persist();
+    return delay(undefined);
+  },
+
+  /* -------------------------------- Links -------------------------------- */
+  async listLinks(): Promise<LifeLink[]> {
+    return delay([...(load().links ?? [])].sort((a, b) => a.order - b.order));
+  },
+  async saveLink(link: LifeLink): Promise<LifeLink> {
+    const db = load();
+    const list = db.links ?? [];
+    db.links = list.some((l) => l.id === link.id) ? list.map((l) => (l.id === link.id ? link : l)) : [...list, link];
+    persist();
+    return delay(link);
+  },
+  async deleteLink(id: string): Promise<void> {
+    const db = load();
+    db.links = (db.links ?? []).filter((l) => l.id !== id);
     persist();
     return delay(undefined);
   },

@@ -40,7 +40,7 @@ export type TaskFormValues = z.infer<typeof taskSchema>;
 
 export function toFormValues(task?: Task, defaults?: TaskDefaults): TaskFormValues {
   return {
-    title: task?.title ?? '',
+    title: task?.title ?? defaults?.title ?? '',
     description: task?.description ?? '',
     whatToDo: task?.whatToDo ?? '',
     howTo: task?.howTo ?? '',
@@ -58,7 +58,7 @@ export function toFormValues(task?: Task, defaults?: TaskDefaults): TaskFormValu
     meetingUrl: task?.meetingUrl ?? '',
     location: task?.location,
     subtasks: task?.subtasks ?? [],
-    links: task?.links ?? [],
+    links: task?.links ?? defaults?.links ?? [],
     contactIds: task?.contactIds ?? [],
     attachments: task?.attachments ?? [],
   };

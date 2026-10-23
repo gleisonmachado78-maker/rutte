@@ -1,5 +1,5 @@
 import { addDays, format, subDays } from 'date-fns';
-import type { Category, Contact, FocusSession, GratitudeEntry, GymData, NoteBox, Notebook, Project, Task, UserProfile, WheelAssessment } from '@/types';
+import type { Category, Contact, FocusSession, GratitudeEntry, GymData, LifeLink, NoteBox, Notebook, Project, Task, UserProfile, WheelAssessment } from '@/types';
 import { createGymSeed } from '@/lib/gym';
 
 export const USER_ID = 'user_1';
@@ -24,6 +24,8 @@ export interface Database {
   /** blocos de notas e suas caixas */
   notebooks?: Notebook[];
   notes?: NoteBox[];
+  /** links por área da vida */
+  links?: LifeLink[];
   /** avaliações do usuário: "book:ID", "video:ID", "prayer:ID"… → nota */
   ratings?: Record<string, Rating>;
   /** situação amorosa (muda as sugestões da área Relacionamento) */
