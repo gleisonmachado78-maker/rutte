@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-10-23T19:29:17.500Z",
-  "eta": "2026-10-23T19:44:17.500Z",
-  "until": "2026-10-23T20:04:17.500Z",
-  "message": "Deixando a área de Links mais fácil"
+  "maintenance": false
 }

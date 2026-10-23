@@ -1,6 +1,6 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, CalendarPlus, ExternalLink, Link2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Check, ChevronDown, ExternalLink, LayoutGrid, Link2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useDeleteLink, useLinks, useSaveLink, useTasks } from '@/hooks/use-data';
 import { icsEnabled, useLinkFeeds, type LinkEvent } from '@/hooks/use-link-feeds';
 import { LIFE_AREAS, LIFE_AREA_BY_ID } from '@/lib/life-areas';
+import { LINK_CATALOG, type CatalogItem } from '@/lib/link-catalog';
 import { isClosed, todayISO } from '@/lib/task-utils';
 import { cn, uid } from '@/lib/utils';
 import { useUI } from '@/store/ui';
@@ -19,19 +20,6 @@ import type { LifeAreaId, LifeLink } from '@/types';
 const AREA_LABEL: Partial<Record<LifeAreaId, string>> = { intelectual: 'Estudos', profissional: 'Trabalho', saude: 'Saúde', financas: 'Finanças' };
 const areaName = (a: LifeAreaId) => AREA_LABEL[a] ?? LIFE_AREA_BY_ID[a].short;
 
-/** Sugestões rápidas de link por área (a pessoa completa o endereço). */
-const SUGGEST: Partial<Record<LifeAreaId, { title: string; url?: string }[]>> = {
-  intelectual: [{ title: 'Portal do aluno' }, { title: 'AVA / Moodle' }, { title: 'Google Classroom', url: 'https://classroom.google.com' }, { title: 'Biblioteca virtual' }],
-  profissional: [{ title: 'E-mail do trabalho' }, { title: 'Sistema da empresa' }, { title: 'Drive / arquivos' }, { title: 'LinkedIn', url: 'https://www.linkedin.com' }],
-  financas: [{ title: 'Banco' }, { title: 'Cartão de crédito' }, { title: 'Investimentos' }, { title: 'gov.br / Receita', url: 'https://www.gov.br' }],
-  saude: [{ title: 'Plano de saúde' }, { title: 'Meu SUS Digital', url: 'https://meususdigital.saude.gov.br' }, { title: 'Laboratório / exames' }, { title: 'App da academia' }],
-  familia: [{ title: 'Agenda da escola dos filhos' }, { title: 'Grupo da família' }],
-  espiritualidade: [{ title: 'Site da igreja' }, { title: 'Bíblia online', url: 'https://www.bibliaonline.com.br' }],
-  emocional: [{ title: 'Agendamento da terapia' }],
-  social: [{ title: 'Eventos e encontros' }],
-  lazer: [{ title: 'Streaming' }, { title: 'Ingressos' }],
-  relacionamentos: [{ title: 'Datas especiais' }],
-};
 
 const host = (url: string) => {
   try {
@@ -56,6 +44,8 @@ export function LinksPage() {
   const { events, errors } = useLinkFeeds();
   const [q, setQ] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState<boolean | null>(null);
+  const showCatalog = catalogOpen ?? links.length === 0;
 
   const query = q.trim().toLowerCase();
   const visible = links.filter((l) => !query || `${l.title} ${l.url} ${areaName(l.area)}`.toLowerCase().includes(query));
@@ -73,10 +63,17 @@ export function LinksPage() {
           </h1>
           <p className="text-sm text-foreground/60">Seus portais e sites de cada área da vida num só lugar. Conecte o calendário do portal e as entregas aparecem no Calendário.</p>
         </div>
-        <Button onClick={() => setDraft(emptyDraft())}>
-          <Plus /> Novo link
-        </Button>
+        <div className="flex w-full gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:flex-none">
+          <Button variant={showCatalog ? 'secondary' : 'outline'} onClick={() => setCatalogOpen(!showCatalog)} aria-expanded={showCatalog}>
+            <LayoutGrid /> Escolher da lista
+          </Button>
+          <Button onClick={() => setDraft(emptyDraft())}>
+            <Plus /> Outro link
+          </Button>
+        </div>
       </header>
+
+      {showCatalog && <Catalog links={links} onAdded={() => setCatalogOpen(true)} onCustom={(area, item) => setDraft({ ...emptyDraft(area), title: item?.title ?? '' })} onClose={links.length ? () => setCatalogOpen(false) : undefined} />}
 
       {links.length > 0 && (
         <div className="relative max-w-md">
@@ -137,40 +134,117 @@ export function LinksPage() {
         </section>
       ))}
 
-      {/* Começar: áreas com sugestões */}
-      {links.length === 0 && (
-        <section className="space-y-3">
-          <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-            <Link2 className="mx-auto size-10 text-foreground/25" aria-hidden />
-            <p className="mt-2 font-semibold">Guarde aqui os sites que você usa em cada área</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-foreground/60">Ex.: em Estudos, o portal da faculdade e o AVA. Se o portal tiver “exportar calendário”, as entregas aparecem no seu Calendário.</p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {LIFE_AREAS.filter((a) => SUGGEST[a.id]).map((a) => (
-              <div key={a.id} className="rounded-xl border border-border bg-card p-3">
-                <p className="mb-2 flex items-center gap-2 text-sm font-bold">
-                  <span className="grid size-6 place-items-center rounded-md text-white" style={{ backgroundColor: a.color }}>
-                    <a.icon className="size-3.5" aria-hidden />
-                  </span>
-                  {areaName(a.id)}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {SUGGEST[a.id]!.map((s) => (
-                    <button key={s.title} type="button" onClick={() => setDraft({ ...emptyDraft(a.id), title: s.title, url: s.url ?? '' })} className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium hover:border-primary hover:text-primary">
-                      <Plus className="size-3" aria-hidden /> {s.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {links.length > 0 && visible.length === 0 && <p className="text-sm text-foreground/60">Nenhum link encontrado.</p>}
 
       <LinkDialog draft={draft} onClose={() => setDraft(null)} count={links.length} />
     </div>
+  );
+}
+
+/** Lista pronta: um toque adiciona (ou abre, se já estiver salvo). */
+function Catalog({ links, onAdded, onCustom, onClose }: { links: LifeLink[]; onAdded: () => void; onCustom: (area: LifeAreaId, item?: CatalogItem) => void; onClose?: () => void }) {
+  const save = useSaveLink();
+  const del = useDeleteLink();
+  const [area, setArea] = useState<LifeAreaId>('lazer');
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
+  const items: { item: CatalogItem; area: LifeAreaId }[] = query
+    ? LIFE_AREAS.flatMap((a) => LINK_CATALOG[a.id].filter((i) => i.title.toLowerCase().includes(query)).map((item) => ({ item, area: a.id })))
+        .filter((x, i, arr) => arr.findIndex((y) => y.item.title === x.item.title) === i)
+    : LINK_CATALOG[area].map((item) => ({ item, area }));
+  const saved = (item: CatalogItem) => (item.url ? links.find((l) => host(l.url) === host(item.url!)) : undefined);
+
+  const add = (item: CatalogItem, a: LifeAreaId) => {
+    if (!item.url) return onCustom(a, item);
+    onAdded();
+    const link: LifeLink = { id: uid('lnk'), title: item.title, url: item.url, area: a, order: links.length, createdAt: new Date().toISOString() };
+    save.mutate(link, {
+      onSuccess: () => toast.success(`${item.title} adicionado`, { description: `em ${areaName(a)}`, action: { label: 'Desfazer', onClick: () => del.mutate(link.id) } }),
+    });
+  };
+
+  return (
+    <section aria-label="Escolher da lista" className="space-y-3 rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-bold">Escolha da lista</h2>
+          <p className="text-xs text-foreground/60">Toque para adicionar. No celular, abre direto no app (Spotify, WhatsApp, banco…).</p>
+        </div>
+        <div className="relative order-last w-full sm:order-none sm:w-56">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" aria-hidden />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Procurar app ou site…"
+            aria-label="Procurar na lista"
+            className="h-9 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+        {onClose && (
+          <button type="button" onClick={onClose} className="grid size-9 place-items-center rounded-full text-foreground/50 hover:bg-muted" aria-label="Fechar a lista">
+            <ChevronDown className="size-4 rotate-180" />
+          </button>
+        )}
+      </div>
+
+      {!query && (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Áreas da vida">
+          {LIFE_AREAS.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              role="tab"
+              aria-selected={area === a.id}
+              onClick={() => setArea(a.id)}
+              className={cn('inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors', area === a.id ? 'border-transparent text-white' : 'border-border hover:bg-muted')}
+              style={area === a.id ? { backgroundColor: a.color } : undefined}
+            >
+              <a.icon className="size-3.5" aria-hidden /> {areaName(a.id)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {items.map(({ item, area: a }) => {
+          const has = saved(item);
+          const inner = (
+            <>
+              <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-muted">
+                {item.url ? <img src={favicon(item.url)} alt="" className="size-6" loading="lazy" /> : <Link2 className="size-4 text-foreground/50" aria-hidden />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold leading-tight">{item.title}</span>
+                <span className="block truncate text-[11px] text-foreground/50">{has ? 'Já está nos seus links' : item.url ? host(item.url) : item.hint}</span>
+              </span>
+              <span className={cn('grid size-6 shrink-0 place-items-center rounded-full', has ? 'bg-emerald-500 text-white' : 'bg-muted text-foreground/60')}>
+                {has ? <Check className="size-3.5" aria-hidden /> : <Plus className="size-3.5" aria-hidden />}
+              </span>
+            </>
+          );
+          const cls = cn('flex items-center gap-2 rounded-xl border p-2 text-left transition-colors', has ? 'border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10' : 'border-border hover:border-primary hover:bg-muted/50');
+          return has ? (
+            <a key={item.title + a} href={has.url} target="_blank" rel="noreferrer" className={cls} title={`Abrir ${item.title}`}>
+              {inner}
+            </a>
+          ) : (
+            <button key={item.title + a} type="button" onClick={() => add(item, a)} className={cls} title={item.url ? `Adicionar ${item.title} em ${areaName(a)}` : 'Cole o endereço no próximo passo'}>
+              {inner}
+            </button>
+          );
+        })}
+        <button type="button" onClick={() => onCustom(query ? 'lazer' : area, query ? { title: q.trim() } : undefined)} className="flex items-center gap-2 rounded-xl border border-dashed border-border p-2 text-left text-foreground/70 hover:border-primary hover:text-primary">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
+            <Plus className="size-4" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold leading-tight">{query ? `Adicionar “${q.trim()}”` : 'Outro site'}</span>
+            <span className="block truncate text-[11px] text-foreground/50">colar o endereço</span>
+          </span>
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -310,9 +384,9 @@ function LinkDialog({ draft, onClose, count }: { draft: Draft | null; onClose: (
                 </button>
               ))}
             </div>
-            {SUGGEST[d.area] && !d.id && (
+            {!d.id && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {SUGGEST[d.area]!.map((s) => (
+                {LINK_CATALOG[d.area].slice(0, 8).map((s) => (
                   <button key={s.title} type="button" onClick={() => setD({ ...d, title: s.title, url: d.url || s.url || '' })} className="h-7 rounded-full bg-muted px-2.5 text-[11px] font-medium text-foreground/70 hover:text-foreground">
                     {s.title}
                   </button>
