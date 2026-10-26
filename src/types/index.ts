@@ -29,6 +29,8 @@ export interface LifeLink {
   /** calendário do portal em formato iCal (.ics): entregas e provas aparecem no Calendário */
   icsUrl?: string;
   note?: string;
+  /** aparece no menu lateral, em Atalhos (abre em outra aba) */
+  pinned?: boolean;
   order: number;
   createdAt: string;
 }

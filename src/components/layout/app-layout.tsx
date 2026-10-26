@@ -1,5 +1,6 @@
 import {
   Cloud,
+  ExternalLink,
   CloudOff,
   RefreshCw,
   Building,
@@ -43,7 +44,7 @@ import { TaskDrawer } from '@/components/tasks/task-drawer';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { Dialog, DialogTitle, SheetContent } from '@/components/ui/sheet';
-import { useModules, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
+import { useLinks, useModules, useScopedTasks, useUser, useTutorialDone } from '@/hooks/use-data';
 import { firstName } from '@/lib/onboarding';
 import { isOverdue } from '@/lib/task-utils';
 import { cn, initials } from '@/lib/utils';
@@ -161,6 +162,40 @@ function NavLinkItem({ entry, collapsed, onNavigate, badge }: { entry: NavEntry;
   );
 }
 
+/** Links marcados com "Fixar no menu" (aba Links): abrem em outra aba. Ficam só na conta de quem fixou. */
+function PinnedLinks({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const { data: links = [] } = useLinks();
+  const pinned = links.filter((l) => l.pinned);
+  if (!pinned.length) return null;
+  const host = (u: string) => {
+    try {
+      return new URL(u).hostname;
+    } catch {
+      return u;
+    }
+  };
+  return (
+    <div className="stagger flex flex-col gap-0.5">
+      {!collapsed && <span className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Atalhos</span>}
+      {pinned.map((l) => (
+        <a
+          key={l.id}
+          href={l.url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={onNavigate}
+          title={collapsed ? l.title : `Abrir ${l.title} em outra aba`}
+          className={cn('group relative flex h-10 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-white/65 transition-colors duration-200 hover:bg-white/[0.06] hover:text-white [@media(max-height:820px)]:h-9', collapsed && 'justify-center px-0')}
+        >
+          <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host(l.url))}&sz=64`} alt="" className="size-[18px] shrink-0 rounded" />
+          {!collapsed && <span className="truncate">{l.title}</span>}
+          {!collapsed && <ExternalLink className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" aria-hidden />}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function NavGroups({ collapsed, onNavigate, only }: { collapsed?: boolean; onNavigate?: () => void; only?: NavEntry[] }) {
   const { data: tasks = [] } = useScopedTasks();
   const overdue = tasks.filter((t) => isOverdue(t)).length;
@@ -180,6 +215,7 @@ function NavGroups({ collapsed, onNavigate, only }: { collapsed?: boolean; onNav
           </div>
         );
       })}
+      {!only && <PinnedLinks collapsed={collapsed} onNavigate={onNavigate} />}
     </nav>
   );
 }

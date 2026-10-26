@@ -1,6 +1,6 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, CalendarPlus, Check, ChevronDown, ExternalLink, LayoutGrid, Link2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Check, ChevronDown, ExternalLink, LayoutGrid, Link2, Pencil, Pin, PinOff, Plus, Search, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ const normUrl = (u: string) => {
   return /^(https?|webcal):\/\//i.test(t) ? t : `https://${t}`;
 };
 
-type Draft = { id?: string; title: string; url: string; area: LifeAreaId; icsUrl: string; note: string };
+type Draft = { id?: string; title: string; url: string; area: LifeAreaId; icsUrl: string; note: string; pinned?: boolean };
 const emptyDraft = (area: LifeAreaId = 'intelectual'): Draft => ({ title: '', url: '', area, icsUrl: '', note: '' });
 
 export function LinksPage() {
@@ -127,7 +127,7 @@ export function LinksPage() {
                       .map((t) => ({ kind: 'task' as const, date: t.dueDate, time: t.deadlineTime, title: t.title, taskId: t.id })),
                   ].sort((x, y) => `${x.date}${x.time ?? ''}`.localeCompare(`${y.date}${y.time ?? ''}`))}
                   feedError={errors[l.id]}
-                  onEdit={() => setDraft({ id: l.id, title: l.title, url: l.url, area: l.area, icsUrl: l.icsUrl ?? '', note: l.note ?? '' })}
+                  onEdit={() => setDraft({ id: l.id, title: l.title, url: l.url, area: l.area, icsUrl: l.icsUrl ?? '', note: l.note ?? '', pinned: l.pinned })}
                 />
               ))}
           </div>
@@ -252,7 +252,10 @@ type Upcoming = { kind: 'feed'; date: string; time?: string; title: string; ev: 
 
 function LinkCard({ link, upcoming, feedError, onEdit }: { link: LifeLink; upcoming: Upcoming[]; feedError?: string; onEdit: () => void }) {
   const del = useDeleteLink();
+  const save = useSaveLink();
   const openNewTask = useUI((s) => s.openNewTask);
+  const togglePin = () =>
+    save.mutate({ ...link, pinned: !link.pinned }, { onSuccess: () => toast.success(link.pinned ? 'Tirado do menu' : 'Fixado no menu', { description: link.pinned ? link.title : `${link.title} aparece em “Atalhos”, no menu lateral` }) });
   const openTask = useUI((s) => s.openTask);
   const area = LIFE_AREA_BY_ID[link.area];
   const [imgOk, setImgOk] = useState(true);
@@ -271,7 +274,10 @@ function LinkCard({ link, upcoming, feedError, onEdit }: { link: LifeLink; upcom
           {imgOk ? <img src={favicon(link.url)} alt="" className="size-7" onError={() => setImgOk(false)} /> : <Link2 className="size-5 text-foreground/50" aria-hidden />}
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold leading-snug">{link.title}</h3>
+          <h3 className="flex items-center gap-1.5 truncate font-semibold leading-snug">
+            {link.title}
+            {link.pinned && <Pin className="size-3.5 shrink-0 text-primary" aria-label="Fixado no menu" />}
+          </h3>
           <p className="truncate text-xs text-foreground/55">{host(link.url)}</p>
           {link.note && <p className="mt-1 text-sm leading-snug text-foreground/75">{link.note}</p>}
           {link.icsUrl && (
@@ -314,6 +320,9 @@ function LinkCard({ link, upcoming, feedError, onEdit }: { link: LifeLink; upcom
           <CalendarPlus className="size-4" aria-hidden /> Entrega
         </button>
         <span className="ml-auto flex">
+          <button type="button" onClick={togglePin} className={cn('grid size-9 place-items-center rounded-full hover:bg-muted', link.pinned ? 'text-primary' : 'text-foreground/45 hover:text-foreground')} aria-label={link.pinned ? `Tirar ${link.title} do menu` : `Fixar ${link.title} no menu`} title={link.pinned ? 'Tirar do menu' : 'Fixar no menu lateral'}>
+            {link.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+          </button>
           <button type="button" onClick={onEdit} className="grid size-9 place-items-center rounded-full text-foreground/45 hover:bg-muted hover:text-foreground" aria-label={`Editar ${link.title}`}>
             <Pencil className="size-4" />
           </button>
@@ -355,6 +364,7 @@ function LinkDialog({ draft, onClose, count }: { draft: Draft | null; onClose: (
       area: d.area,
       icsUrl: d.icsUrl.trim() ? normUrl(d.icsUrl) : undefined,
       note: d.note.trim() || undefined,
+      pinned: d.pinned || undefined,
       order: count,
       createdAt: new Date().toISOString(),
     };
@@ -406,6 +416,13 @@ function LinkDialog({ draft, onClose, count }: { draft: Draft | null; onClose: (
             <Label htmlFor="lk-note">Observação (opcional)</Label>
             <Textarea id="lk-note" value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} placeholder="Ex.: matrícula 2026-1234 · senha no gerenciador" className="min-h-[60px]" />
           </div>
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3">
+            <input type="checkbox" checked={!!d.pinned} onChange={(e) => setD({ ...d, pinned: e.target.checked })} className="size-4 accent-[rgb(var(--primary))]" />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-sm font-semibold"><Pin className="size-4 text-primary" aria-hidden /> Fixar no menu</span>
+              <span className="block text-xs text-foreground/60">Aparece em “Atalhos”, no menu lateral, e abre em outra aba. Só você vê.</span>
+            </span>
+          </label>
           <div className="rounded-xl border border-border p-3">
             <button type="button" onClick={() => setShowIcs((v) => !v)} className="flex w-full items-center gap-2 text-left text-sm font-semibold">
               <CalendarDays className="size-4 text-primary" aria-hidden /> Conectar ao Calendário {d.icsUrl ? '· conectado' : '(opcional)'}
