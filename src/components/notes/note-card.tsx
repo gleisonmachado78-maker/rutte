@@ -249,7 +249,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
             aria-label="Texto da nota"
             data-autofocus={!isNew ? '' : undefined}
             onFocus={cursorToEnd}
-            className={cn('py-2 text-base leading-relaxed', blocks.length ? 'min-h-[3rem]' : 'min-h-[40dvh] flex-1')}
+            className={cn('py-2 text-base leading-relaxed', blocks.length ? 'min-h-[3rem] shrink-0' : 'min-h-[40dvh] shrink-0')}
           />
         ) : (
           <div className="flex-1 py-2">
