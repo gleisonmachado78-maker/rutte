@@ -8,7 +8,8 @@ import { askConfirm } from '@/components/ui/confirm';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { useCreateTask, useDeleteNote, useDeleteNotebook, useNotebooks, useNotes, useReorderNotes, useSaveNote, useSaveNotebook } from '@/hooks/use-data';
-import { newItem, newNote, NOTEBOOK_EMOJIS, noteToText } from '@/lib/notes';
+import { noteImages } from '@/lib/note-images';
+import { newItem, newNote, NOTEBOOK_EMOJIS, noteIsEmpty, noteToText, usedImageKeys } from '@/lib/notes';
 import { todayISO } from '@/lib/task-utils';
 import { cn, uid } from '@/lib/utils';
 import { useUI } from '@/store/ui';
@@ -43,6 +44,14 @@ export function NotesPage() {
   const [newNbOpen, setNewNbOpen] = useState(false);
   const [nbName, setNbName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
+
+  // Imagens das notas ficam no aparelho: ao abrir, apaga as que nenhuma nota usa mais
+  const cleaned = useRef(false);
+  useEffect(() => {
+    if (cleaned.current || !notes.length) return;
+    cleaned.current = true;
+    void noteImages.cleanup(usedImageKeys(notes));
+  }, [notes]);
 
   // Pessoal x Empresa: segue o seletor global quando ele aponta um dos dois
   const globalScope = useUI((s) => s.scope);
@@ -144,7 +153,7 @@ export function NotesPage() {
     // espera o último salvamento da caixa (feito ao fechar) e confere se ficou vazia
     window.setTimeout(() => {
       const n = qc.getQueryData<NoteBox[]>(['notes'])?.find((x) => x.id === id);
-      if (n && !n.title.trim() && !n.text.trim() && !n.items.some((i) => i.text.trim())) delNote.mutate(n.id);
+      if (n && noteIsEmpty(n)) delNote.mutate(n.id);
     }, 50);
   };
 
@@ -159,7 +168,7 @@ export function NotesPage() {
 
   const duplicate = (n: NoteBox) => {
     const now = new Date().toISOString();
-    saveNote.mutate({ ...n, id: uid('nt'), title: n.title ? `${n.title} (cópia)` : '', items: n.items.map((i) => ({ ...i, id: uid('it') })), order: n.order - 0.5, pinned: false, createdAt: now, updatedAt: now });
+    saveNote.mutate({ ...n, id: uid('nt'), title: n.title ? `${n.title} (cópia)` : '', items: n.items.map((i) => ({ ...i, id: uid('it') })), blocks: n.blocks?.map((b) => ({ ...b, id: uid('bk') })), order: n.order - 0.5, pinned: false, createdAt: now, updatedAt: now });
     toast.success('Nota duplicada');
   };
 
@@ -440,7 +449,7 @@ export function NotesPage() {
             e.preventDefault();
             window.setTimeout(() => document.querySelector<HTMLElement>('[role=dialog] [data-autofocus]')?.focus(), 60);
           }}
-          className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border-0 bg-background p-0 shadow-2xl">
+          className="h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-none border-0 bg-background p-0 shadow-2xl sm:h-auto sm:max-h-[94dvh] sm:w-[calc(100%-1.5rem)] sm:max-w-4xl sm:rounded-2xl">
           <DialogTitle className="sr-only">{openNote?.title || 'Editar nota'}</DialogTitle>
           {openNote && (
             <NoteCard

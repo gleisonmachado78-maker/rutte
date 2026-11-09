@@ -336,4 +336,22 @@ export interface NoteBox {
   order: number;
   createdAt: string;
   updatedAt: string;
+  /** conteúdo extra abaixo do texto, como no bloco de notas do iPhone: mais texto, imagens e desenhos */
+  blocks?: NoteBlock[];
 }
+
+/** Traço de um desenho. Coordenadas numa folha de 1000 de largura (escala com a tela). */
+export interface NoteStroke {
+  tool: 'caneta' | 'marcador' | 'borracha';
+  color: string;
+  size: number;
+  /** x,y,x,y… */
+  pts: number[];
+}
+
+export type NoteBlock =
+  | { id: string; type: 'texto'; text: string }
+  /** imagem guardada no próprio aparelho (IndexedDB); fileKey aponta para ela */
+  | { id: string; type: 'imagem'; fileKey: string; w: number; h: number }
+  /** h = altura da folha (na escala de 1000 de largura) */
+  | { id: string; type: 'desenho'; h: number; paper: 'liso' | 'linhas' | 'quadriculado'; strokes: NoteStroke[] };

@@ -1,8 +1,9 @@
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, Coffee, Lightbulb, ListTodo, Pause, Play, RotateCcw, Settings2, SkipForward, Target, Timer, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { Check, Coffee, Headphones, Lightbulb, ListTodo, Pause, Play, RotateCcw, Settings2, SkipForward, Target, Timer, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { unlockAudio, useNow } from '@/components/focus/focus-engine';
+import { getAudioCtx, unlockAudio, useNow } from '@/components/focus/focus-engine';
+import { AMBIENTS, previewAmbient, stopAmbient, type AmbientId } from '@/lib/ambient';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { useDeleteFocusSession, useFocusSessions, useTasks } from '@/hooks/use-data';
@@ -303,6 +304,8 @@ export function FocusPage() {
             )}
           </section>
 
+          <AmbientSounds />
+
           <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
             <button type="button" onClick={() => setShowSettings((v) => !v)} className="flex w-full items-center gap-2 font-semibold" aria-expanded={showSettings}>
               <Settings2 className="size-4 text-primary" aria-hidden /> Ajustes
@@ -378,6 +381,95 @@ export function FocusPage() {
 
       <PomodoroExplainer focus={f.settings.focus} short={f.settings.short} long={f.settings.long} every={f.settings.every} />
     </div>
+  );
+}
+
+/** Sons ambientes opcionais: tocam sozinhos enquanto o foco roda. */
+function AmbientSounds() {
+  const f = useFocus();
+  const { ambient, ambientVol, ambientBreaks } = f.settings;
+  const running = f.status === 'running';
+
+  const choose = (id: AmbientId | '') => {
+    unlockAudio();
+    f.setSettings({ ambient: id });
+    if (!id) return stopAmbient(getAudioCtx());
+    // com o timer parado, toca uma amostra para a pessoa ouvir antes
+    if (!running) previewAmbient(getAudioCtx(), id, ambientVol);
+  };
+
+  return (
+    <section aria-labelledby="amb-title" className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <h2 id="amb-title" className="flex items-center gap-2 font-semibold">
+        <Headphones className="size-4 text-primary" aria-hidden /> Sons para concentrar
+        <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/60">opcional</span>
+      </h2>
+      <p className="mt-1 text-sm text-foreground/60">
+        Um som de fundo ajuda a abafar o barulho e a entrar no ritmo. Ele toca sozinho enquanto o foco roda e para quando você pausa.
+      </p>
+      <div role="radiogroup" aria-label="Som ambiente" className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!ambient}
+          onClick={() => choose('')}
+          className={cn('inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors', !ambient ? 'border-primary bg-primary/10 text-primary dark:text-neon' : 'border-border hover:bg-muted')}
+        >
+          <VolumeX className="size-4" aria-hidden /> Sem som
+        </button>
+        {AMBIENTS.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            role="radio"
+            aria-checked={ambient === a.id}
+            title={a.desc}
+            onClick={() => choose(a.id)}
+            className={cn('inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors', ambient === a.id ? 'border-primary bg-primary/10 text-primary dark:text-neon' : 'border-border hover:bg-muted')}
+          >
+            <span aria-hidden>{a.emoji}</span> {a.label}
+          </button>
+        ))}
+      </div>
+      {ambient && (
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-foreground/60">{AMBIENTS.find((a) => a.id === ambient)?.desc}{running ? ' · tocando agora' : ' · começa junto com o foco'}</p>
+          <label className="flex items-center gap-3 text-sm">
+            <Volume2 className="size-4 shrink-0 text-foreground/60" aria-hidden />
+            <span className="sr-only">Volume</span>
+            <input
+              type="range"
+              min={0.05}
+              max={1}
+              step={0.05}
+              value={ambientVol}
+              onChange={(e) => f.setSettings({ ambientVol: Number(e.target.value) })}
+              className="h-2 flex-1 cursor-pointer accent-[rgb(var(--primary))]"
+              aria-label="Volume do som ambiente"
+            />
+            <span className="w-10 text-right tabular-nums text-foreground/60">{Math.round(ambientVol * 100)}%</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button variant={ambientBreaks ? 'primary' : 'outline'} size="sm" onClick={() => f.setSettings({ ambientBreaks: !ambientBreaks })} aria-pressed={ambientBreaks}>
+              <Coffee /> Tocar também nas pausas
+            </Button>
+            {!running && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  unlockAudio();
+                  previewAmbient(getAudioCtx(), ambient, ambientVol);
+                }}
+              >
+                <Play /> Ouvir amostra
+              </Button>
+            )}
+          </div>
+          {ambient === 'alfa' && <p className="text-xs text-foreground/60">🎧 A batida binaural só funciona com fone de ouvido (um tom diferente em cada lado).</p>}
+        </div>
+      )}
+    </section>
   );
 }
 

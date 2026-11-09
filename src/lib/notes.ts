@@ -1,4 +1,4 @@
-import type { NoteBox, NoteColor } from '@/types';
+import type { NoteBlock, NoteBox, NoteColor } from '@/types';
 import { uid } from './utils';
 
 /** Cores das caixas (classes literais para o Tailwind encontrar). */
@@ -26,5 +26,19 @@ export const newItem = (text = '') => ({ id: uid('it'), text, done: false });
 /** Texto simples da caixa (para copiar, buscar e virar afazer). */
 export function noteToText(n: NoteBox) {
   const body = n.kind === 'lista' ? n.items.map((i) => `${i.done ? '☑' : '☐'} ${i.text}`).join('\n') : n.text;
-  return [n.title, body].filter(Boolean).join('\n\n');
+  const extra = (n.blocks ?? []).map((b) => (b.type === 'texto' ? b.text : b.type === 'imagem' ? '[imagem]' : '[desenho]')).filter(Boolean);
+  return [n.title, body, ...extra].filter(Boolean).join('\n\n');
 }
+
+/** Caixa sem nada escrito, desenhado ou anexado. */
+export const noteIsEmpty = (n: NoteBox) =>
+  !n.title.trim() &&
+  !n.text.trim() &&
+  !n.items.some((i) => i.text.trim()) &&
+  !(n.blocks ?? []).some((b) => (b.type === 'texto' ? b.text.trim() : b.type === 'imagem' ? true : b.strokes.length > 0));
+
+export const newTextBlock = (text = ''): NoteBlock => ({ id: uid('bk'), type: 'texto', text });
+export const newDrawing = (): NoteBlock => ({ id: uid('bk'), type: 'desenho', h: 700, paper: 'liso', strokes: [] });
+
+/** Chaves de imagem usadas por todas as notas (para limpar as órfãs). */
+export const usedImageKeys = (notes: NoteBox[]) => new Set(notes.flatMap((n) => (n.blocks ?? []).flatMap((b) => (b.type === 'imagem' ? [b.fileKey] : []))));

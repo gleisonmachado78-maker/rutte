@@ -2,9 +2,12 @@ import { ArrowRightLeft, Check, ClipboardCopy, Copy, GripVertical, ListChecks, L
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
-import { newItem, NOTE_COLOR_BY_ID, NOTE_COLORS, noteToText } from '@/lib/notes';
+import { imagesToBlocks, NoteBlocks, NoteImage, NoteInsertBar } from '@/components/notes/note-blocks';
+import { NoteDrawing } from '@/components/notes/note-drawing';
+import { imageFiles } from '@/lib/note-images';
+import { newItem, NOTE_COLOR_BY_ID, NOTE_COLORS, noteIsEmpty, noteToText } from '@/lib/notes';
 import { cn } from '@/lib/utils';
-import type { NoteBox, NoteItem, Notebook } from '@/types';
+import type { NoteBlock, NoteBox, NoteItem, Notebook } from '@/types';
 
 /** Textarea que cresce com o conteúdo. */
 function AutoText({ value, onChange, className, ...rest }: { value: string; onChange: (v: string) => void; className?: string } & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>) {
@@ -53,7 +56,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
 
   // Mudanças vindas de fora atualizam o rascunho sem atropelar o que está sendo digitado
   useEffect(() => {
-    setDraft((d) => (timer.current && d.id === note.id ? { ...note, title: d.title, text: d.text, items: d.items } : note));
+    setDraft((d) => (timer.current && d.id === note.id ? { ...note, title: d.title, text: d.text, items: d.items, blocks: d.blocks } : note));
   }, [note]);
 
   const commit = (next: NoteBox, immediate = false) => {
@@ -106,7 +109,25 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
   };
 
   const nb = notebooks.find((n) => n.id === draft.notebookId);
-  const empty = !draft.title.trim() && !draft.text.trim() && !draft.items.some((i) => i.text.trim());
+  const empty = noteIsEmpty(draft);
+  const blocks = draft.blocks ?? [];
+  const [autoEdit, setAutoEdit] = useState<string | null>(null);
+  const addBlocks = (add: NoteBlock[]) => {
+    if (!add.length) return;
+    commit({ ...latest.current, blocks: [...(latest.current.blocks ?? []), ...add] }, true);
+    const last = add[add.length - 1];
+    if (last.type === 'desenho') setAutoEdit(last.id);
+    if (last.type === 'texto') window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('[data-block-text="' + last.id + '"]')?.focus(), 30);
+    else window.setTimeout(() => document.querySelector('[data-note-end]')?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80);
+  };
+  // colar ou soltar imagens dentro da nota aberta
+  const dropImages = async (files: File[]) => {
+    if (!files.length) return false;
+    addBlocks(await imagesToBlocks(files));
+    return true;
+  };
+  const media = blocks.filter((b) => b.type !== 'texto');
+  const extraText = blocks.flatMap((b) => (b.type === 'texto' && b.text.trim() ? [b.text] : [])).join('\n');
 
   const checkbox = (it: NoteItem) => (
     <button
@@ -139,6 +160,29 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
     <article
       data-note-id={editor ? undefined : note.id}
       data-pinned={note.pinned ? '1' : '0'}
+      onPaste={
+        editor
+          ? (e) => {
+              const files = imageFiles(e.clipboardData?.items);
+              if (files.length) {
+                e.preventDefault();
+                void dropImages(files);
+              }
+            }
+          : undefined
+      }
+      onDragOver={editor ? (e) => e.dataTransfer.types.includes('Files') && e.preventDefault() : undefined}
+      onDrop={
+        editor
+          ? (e) => {
+              const files = imageFiles(e.dataTransfer.files);
+              if (files.length) {
+                e.preventDefault();
+                void dropImages(files);
+              }
+            }
+          : undefined
+      }
       className={cn(
         'group relative flex flex-col border transition-[box-shadow,transform,opacity] duration-150',
         color.card,
@@ -205,7 +249,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
             aria-label="Texto da nota"
             data-autofocus={!isNew ? '' : undefined}
             onFocus={cursorToEnd}
-            className="min-h-[40dvh] flex-1 py-2 text-base leading-relaxed"
+            className={cn('py-2 text-base leading-relaxed', blocks.length ? 'min-h-[3rem]' : 'min-h-[40dvh] flex-1')}
           />
         ) : (
           <div className="flex-1 py-2">
@@ -266,7 +310,10 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
             </button>
           </div>
         )
-      ) : (
+      ) : null}
+      {editor && <NoteBlocks blocks={blocks} autoEdit={autoEdit} onChange={(b, immediate) => commit({ ...draft, blocks: b }, immediate)} />}
+      {editor && <span data-note-end aria-hidden />}
+      {!editor && (
         /* prévia: clicar abre a caixa ampliada */
         <div
           role="button"
@@ -299,11 +346,31 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
               {draft.items.length > 7 && <p className="mt-1 text-xs font-medium text-foreground/50">+ {draft.items.length - 7} itens</p>}
             </>
           )}
+          {extraText && <p className="mt-1 line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed">{extraText}</p>}
+          {media.length > 0 && (
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {media.slice(0, 2).map((b) =>
+                b.type === 'imagem' ? (
+                  <NoteImage key={b.id} fileKey={b.fileKey} w={b.w} h={b.h} className="h-28 w-full object-cover" />
+                ) : b.type === 'desenho' ? (
+                  <div key={b.id} className="pointer-events-none h-28 overflow-hidden rounded-xl">
+                    <NoteDrawing block={b} compact />
+                  </div>
+                ) : null,
+              )}
+              {media.length > 2 && <p className="col-span-2 text-xs font-medium text-foreground/50">+ {media.length - 2} anexos</p>}
+            </div>
+          )}
         </div>
       )}
 
       {/* ------------------------------ rodapé ------------------------------ */}
-      <footer className={cn('mt-auto flex flex-wrap items-center gap-1 pt-2', editor && 'border-t border-foreground/10 pt-3')}>
+      {editor && (
+        <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t border-foreground/10 bg-inherit px-3 py-1.5 backdrop-blur sm:-mx-6 sm:px-5">
+          <NoteInsertBar onAdd={addBlocks} />
+        </div>
+      )}
+      <footer className={cn('mt-auto flex flex-wrap items-center gap-1 pt-2', editor && 'pt-3')}>
         <div role="radiogroup" aria-label="Cor da nota" className={cn('flex items-center gap-1 transition-opacity', editor ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}>
           {NOTE_COLORS.map((c) => (
             <button

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { AmbientId } from '@/lib/ambient';
 
 export type FocusPhase = 'focus' | 'short' | 'long';
 export type FocusStatus = 'idle' | 'running' | 'paused';
@@ -12,6 +13,12 @@ export interface FocusSettings {
   every: number;
   autoStart: boolean;
   sound: boolean;
+  /** som ambiente durante o foco (opcional; vazio = desligado) */
+  ambient: AmbientId | '';
+  /** volume do som ambiente, de 0 a 1 */
+  ambientVol: number;
+  /** também toca o som nas pausas */
+  ambientBreaks: boolean;
 }
 
 export interface FocusActivity {
@@ -19,7 +26,7 @@ export interface FocusActivity {
   taskId?: string;
 }
 
-export const DEFAULT_SETTINGS: FocusSettings = { focus: 25, short: 5, long: 15, every: 4, autoStart: false, sound: true };
+export const DEFAULT_SETTINGS: FocusSettings = { focus: 25, short: 5, long: 15, every: 4, autoStart: false, sound: true, ambient: '', ambientVol: 0.5, ambientBreaks: false };
 
 export const PHASE_LABEL: Record<FocusPhase, string> = {
   focus: 'Foco',
@@ -106,7 +113,14 @@ export const useFocus = create<FocusState>()(
         return ended;
       },
     }),
-    { name: 'rutte:focus' },
+    {
+      name: 'rutte:focus',
+      // ajustes salvos antes de existir uma opção nova ganham o valor padrão
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<FocusState>;
+        return { ...current, ...p, settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) } };
+      },
+    },
   ),
 );
 

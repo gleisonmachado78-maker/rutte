@@ -81,6 +81,10 @@ escolha. Reabre pelo menu “Personalizar a Rutte” (mantém os dados). Ao adic
   certo ao trocar de página, recarregar ou com a aba em segundo plano. `FocusEngine` (no layout) detecta o fim da fase,
   registra o pomodoro (`focusSessions` no banco + histórico do afazer), toca o aviso e atualiza o título da aba;
   `FocusPill` mostra o mini-cronômetro fora da página `/focus`.
+- Sons para concentrar (opcional, desligado por padrão): `src/lib/ambient.ts` gera chuva, mar, floresta, lareira, ruído branco/marrom e
+  ondas alfa (binaural) com Web Audio, sem arquivos. Ajustes `ambient`, `ambientVol`, `ambientBreaks` no `FocusSettings` (o persist faz merge
+  com `DEFAULT_SETTINGS`). O `FocusEngine` toca enquanto o foco roda (e nas pausas, se marcado) e para ao pausar; com o timer parado, escolher
+  um som toca uma amostra de 6 s (`previewAmbient`).
 - Caixas leves: regra global em `src/index.css` para `.bg-card.border` (borda fina + sombra discreta); cantos em neon
   só com a classe opcional `.hud` (timer do Foco). Brilhos (`btn-neon`, `shadow-neon`) são sutis — manter assim,
   com especificidade zero (`:where`) para não sobrescrever destaques.
@@ -175,7 +179,13 @@ guarda só as 6 últimas imagens grandes.
 texto ou lista marcável, 8 cores, fixar, duplicar, mover de bloco, virar afazer, excluir com desfazer. Salva sozinho (debounce 450 ms).
 Arrastar pela alça usa pointer events (mouse e toque; só troca dentro do mesmo grupo fixadas/outras). Busca em todos os blocos.
 Na grade a caixa é prévia (`mode="preview"`); clicar ou criar abre `mode="editor"` ampliado num Dialog (foco por `data-autofocus`);
-ao fechar volta ao tamanho normal e caixa nova vazia é descartada.
+ao fechar volta ao tamanho normal e caixa nova vazia é descartada (`noteIsEmpty`).
+Estilo bloco de notas do iPhone: abaixo do texto/lista, `NoteBox.blocks` (texto, imagem, desenho) com a barra Texto · Imagem · Foto · Desenho
+(`components/notes/note-blocks.tsx`); colar/arrastar imagem também adiciona. No celular a nota abre em tela cheia e rola. Imagens: reduzidas
+(lado ≤ 1600 px, WebP/JPEG) e guardadas só no aparelho, IndexedDB `rutte-note-images` (`lib/note-images.ts`; a nota guarda a chave;
+fora do banco/sync/backup; órfãs apagadas ao abrir as Notas — `usedImageKeys`). Desenho (`note-drawing.tsx`): traços vetoriais no banco
+(folha de 1000 de largura, `h` = altura), caneta/marca-texto/borracha (`destination-out`)/mão para rolar, 6 cores ("auto" = cor do texto do
+tema), desfazer/refazer, folha lisa/linhas/quadriculado (fundo em CSS, fora do canvas). Com caneta (pointerType pen) o toque da palma é ignorado.
 
 ## Login e nuvem (Supabase) + tutorial
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSaveFocusSession } from '@/hooks/use-data';
+import { ambientPreviewing, playAmbient, setAmbientVolume, stopAmbient } from '@/lib/ambient';
 import { cn } from '@/lib/utils';
 import { fmtClock, PHASE_LABEL, remainingAt, useFocus } from '@/store/focus';
 
@@ -19,6 +20,9 @@ export function unlockAudio() {
     /* sem áudio */
   }
 }
+
+/** Contexto de áudio já liberado por um clique (ou null). */
+export const getAudioCtx = () => audioCtx;
 
 function chime() {
   if (!audioCtx) return;
@@ -90,6 +94,18 @@ export function FocusEngine() {
     }
     handling.current = false;
   }, [left, state.status, save]);
+
+  // Som ambiente: toca enquanto o foco roda (e nas pausas, se a pessoa quiser)
+  const { ambient, ambientVol, ambientBreaks } = state.settings;
+  const wantAmbient = !!ambient && state.status === 'running' && (state.phase === 'focus' || ambientBreaks);
+  useEffect(() => {
+    if (wantAmbient && ambient) playAmbient(audioCtx, ambient, ambientVol);
+    else if (!ambientPreviewing()) stopAmbient(audioCtx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantAmbient, ambient]);
+  useEffect(() => {
+    if (wantAmbient || ambientPreviewing()) setAmbientVolume(audioCtx, ambientVol);
+  }, [ambientVol, wantAmbient]);
 
   // Título da aba com o tempo restante
   useEffect(() => {
