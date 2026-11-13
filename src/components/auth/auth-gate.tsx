@@ -1,12 +1,13 @@
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Hourglass, Loader2, LogIn, Mail, RefreshCw, UserPlus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Eye, EyeOff, Hourglass, Loader2, LogIn, Mail, NotebookPen, RefreshCw, Sparkles, Timer, UserPlus } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { DevCredit } from '@/components/brand/credit';
 import { RutteLogo } from '@/components/brand/rutte';
 import { authErrorPt, cloudEnabled, googleEnabled, siteUrl, supabase, cloudData, getLastEmail, getRemember, setRemember } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { LandingPage } from '@/pages/landing';
 import { api, readLocalDb } from '@/services/api';
 import { getMyProfile, OWNER_EMAIL, touchProfile } from '@/services/profiles';
 import { flushSync, startSync, stopSync } from '@/services/sync';
@@ -23,13 +24,16 @@ export const useAuth = () => useContext(AuthContext);
 
 /* ----------------------------------- Visual comum ----------------------------------- */
 
-function Screen({ children }: { children: ReactNode }) {
+function Screen({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-navy px-4 py-10 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_500px_at_80%_110%,rgb(185_27_28/0.35),transparent_60%),radial-gradient(700px_400px_at_10%_-10%,rgb(127_29_28/0.4),transparent_60%)]" aria-hidden />
-      <div className="relative w-full max-w-md">
-        {children}
-        <DevCredit className="mt-6 text-center" />
+      <div className={cn('relative w-full', aside ? 'grid max-w-5xl items-center gap-16 lg:grid-cols-2' : 'max-w-md')}>
+        {aside}
+        <div className="mx-auto w-full max-w-md">
+          {children}
+          <DevCredit className="mt-6 text-center" />
+        </div>
       </div>
     </div>
   );
@@ -70,8 +74,36 @@ function GoogleIcon() {
   );
 }
 
-function LoginScreen() {
-  const [mode, setMode] = useState<'entrar' | 'criar' | 'esqueci'>('entrar');
+/** Painel da marca ao lado do formulário (telas grandes). */
+function AuthAside() {
+  const items = [
+    [Check, 'Afazeres com prioridade e prazos'],
+    [CalendarDays, 'Agenda com Google Agenda e alertas'],
+    [Timer, 'Foco (Pomodoro) com sons para concentrar'],
+    [NotebookPen, 'Notas com listas, imagens e desenho'],
+    [Sparkles, 'Rutte IA que conhece a sua rotina'],
+  ] as const;
+  return (
+    <aside className='hidden lg:block'>
+      <RutteLogo glow className='w-16' />
+      <p className='mt-6 font-brand text-4xl font-bold leading-tight [text-wrap:balance]'>Organize o que você precisa fazer. Evolua no que você precisa ser.</p>
+      <ul className='mt-8 space-y-3'>
+        {items.map(([Icon, t]) => (
+          <li key={t} className='flex items-center gap-3 text-white/80'>
+            <span className='grid size-9 place-items-center rounded-xl bg-white/5 text-neon'>
+              <Icon className='size-4' aria-hidden />
+            </span>
+            {t}
+          </li>
+        ))}
+      </ul>
+      <p className='mt-10 text-sm text-white/45'>Beta aberto · todos os recursos liberados, sem cartão de crédito.</p>
+    </aside>
+  );
+}
+
+function LoginScreen({ initialMode = 'entrar', onBack }: { initialMode?: 'entrar' | 'criar'; onBack?: () => void }) {
+  const [mode, setMode] = useState<'entrar' | 'criar' | 'esqueci'>(initialMode);
   const [email, setEmail] = useState(getLastEmail);
   const [password, setPassword] = useState('');
   const [remember, setRememberState] = useState(getRemember);
@@ -130,8 +162,16 @@ function LoginScreen() {
   }
 
   return (
-    <Screen>
-      <Brand subtitle={mode === 'esqueci' ? 'Vamos criar uma nova senha' : 'Organize o que você precisa fazer. Evolua no que você precisa ser.'} />
+    <Screen aside={<AuthAside />}>
+      {onBack && (
+        <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white">
+          <ArrowLeft className="size-4" aria-hidden /> Conhecer a Rutte
+        </button>
+      )}
+      <div className={mode === 'esqueci' ? '' : 'lg:hidden'}>
+        <Brand subtitle={mode === 'esqueci' ? 'Vamos criar uma nova senha' : 'Organize o que você precisa fazer. Evolua no que você precisa ser.'} />
+      </div>
+      {mode !== 'esqueci' && <h2 className="mb-4 hidden font-brand text-2xl font-bold lg:block">{mode === 'entrar' ? 'Bem-vindo de volta' : 'Crie sua conta grátis'}</h2>}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur sm:p-6">
         {mode !== 'esqueci' && (
           <div role="tablist" aria-label="Entrar ou criar conta" className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1">
@@ -199,6 +239,13 @@ function LoginScreen() {
           </button>
         </form>
 
+        {mode === 'criar' && (
+          <p className="mt-3 text-center text-xs leading-relaxed text-white/50">
+            Ao criar sua conta você concorda com os{' '}
+            <a href="/termos" className="underline hover:text-white">Termos de Uso</a> e a{' '}
+            <a href="/privacidade" className="underline hover:text-white">Política de Privacidade</a>.
+          </p>
+        )}
         {mode === 'entrar' && (
           <button type="button" onClick={() => { setMode('esqueci'); setError(''); }} className="mt-3 w-full text-center text-sm text-white/60 underline-offset-2 hover:text-white hover:underline">
             Esqueci minha senha
@@ -280,6 +327,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [pending, setPending] = useState(false);
+  // Visitante novo vê a apresentação; quem já entrou antes (ou veio de "Entrar"/"Criar conta") vai direto ao formulário
+  const [view, setView] = useState<'apresentacao' | 'entrar' | 'criar'>(() => {
+    const q = typeof location !== 'undefined' ? location.search : '';
+    if (/[?&]criar/.test(q)) return 'criar';
+    if (/[?&]entrar/.test(q) || getLastEmail()) return 'entrar';
+    return 'apresentacao';
+  });
   const uid = session?.user.id ?? null;
 
   useEffect(() => {
@@ -334,7 +388,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!cloudEnabled) return <AuthContext.Provider value={{ email: null, isAdmin: false, signOut: async () => {} }}>{children}</AuthContext.Provider>;
   if (session === undefined) return <Splash text="Abrindo a Rutte…" />;
   if (recovery && session) return <NewPasswordScreen onDone={() => setRecovery(false)} />;
-  if (!session) return <LoginScreen />;
+  if (!session) {
+    if (view === 'apresentacao') return <LandingPage onAuth={(m) => setView(m)} />;
+    return <LoginScreen key={view} initialMode={view} onBack={() => setView('apresentacao')} />;
+  }
   if (syncError)
     return (
       <Screen>

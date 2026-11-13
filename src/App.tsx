@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { AdminPage } from '@/pages/admin';
 import { SettingsPage } from '@/pages/settings';
-import { AboutPage, PrivacyPage, TermsPage } from '@/pages/public-pages';
+import { PrivacyPage, TermsPage } from '@/pages/public-pages';
+import { LandingPage } from '@/pages/landing';
 import { AssistantPage } from '@/pages/assistant';
 import { CalendarPage } from '@/pages/calendar';
 import { DashboardPage } from '@/pages/dashboard';
@@ -25,10 +26,11 @@ import { useUI } from '@/store/ui';
 
 function NotFound() {
   return (
-    <div className="py-20 text-center">
-      <p className="text-5xl font-bold text-primary">404</p>
-      <p className="mt-2 text-foreground/60">Página não encontrada.</p>
-      <Link to="/" className="mt-4 inline-block font-semibold text-primary hover:underline">
+    <div className="mx-auto flex max-w-md flex-col items-center py-20 text-center">
+      <p className="font-brand text-7xl font-bold text-primary">404</p>
+      <h1 className="mt-3 text-2xl font-bold">Esta página não existe</h1>
+      <p className="mt-2 text-foreground/60">O endereço pode ter mudado ou foi digitado errado. Use o menu ao lado ou volte ao início.</p>
+      <Link to="/" className="btn-neon mt-6 inline-flex h-11 items-center rounded-xl px-5 font-semibold text-white">
         Voltar ao início
       </Link>
     </div>
@@ -76,7 +78,7 @@ export default function App() {
     <Router>
       <Routes>
         {/* páginas públicas (sem login) */}
-        <Route path="/sobre" element={<AboutPage />} />
+        <Route path="/sobre" element={<LandingPage />} />
         <Route path="/privacidade" element={<PrivacyPage />} />
         <Route path="/termos" element={<TermsPage />} />
         <Route path="*" element={<AuthGate><PrivateRoutes /></AuthGate>} />

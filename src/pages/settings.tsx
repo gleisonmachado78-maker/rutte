@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Database, GraduationCap, KeyRound, LogOut, MapPin, Moon, Palette, RotateCcw, Settings, ShieldCheck, Sparkles, Sun, Trash2, UserRound, WandSparkles, type LucideIcon } from 'lucide-react';
+import { Bell, CalendarDays, Crown, Database, GraduationCap, KeyRound, LogOut, MapPin, Moon, Palette, RotateCcw, Settings, ShieldCheck, Sparkles, Sun, Trash2, UserRound, WandSparkles, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/components/auth/auth-gate';
@@ -6,6 +6,7 @@ import { AiKeyDialog } from '@/components/layout/ai-key-dialog';
 import { BackupDialog } from '@/components/layout/backup-dialog';
 import { AlertsDialog, GoogleCalendarDialog } from '@/components/layout/google-alerts-dialogs';
 import { MapsKeyDialog } from '@/components/layout/maps-key-dialog';
+import { PlanTab } from '@/components/settings/plan-tab';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { Select } from '@/components/ui/form-controls';
@@ -13,9 +14,10 @@ import { useResetData, useUser, useWipeData } from '@/hooks/use-data';
 import { cn } from '@/lib/utils';
 import { useUI } from '@/store/ui';
 
-type TabId = 'geral' | 'alertas' | 'google' | 'ia' | 'maps' | 'dados';
+type TabId = 'geral' | 'plano' | 'alertas' | 'google' | 'ia' | 'maps' | 'dados';
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'geral', label: 'Geral', icon: Settings },
+  { id: 'plano', label: 'Plano', icon: Crown },
   { id: 'alertas', label: 'Alertas', icon: Bell },
   { id: 'google', label: 'Google Agenda', icon: CalendarDays },
   { id: 'ia', label: 'Rutte IA', icon: Sparkles },
@@ -187,6 +189,7 @@ export function SettingsPage() {
 
       <div role="tabpanel" className="max-w-3xl">
         {tab === 'geral' && <GeneralTab />}
+        {tab === 'plano' && <PlanTab />}
         {tab === 'alertas' && <AlertsDialog inline />}
         {tab === 'google' && <GoogleCalendarDialog inline />}
         {tab === 'ia' && <AiKeyDialog inline />}

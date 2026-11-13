@@ -1,10 +1,9 @@
-import { ArrowRight, BellRing, BookOpen, CalendarDays, CircleCheck, Dumbbell, Heart, NotebookPen, PieChart, ShieldCheck, Sparkles, Timer } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { DevCredit } from '@/components/brand/credit';
 import { RutteLogo } from '@/components/brand/rutte';
 
-/** Páginas públicas (abrem sem login): página inicial, Política de Privacidade e Termos de Uso. */
+/** Páginas públicas (abrem sem login): Política de Privacidade e Termos de Uso. A apresentação fica em pages/landing.tsx. */
 
 const CONTACT = 'gleisonmachado78@gmail.com';
 const UPDATED = '6 de outubro de 2026';
@@ -35,58 +34,6 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </footer>
     </div>
-  );
-}
-
-/* ------------------------------------------- página inicial ------------------------------------------- */
-
-const FEATURES = [
-  { icon: CircleCheck, t: 'Afazeres', d: 'Prioridade, prazos, subtarefas, Kanban e recorrência.' },
-  { icon: CalendarDays, t: 'Agenda + Google Agenda', d: 'Veja seus compromissos e os eventos do Google no mesmo calendário.' },
-  { icon: BellRing, t: 'Alertas', d: 'Avisos com som antes de cada compromisso e resumo da manhã.' },
-  { icon: Timer, t: 'Foco', d: 'Pomodoro para render sem distração.' },
-  { icon: NotebookPen, t: 'Notas', d: 'Blocos de notas com caixas de texto e listas.' },
-  { icon: Sparkles, t: 'Rutte IA', d: 'Pergunte, pesquise e crie afazeres conversando.' },
-  { icon: PieChart, t: 'Roda da Vida', d: 'Equilíbrio entre as áreas da sua vida.' },
-  { icon: Dumbbell, t: 'Academia', d: 'Treinos, cargas e evolução.' },
-  { icon: Heart, t: 'Gratidão', d: 'Diário, meditações e orações.' },
-  { icon: BookOpen, t: 'Biblioteca', d: 'Livros, vídeos, podcasts e grandes nomes por tema.' },
-];
-
-export function AboutPage() {
-  return (
-    <Shell>
-      <section className="py-10 text-center sm:py-16">
-        <RutteLogo glow className="mx-auto w-28" />
-        <h1 className="mt-6 font-brand text-5xl font-bold leading-tight sm:text-6xl">
-          Rutte, a sua <span className="text-neon">secretária digital</span>
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-white/75">Organize o que você precisa fazer. Evolua no que você precisa ser. Afazeres, agenda, alertas, foco e desenvolvimento pessoal em um só app.</p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link to="/" className="btn-neon inline-flex h-12 items-center gap-2 rounded-xl px-6 font-bold text-white">
-            Começar agora <ArrowRight className="size-5" aria-hidden />
-          </Link>
-          <Link to="/privacidade" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 px-6 font-semibold text-white/85 hover:bg-white/5">
-            <ShieldCheck className="size-5" aria-hidden /> Como cuidamos dos seus dados
-          </Link>
-        </div>
-      </section>
-      <section aria-label="O que a Rutte faz" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f) => (
-          <div key={f.t} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <f.icon className="size-6 text-neon" aria-hidden />
-            <h2 className="mt-3 font-bold">{f.t}</h2>
-            <p className="mt-1 text-sm text-white/70">{f.d}</p>
-          </div>
-        ))}
-      </section>
-      <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm leading-relaxed text-white/75">
-        <h2 className="text-lg font-bold text-white">Integração com o Google Agenda</h2>
-        <p className="mt-2">
-          Se você quiser, a Rutte se conecta ao seu Google Agenda para mostrar seus eventos no calendário do app, avisar antes deles e criar eventos a partir dos seus afazeres. O acesso é feito direto no seu navegador, só acontece quando você autoriza e pode ser removido a qualquer momento. Veja os detalhes na <Link to="/privacidade" className="font-semibold text-neon hover:underline">Política de Privacidade</Link>.
-        </p>
-      </section>
-    </Shell>
   );
 }
 

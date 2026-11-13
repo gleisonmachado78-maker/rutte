@@ -238,7 +238,9 @@ sistema fora dela). Push com o app fechado: `lib/push.ts` (VAPID público no có
 `supabase/push.sql` (push_subscriptions, reminders, RPCs `save_push_subscription`/`sync_reminders`, pg_cron a cada minuto)
 e `supabase/functions/send-reminders` (Deno + web-push, sem verificação de JWT). `useAlertsRunner` sincroniza 7 dias de
 alertas quando o push está ligado; o SW (`push`) repassa para a tela se ela estiver aberta (sem duplicar, pela `tag`).
-Páginas públicas sem login: `/sobre`, `/privacidade`, `/termos` (`pages/public-pages.tsx`), fora do AuthGate no App.tsx.
+Páginas públicas sem login: `/sobre` (apresentação, `pages/landing.tsx`), `/privacidade`, `/termos` (`pages/public-pages.tsx`), fora do AuthGate no App.tsx.
+Apresentação: o AuthGate mostra `LandingPage` a quem não entrou (visitante novo); quem já entrou antes (`rutte:last-email`) ou chega com `?entrar`/`?criar` vai direto ao formulário. Login com painel da marca ao lado em telas grandes (`AuthAside`) e botão "Conhecer a Rutte".
+Planos (base de SaaS, sem cobrança): `src/lib/plans.ts` (`PLANS` Grátis/Pro/Empresa, `price: null` = "Em breve" — o dono define os valores; `currentPlan()` = Beta com tudo liberado; `planAllows()` para limitar no futuro). Aparece na apresentação (#planos) e em Configurações → Plano (`components/settings/plan-tab.tsx`, uso da conta); selo "Beta" no menu da conta.
 Aba Configurações (`pages/settings.tsx`, rota `/settings?tab=geral|alertas|google|ia|maps|dados`, grupo "Ajustes" no menu):
 os painéis de alertas, Google Agenda, Rutte IA, Google Maps e backup usam `PanelFrame` (`layout/panel-frame.tsx`) — o mesmo
 componente vira janela (Dialog) ou seção da página com `inline`. Use `PTitle`/`PDesc` no lugar de DialogTitle/Description.

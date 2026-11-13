@@ -1,5 +1,6 @@
 import {
   Cloud,
+  Crown,
   ExternalLink,
   CloudOff,
   RefreshCw,
@@ -251,7 +252,10 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           {!collapsed && (
             <>
               <span className="min-w-0 flex-1 leading-tight">
-                <span className="block truncate text-sm font-semibold">{firstName(name)}</span>
+                <span className="flex items-center gap-1.5 truncate text-sm font-semibold">
+                  {firstName(name)}
+                  {auth.email && <span className="rounded bg-white/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white/70">Beta</span>}
+                </span>
                 <span className={cn('flex items-center gap-1 text-[11px]', sync === 'error' ? 'text-amber-300' : 'text-white/45')} title="Seus dados ficam guardados no seu login e aparecem em qualquer aparelho">
                   {sync !== 'local' && (sync === 'saved' ? <Cloud className="size-3" aria-hidden /> : sync === 'saving' ? <RefreshCw className="size-3 animate-spin" aria-hidden /> : <CloudOff className="size-3" aria-hidden />)}
                   {SYNC_LABEL[sync]}
@@ -295,6 +299,11 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
           <DropdownMenuItem onSelect={() => go('/settings')}>
             <Settings /> Configurações
           </DropdownMenuItem>
+          {auth.email && (
+            <DropdownMenuItem onSelect={() => go('/settings?tab=plano')}>
+              <Crown /> Plano e conta
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => go('/settings?tab=alertas')}>
             <Bell /> Alertas no aparelho
           </DropdownMenuItem>
