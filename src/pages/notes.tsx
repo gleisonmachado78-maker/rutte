@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { useCreateTask, useDeleteNote, useDeleteNotebook, useNotebooks, useNotes, useReorderNotes, useSaveNote, useSaveNotebook } from '@/hooks/use-data';
 import { noteImages } from '@/lib/note-images';
+import { ensureNoteFonts } from '@/lib/note-fonts';
 import { newItem, newNote, NOTEBOOK_EMOJIS, noteIsEmpty, noteToText, usedImageKeys } from '@/lib/notes';
 import { todayISO } from '@/lib/task-utils';
 import { cn, uid } from '@/lib/utils';
@@ -44,6 +45,9 @@ export function NotesPage() {
   const [newNbOpen, setNewNbOpen] = useState(false);
   const [nbName, setNbName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
+
+  // fontes extras das notas: baixadas só quando as Notas abrem
+  useEffect(() => ensureNoteFonts(), []);
 
   // Imagens das notas ficam no aparelho: ao abrir, apaga as que nenhuma nota usa mais
   const cleaned = useRef(false);

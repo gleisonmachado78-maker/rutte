@@ -304,6 +304,8 @@ export interface GratitudeEntry {
 
 /* ------------------------------------ Notas ------------------------------------ */
 
+export type NoteFont = 'padrao' | 'classica' | 'serifada' | 'elegante' | 'manuscrita' | 'arredondada' | 'mono';
+
 export type NoteColor = 'padrao' | 'vermelho' | 'laranja' | 'amarelo' | 'verde' | 'azul' | 'roxo' | 'rosa';
 
 /** Um bloco de notas (ex.: "Ideias", "Trabalho"), com várias caixas dentro. */
@@ -336,6 +338,10 @@ export interface NoteBox {
   order: number;
   createdAt: string;
   updatedAt: string;
+  /** texto com formatação (HTML limpo: negrito, itálico, títulos, listas); `text` guarda a versão simples */
+  html?: string;
+  /** fonte da nota */
+  font?: NoteFont;
   /** conteúdo extra abaixo do texto, como no bloco de notas do iPhone: mais texto, imagens e desenhos */
   blocks?: NoteBlock[];
 }
@@ -350,7 +356,7 @@ export interface NoteStroke {
 }
 
 export type NoteBlock =
-  | { id: string; type: 'texto'; text: string }
+  | { id: string; type: 'texto'; text: string; html?: string }
   /** imagem guardada no próprio aparelho (IndexedDB); fileKey aponta para ela */
   | { id: string; type: 'imagem'; fileKey: string; w: number; h: number }
   /** h = altura da folha (na escala de 1000 de largura) */

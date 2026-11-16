@@ -1,6 +1,8 @@
-// Service worker da Rutte: guarda o app para abrir sem internet.
-const CACHE = 'rutte-v3';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+// Service worker da Rutte: guarda o app para abrir rápido e sem internet.
+// - arquivos com hash (/assets/…): cache primeiro (nunca mudam; abre instantâneo)
+// - página e demais arquivos: rede primeiro, mas se a rede demorar mais de 2,5 s (ou cair) usa a cópia guardada
+const CACHE = 'rutte-v4';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './favicon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -12,22 +14,62 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Rede primeiro (pega atualizações); sem internet, usa a cópia guardada.
+const save = (req, res) => {
+  if (res && res.ok && (res.type === 'basic' || res.type === 'cors')) {
+    const copy = res.clone();
+    caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+  }
+  return res;
+};
+
+/** Rede com prazo: se não responder a tempo, usa a cópia (e a rede continua atualizando a cópia por trás). */
+function networkFirst(req, fallbackHtml) {
+  const net = fetch(req).then((res) => save(req, res));
+  const cached = () => caches.match(req).then((r) => r || (fallbackHtml ? caches.match('./index.html') : undefined));
+  return new Promise((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      cached().then((r) => {
+        if (!done && r) {
+          done = true;
+          resolve(r);
+        }
+      });
+    }, 2500);
+    net
+      .then((res) => {
+        clearTimeout(timer);
+        if (!done) {
+          done = true;
+          resolve(res);
+        }
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        cached().then((r) => {
+          if (!done) {
+            done = true;
+            resolve(r || Response.error());
+          }
+        });
+      });
+  });
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  const sameOrigin = new URL(req.url).origin === self.location.origin;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
   const isFont = /fonts\.(googleapis|gstatic)\.com/.test(req.url);
   if (!sameOrigin && !isFont) return;
-  e.respondWith(
-    fetch(req)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      })
-      .catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))),
-  );
+  // versão e aviso de manutenção: sempre da rede (sem cópia)
+  if (sameOrigin && /\/(version|status|news)\.json$/.test(url.pathname)) return;
+  if ((sameOrigin && url.pathname.includes('/assets/')) || /fonts\.gstatic\.com/.test(req.url)) {
+    e.respondWith(caches.match(req).then((r) => r || fetch(req).then((res) => save(req, res))));
+    return;
+  }
+  e.respondWith(networkFirst(req, req.mode === 'navigate'));
 });
 
 // Toque na notificação: foca a Rutte aberta ou abre o endereço do alerta

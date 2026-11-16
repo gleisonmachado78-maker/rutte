@@ -10,7 +10,25 @@ import { cn } from '@/lib/utils';
 import { LandingPage } from '@/pages/landing';
 import { api, readLocalDb } from '@/services/api';
 import { getMyProfile, OWNER_EMAIL, touchProfile } from '@/services/profiles';
-import { flushSync, startSync, stopSync } from '@/services/sync';
+import { flushSync, setRemoteListener, startSync, stopSync } from '@/services/sync';
+
+/** Último perfil conhecido neste aparelho: deixa abrir na hora (e sem internet) quem já foi aprovado. */
+type ProfileCache = { admin: boolean; approved: boolean; blocked: boolean };
+const profileKey = (uid: string) => `rutte:profile:${uid}`;
+const readProfileCache = (uid: string): ProfileCache | null => {
+  try {
+    return JSON.parse(localStorage.getItem(profileKey(uid)) || 'null') as ProfileCache | null;
+  } catch {
+    return null;
+  }
+};
+const writeProfileCache = (uid: string, p: ProfileCache) => {
+  try {
+    localStorage.setItem(profileKey(uid), JSON.stringify(p));
+  } catch {
+    /* sem armazenamento */
+  }
+};
 
 interface AuthInfo {
   /** e-mail da conta (null no modo sem login) */
@@ -338,12 +356,35 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    // Sem internet, o Supabase não consegue renovar um acesso vencido e devolve "sem sessão":
+    // nesse caso segue com a última sessão guardada neste aparelho (os dados estão no aparelho) e renova ao voltar a conexão.
+    const offlineSession = (): Session | null => {
+      try {
+        const raw = sessionStorage.getItem('rutte:auth') ?? localStorage.getItem('rutte:auth');
+        const s = raw ? (JSON.parse(raw) as Session) : null;
+        return s?.user?.id ? s : null;
+      } catch {
+        return null;
+      }
+    };
+    const load = () =>
+      supabase!.auth
+        .getSession()
+        .then(({ data }) => setSession(data.session ?? (!navigator.onLine ? offlineSession() : null)))
+        .catch(() => setSession(offlineSession()));
+    void load();
+    const back = () => void load();
+    window.addEventListener('online', back);
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      // sem internet, uma renovação que falhou não derruba quem já estava dentro
+      if (!s && event !== 'SIGNED_OUT' && !navigator.onLine) return;
       setSession(s);
     });
-    return () => data.subscription.unsubscribe();
+    return () => {
+      data.subscription.unsubscribe();
+      window.removeEventListener('online', back);
+    };
   }, []);
 
   useEffect(() => {
@@ -359,24 +400,48 @@ export function AuthGate({ children }: { children: ReactNode }) {
     let alive = true;
     setReady(false);
     setSyncError('');
+    setRemoteListener(() => qc.invalidateQueries());
     startSync(uid)
       .then(async () => {
-        // perfil na nuvem: último acesso, papel, bloqueio e nome definido pelo administrador
-        const localName = readLocalDb()?.user?.name ?? '';
-        const touched = await touchProfile(localName === 'Você' ? '' : localName); // 'Você' é o nome provisório
-        // confirma que a resposta é desta conta; se não vier, lê o perfil direto
-        const profile = touched && touched.id === uid ? touched : await getMyProfile(uid);
-        if (!alive) return;
         const owner = (session?.user.email ?? '').toLowerCase() === OWNER_EMAIL;
-        if (profile?.name_locked && profile.name) api.applyAdminName(profile.name);
-        setIsAdmin(owner || profile?.role === 'admin');
-        setBlocked(!!profile?.blocked);
+        const cached = readProfileCache(uid);
+        const apply = (p: ProfileCache) => {
+          setIsAdmin(p.admin);
+          setBlocked(p.blocked);
+          setPending(!p.approved);
+        };
+        // perfil na nuvem: último acesso, papel, bloqueio e nome definido pelo administrador
+        const checkProfile = async (): Promise<ProfileCache | null> => {
+          const localName = readLocalDb()?.user?.name ?? '';
+          const touched = await touchProfile(localName === 'Você' ? '' : localName); // 'Você' é o nome provisório
+          // confirma que a resposta é desta conta; se não vier, lê o perfil direto
+          const profile = touched && touched.id === uid ? touched : await getMyProfile(uid);
+          if (!alive || !profile) return null;
+          if (profile.name_locked && profile.name) api.applyAdminName(profile.name);
+          const p = { admin: owner || profile.role === 'admin', blocked: !!profile.blocked, approved: owner || profile.role === 'admin' || profile.approved !== false };
+          writeProfileCache(uid, p);
+          return p;
+        };
+        qc.clear();
+        if (cached && cached.approved && !cached.blocked) {
+          // já aprovado neste aparelho: abre na hora e confere o perfil em segundo plano
+          apply({ ...cached, admin: cached.admin || owner });
+          setReady(true);
+          const fresh = await checkProfile().catch(() => null);
+          if (fresh && alive) apply(fresh);
+          return;
+        }
+        const fresh = await checkProfile().catch(() => null);
+        if (!alive) return;
         // Só entra com aprovação confirmada. Sem resposta do servidor: com internet, espera (tela "em análise");
         // sem internet, segue com o que está no aparelho para não travar quem já usava.
-        if (owner) setPending(false);
-        else if (profile) setPending(profile.approved === false && profile.role !== 'admin');
-        else setPending(navigator.onLine);
-        qc.clear();
+        if (owner) apply({ admin: true, blocked: !!fresh?.blocked, approved: true });
+        else if (fresh) apply(fresh);
+        else {
+          setIsAdmin(false);
+          setBlocked(false);
+          setPending(navigator.onLine);
+        }
         setReady(true);
       })
       .catch((e) => alive && setSyncError(e instanceof Error ? e.message : String(e)));

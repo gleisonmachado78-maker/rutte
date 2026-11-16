@@ -186,6 +186,10 @@ Estilo bloco de notas do iPhone: abaixo do texto/lista, `NoteBox.blocks` (texto,
 fora do banco/sync/backup; órfãs apagadas ao abrir as Notas — `usedImageKeys`). Desenho (`note-drawing.tsx`): traços vetoriais no banco
 (folha de 1000 de largura, `h` = altura), caneta/marca-texto/borracha (`destination-out`)/mão para rolar, 6 cores ("auto" = cor do texto do
 tema), desfazer/refazer, folha lisa/linhas/quadriculado (fundo em CSS, fora do canvas). Com caneta (pointerType pen) o toque da palma é ignorado.
+Texto com formatação (`components/notes/rich-text.tsx`): contentEditable que guarda `html` (limpo por `cleanNoteHtml`: só b/i/u/s/br/div/h2/h3/ul/ol/li)
+e `text` simples (busca/prévia/afazer); nota antiga sem `html` abre via `textToNoteHtml`. Barra fixa no editor (`RichToolbar`, execCommand)
++ fonte da nota (`NoteBox.font`, `lib/note-fonts.ts`; Google Fonts extras só carregam ao abrir as Notas). Não usar textarea com
+height='auto' sem guardar a rolagem (`scrollParent` em note-card) — fazia a tela pular para cima ao digitar.
 
 ## Login e nuvem (Supabase) + tutorial
 
@@ -195,7 +199,10 @@ código, para o Vercel funcionar sem variáveis). O build `--mode single` (arqui
 Por padrão é **só login** (`cloudData` falso): `startSync` escolhe o espaço local da conta e para por aí; os dados ficam
 no aparelho. Com `VITE_SUPABASE_SYNC=1`, `services/sync.ts` guarda o banco inteiro da conta como JSON em `rutte_data` (RLS por `auth.uid()`, SQL em `supabase/schema.sql`); o app
 segue usando o armazenamento local por conta (`setStorageNamespace`) e cada `persist()` agenda um upsert (1,2 s); offline marca
-"dirty" e envia ao voltar. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
+"dirty" e envia ao voltar. **Local-first**: com dados locais e conta já ligada, abre na hora e reconcilia com a nuvem em segundo plano
+(`reconcile`, `setRemoteListener` → invalida as queries). Offline: sessão lida do cache `rutte:auth` e perfil do cache `rutte:profile:<uid>`.
+Rotas carregadas sob demanda (`lazy` em App.tsx, Suspense no app-layout); `api.ts` sem latência artificial. `sw.js` (rutte-v4):
+cache-first para /assets e fontes, network-first com 2,5 s e queda para o cache. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
 Administração: `supabase/admin.sql` (tabela `profiles` com RLS, `is_admin()`, gatilho que cria o perfil e faz o e-mail do dono
 admin, RPCs `rutte_touch(p_name)` — último acesso + nome —, `admin_delete_user` e `admin_set_password` (pgcrypto `extensions.crypt`)).
 Criar conta pelo admin: `createAccount` usa um cliente Supabase temporário sem sessão (signUp; confirmação por e-mail desligada). `services/profiles.ts`; AuthGate chama

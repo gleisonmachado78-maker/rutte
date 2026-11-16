@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp, Camera, ImageIcon, ImageOff, Loader2, PenLine, Trash2, Type } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { NoteDrawing } from '@/components/notes/note-drawing';
+import { RichText, textToNoteHtml } from '@/components/notes/rich-text';
 import { noteImages } from '@/lib/note-images';
 import { newDrawing, newTextBlock } from '@/lib/notes';
 import { cn, uid } from '@/lib/utils';
@@ -40,27 +41,6 @@ export function NoteImage({ fileKey, w, h, className, onClick }: { fileKey: stri
   );
 }
 
-/** Textarea que cresce com o conteúdo. */
-function Grow({ value, onChange, ...rest }: { value: string; onChange: (v: string) => void } & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-  return (
-    <textarea
-      ref={ref}
-      rows={1}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="block w-full resize-none overflow-hidden bg-transparent py-1 text-base leading-relaxed outline-none placeholder:text-foreground/35 focus-visible:ring-0 focus-visible:ring-offset-0"
-      {...rest}
-    />
-  );
-}
-
 /** Imagens enviadas por arquivo, câmera, colar ou arrastar → blocos de imagem. */
 export async function imagesToBlocks(files: File[]): Promise<NoteBlock[]> {
   const out: NoteBlock[] = [];
@@ -76,7 +56,7 @@ export async function imagesToBlocks(files: File[]): Promise<NoteBlock[]> {
 }
 
 /** Conteúdo extra da nota (texto, imagens e desenhos), um embaixo do outro, como no iPhone. */
-export function NoteBlocks({ blocks, onChange, autoEdit }: { blocks: NoteBlock[]; onChange: (blocks: NoteBlock[], immediate?: boolean) => void; autoEdit?: string | null }) {
+export function NoteBlocks({ blocks, onChange, autoEdit, fontStyle }: { blocks: NoteBlock[]; onChange: (blocks: NoteBlock[], immediate?: boolean) => void; autoEdit?: string | null; fontStyle?: React.CSSProperties }) {
   const [drawing, setDrawing] = useState<string | null>(null);
   // desenho recém-inserido já abre pronto para riscar
   useEffect(() => {
@@ -99,19 +79,16 @@ export function NoteBlocks({ blocks, onChange, autoEdit }: { blocks: NoteBlock[]
       {blocks.map((b, i) => (
         <div key={b.id} className="group/block relative">
           {b.type === 'texto' ? (
-            <Grow
-              value={b.text}
-              onChange={(text) => set(b.id, { ...b, text })}
-              placeholder="Continue escrevendo…"
-              aria-label="Texto"
-              data-block-text={b.id}
-              onKeyDown={(e) => {
-                if (e.key === 'Backspace' && !b.text) {
-                  e.preventDefault();
-                  remove(b.id);
-                }
-              }}
-            />
+            <div data-block-text={b.id}>
+              <RichText
+                html={b.html ?? textToNoteHtml(b.text)}
+                onChange={(html, text) => set(b.id, { ...b, html, text })}
+                placeholder="Continue escrevendo…"
+                ariaLabel="Texto"
+                style={fontStyle}
+                className="py-1 text-base leading-relaxed"
+              />
+            </div>
           ) : b.type === 'imagem' ? (
             <NoteImage fileKey={b.fileKey} w={b.w} h={b.h} onClick={() => setZoom(zoom === b.id ? null : b.id)} className={zoom === b.id ? '' : 'max-h-[60dvh] w-auto max-w-full'} />
           ) : (

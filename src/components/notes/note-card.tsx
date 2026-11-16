@@ -4,10 +4,21 @@ import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { imagesToBlocks, NoteBlocks, NoteImage, NoteInsertBar } from '@/components/notes/note-blocks';
 import { NoteDrawing } from '@/components/notes/note-drawing';
+import { cleanNoteHtml, RICH, RichText, RichToolbar, textToNoteHtml } from '@/components/notes/rich-text';
+import { NOTE_FONTS, noteFontStyle } from '@/lib/note-fonts';
 import { imageFiles } from '@/lib/note-images';
 import { newItem, NOTE_COLOR_BY_ID, NOTE_COLORS, noteIsEmpty, noteToText } from '@/lib/notes';
 import { cn } from '@/lib/utils';
-import type { NoteBlock, NoteBox, NoteItem, Notebook } from '@/types';
+import type { NoteBlock, NoteBox, NoteFont, NoteItem, Notebook } from '@/types';
+
+/** Primeiro ancestral que rola (a janela da nota ou a página). */
+export function scrollParent(el: HTMLElement | null): HTMLElement | null {
+  for (let p = el?.parentElement; p; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+  }
+  return (document.scrollingElement as HTMLElement) ?? null;
+}
 
 /** Textarea que cresce com o conteúdo. */
 function AutoText({ value, onChange, className, ...rest }: { value: string; onChange: (v: string) => void; className?: string } & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>) {
@@ -15,16 +26,15 @@ function AutoText({ value, onChange, className, ...rest }: { value: string; onCh
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // ao medir, a caixa encolhe por um instante: guarda e devolve a rolagem para a tela não pular
+    const scroller = scrollParent(el);
+    const top = scroller?.scrollTop ?? 0;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
+    if (scroller && scroller.scrollTop !== top) scroller.scrollTop = top;
   }, [value]);
   return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} className={cn('block w-full resize-none overflow-hidden bg-transparent outline-none placeholder:text-foreground/35 focus-visible:ring-0 focus-visible:ring-offset-0', className)} {...rest} />;
 }
-
-const cursorToEnd = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-  const n = e.currentTarget.value.length;
-  e.currentTarget.setSelectionRange(n, n);
-};
 
 export interface NoteCardProps {
   note: NoteBox;
@@ -117,7 +127,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
     commit({ ...latest.current, blocks: [...(latest.current.blocks ?? []), ...add] }, true);
     const last = add[add.length - 1];
     if (last.type === 'desenho') setAutoEdit(last.id);
-    if (last.type === 'texto') window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('[data-block-text="' + last.id + '"]')?.focus(), 30);
+    if (last.type === 'texto') window.setTimeout(() => document.querySelector<HTMLElement>('[data-block-text="' + last.id + '"] [contenteditable]')?.focus(), 30);
     else window.setTimeout(() => document.querySelector('[data-note-end]')?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80);
   };
   // colar ou soltar imagens dentro da nota aberta
@@ -126,6 +136,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
     addBlocks(await imagesToBlocks(files));
     return true;
   };
+  const fontStyle = noteFontStyle(draft.font);
   const media = blocks.filter((b) => b.type !== 'texto');
   const extraText = blocks.flatMap((b) => (b.type === 'texto' && b.text.trim() ? [b.text] : [])).join('\n');
 
@@ -239,20 +250,40 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
 
       {showNotebook && nb && <p className="mb-1 text-[11px] font-medium text-foreground/50">{nb.emoji} {nb.name}</p>}
 
+      {editor && (
+        <div className="sticky top-0 z-20 -mx-4 mb-1 flex flex-wrap items-center gap-1 border-b border-foreground/10 bg-inherit px-3 py-1 backdrop-blur sm:-mx-6 sm:px-5">
+          {draft.kind === 'texto' && <RichToolbar />}
+          <select
+            value={draft.font ?? 'padrao'}
+            onChange={(e) => commit({ ...draft, font: e.target.value as NoteFont }, true)}
+            aria-label="Fonte da nota"
+            title="Fonte da nota"
+            className="ml-auto h-9 max-w-[11rem] rounded-lg border border-border bg-background px-2 text-sm"
+            style={noteFontStyle(draft.font)}
+          >
+            {NOTE_FONTS.map((fo) => (
+              <option key={fo.id} value={fo.id} style={{ fontFamily: fo.family }}>
+                {fo.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* ------------------------------ corpo ------------------------------ */}
       {editor ? (
         draft.kind === 'texto' ? (
-          <AutoText
-            value={draft.text}
-            onChange={(text) => commit({ ...draft, text })}
+          <RichText
+            html={draft.html ?? textToNoteHtml(draft.text)}
+            onChange={(html, text) => commit({ ...draft, html, text })}
             placeholder="Escreva à vontade…"
-            aria-label="Texto da nota"
-            data-autofocus={!isNew ? '' : undefined}
-            onFocus={cursorToEnd}
+            ariaLabel="Texto da nota"
+            autoFocus={!isNew}
+            style={fontStyle}
             className={cn('py-2 text-base leading-relaxed', blocks.length ? 'min-h-[3rem] shrink-0' : 'min-h-[40dvh] shrink-0')}
           />
         ) : (
-          <div className="flex-1 py-2">
+          <div className="flex-1 py-2" style={fontStyle}>
             {progress}
             <ul className="space-y-1">
               {draft.items.map((it, idx) => (
@@ -311,7 +342,7 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
           </div>
         )
       ) : null}
-      {editor && <NoteBlocks blocks={blocks} autoEdit={autoEdit} onChange={(b, immediate) => commit({ ...draft, blocks: b }, immediate)} />}
+      {editor && <NoteBlocks blocks={blocks} fontStyle={fontStyle} autoEdit={autoEdit} onChange={(b, immediate) => commit({ ...draft, blocks: b }, immediate)} />}
       {editor && <span data-note-end aria-hidden />}
       {!editor && (
         /* prévia: clicar abre a caixa ampliada */
@@ -331,7 +362,13 @@ export function NoteCard({ note, notebooks, mode = 'preview', showNotebook, drag
           {empty ? (
             <p className="text-sm text-foreground/40">Toque para escrever…</p>
           ) : draft.kind === 'texto' ? (
-            <p className="line-clamp-[10] whitespace-pre-wrap break-words text-sm leading-relaxed">{draft.text}</p>
+            draft.html ? (
+              <div className={cn(RICH, 'line-clamp-[10] whitespace-pre-wrap break-words text-sm leading-relaxed')} style={fontStyle} dangerouslySetInnerHTML={{ __html: cleanNoteHtml(draft.html) }} />
+            ) : (
+              <p className="line-clamp-[10] whitespace-pre-wrap break-words text-sm leading-relaxed" style={fontStyle}>
+                {draft.text}
+              </p>
+            )
           ) : (
             <>
               {progress}

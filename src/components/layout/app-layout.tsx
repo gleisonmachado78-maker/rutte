@@ -33,7 +33,7 @@ import {
   Bell,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { DevCredit } from '@/components/brand/credit';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
@@ -330,6 +330,22 @@ function AccountMenu({ collapsed }: { collapsed?: boolean }) {
   );
 }
 
+/** Enquanto uma tela carrega pela primeira vez: esqueleto leve no lugar do conteúdo. */
+function PageLoading() {
+  return (
+    <div className="animate-pulse space-y-4" role="status" aria-label="Carregando">
+      <div className="h-8 w-48 rounded-lg bg-foreground/10" />
+      <div className="h-4 w-72 max-w-full rounded bg-foreground/5" />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="h-24 rounded-2xl bg-foreground/5" />
+        <div className="h-24 rounded-2xl bg-foreground/5" />
+        <div className="h-24 rounded-2xl bg-foreground/5" />
+      </div>
+      <div className="h-64 rounded-2xl bg-foreground/5" />
+    </div>
+  );
+}
+
 export function AppLayout() {
   const modules = useModules();
   const { data: user, isLoading: userLoading } = useUser();
@@ -466,7 +482,9 @@ export function AppLayout() {
 
       <main id="main" className={cn('pb-28 transition-all duration-200 md:pb-10', collapsed ? 'md:pl-[72px]' : 'md:pl-60')}>
         <div key={location.pathname} className="mx-auto w-full max-w-6xl animate-page-in px-4 py-5 sm:px-6 sm:py-8">
-          <Outlet />
+          <Suspense fallback={<PageLoading />}>
+            <Outlet />
+          </Suspense>
           <NewsPopup />
         </div>
       </main>

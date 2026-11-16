@@ -29,7 +29,6 @@ import { createEmpty, createSeed, migrate, USER_ID, type Database, type Rating, 
 import { categoriesFor, type StarterTask } from '@/lib/onboarding';
 
 const BASE_KEY = 'secretaria:db:v1';
-const LATENCY = 120;
 
 /** Chave do armazenamento local: uma por conta (com login) ou a padrão (sem login). */
 let storageKey = BASE_KEY;
@@ -96,8 +95,8 @@ function persist(notify = true) {
   }
 }
 
-const delay = <T,>(value: T) =>
-  new Promise<T>((resolve) => setTimeout(() => resolve(structuredClone(value)), LATENCY));
+/** Leitura assíncrona (mesma assinatura de um backend), sem espera artificial. */
+const delay = <T,>(value: T) => Promise.resolve(structuredClone(value));
 
 const entry = (type: TaskHistoryEntry['type'], message: string): TaskHistoryEntry => ({
   id: uid('h'),
