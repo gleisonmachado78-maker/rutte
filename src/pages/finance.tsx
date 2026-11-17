@@ -1,7 +1,8 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import { ChevronDown, CircleCheck, Circle, Info, Zap, ListPlus, Minus, Pencil, PiggyBank, Plus, Target, Trash2, TrendingUp, Wallet } from 'lucide-react';
+import { ChevronDown, CircleCheck, Circle, Info, Zap, ListPlus, Minus, Pencil, PiggyBank, Plus, Target, Trash2, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { PlanBuilder } from '@/components/finance/plan-builder';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { Input, Label, Progress, Textarea } from '@/components/ui/form-controls';
@@ -28,18 +29,15 @@ import {
   METHODS,
   moneyInput,
   monthLabel,
-  monthsToReach,
   parseMoney,
   planFor,
-  reachDate,
-  savingPlan,
   STATUS_INFO,
   type FinanceMethod,
   type MethodGroup,
 } from '@/lib/finance';
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import type { Dream, FinanceBudget } from '@/types';
+import type { Dream } from '@/types';
 
 /* ------------------------------- Campo de dinheiro ------------------------------- */
 
@@ -438,129 +436,19 @@ function useStepToTask() {
     });
 }
 
-function SavingPlanSection({ dream, budget, rate, onAddMethod }: { dream: Dream; budget: FinanceBudget | null | undefined; rate: number; onAddMethod: (id: string) => void }) {
-  const { data: dreams = [] } = useDreams();
-  const plan = savingPlan(dream, budget, dreams, rate);
-  if (!plan.parts.length) return null;
-  return (
-    <section aria-labelledby="dr-plan" className="mt-6">
-      <h3 id="dr-plan" className="flex items-center gap-2 font-bold">
-        <PiggyBank className="size-4 text-primary" aria-hidden /> Como juntar {brl(dream.target - plan.saved)}
-      </h3>
-      <p className="text-sm text-foreground/60">
-        Uma sugestão de onde pode vir cada parte, em {plan.months} {plan.months === 1 ? 'mês' : 'meses'}. Toque numa linha para colocá-la no seu plano.
-      </p>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/55">
-            <tr>
-              <th className="px-3 py-2 font-semibold">De onde vem</th>
-              <th className="px-3 py-2 text-right font-semibold">Por mês</th>
-              <th className="px-3 py-2 text-right font-semibold">No total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {plan.saved > 0 && (
-              <tr>
-                <td className="px-3 py-2">✅ Já guardado</td>
-                <td className="px-3 py-2 text-right text-foreground/45">—</td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{brl(plan.saved)}</td>
-              </tr>
-            )}
-            {plan.parts.map((part) => {
-              const inPlan = !!part.methodId && dream.methods.includes(part.methodId);
-              return (
-                <tr key={part.id} className={cn(!inPlan && 'cursor-pointer hover:bg-muted/50')} onClick={() => part.methodId && onAddMethod(part.methodId)}>
-                  <td className="px-3 py-2">
-                    <span className="font-medium">
-                      {part.emoji} {part.title}
-                    </span>
-                    {inPlan && <span className="ml-1.5 text-xs text-emerald-600 dark:text-emerald-400">no plano ✓</span>}
-                    <span className="block text-xs text-foreground/55">{part.detail}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right align-top tabular-nums">{part.monthly ? brl(part.monthly) : <span className="text-xs text-foreground/55">uma vez</span>}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right align-top font-semibold tabular-nums">{brl(part.total)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot className="border-t-2 border-border bg-muted/40">
-            <tr>
-              <td className="px-3 py-2 font-bold">Total</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right font-bold tabular-nums">{brl(plan.monthly)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right font-bold tabular-nums">{brl(plan.total)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      {!budget?.income && <p className="mt-1.5 text-xs text-foreground/55">Preencha "Seu mês" na página Sonhos e metas para a Rutte usar a sua sobra real no plano.</p>}
-    </section>
-  );
-}
-
-function BoostSection({ dream, budget, rate, onAddMethod }: { dream: Dream; budget: FinanceBudget | null | undefined; rate: number; onAddMethod: (id: string) => void }) {
-  const boosts = boostsFor(dream, budget, rate);
-  if (!boosts.length) return null;
-  return (
-    <section aria-labelledby="dr-boost" className="mt-6">
-      <h3 id="dr-boost" className="flex items-center gap-2 font-bold">
-        <Zap className="size-4 text-amber-500" aria-hidden /> Dar um boost: ganhar mais e chegar antes
-      </h3>
-      <p className="text-sm text-foreground/60">Guardando o valor do mês e somando um destes, quando você chega lá:</p>
-      <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-        {boosts.map((b) => {
-          const date = reachDate(b.months);
-          const inPlan = dream.methods.includes(b.methodId);
-          const gains = [b.extra ? `+${brl(b.extra)}/mês` : '', b.oneTime ? `+${brl(b.oneTime)} de uma vez` : ''].filter(Boolean).join(' e ');
-          return (
-            <li key={b.id} className="flex flex-col rounded-xl border border-border p-3">
-              <p className="font-semibold">
-                {b.emoji} {b.title}
-              </p>
-              <p className="text-xs text-foreground/55">{b.detail}</p>
-              <p className="mt-1.5 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{gains}</p>
-              {date && (
-                <p className="text-sm">
-                  Realiza em <strong>{monthLabel(date)}</strong>
-                  {b.gain > 0 ? (
-                    <span className="text-emerald-700 dark:text-emerald-400">
-                      {' '}
-                      · {b.gain} {b.gain === 1 ? 'mês' : 'meses'} antes
-                    </span>
-                  ) : (
-                    ' · no mesmo prazo'
-                  )}
-                </p>
-              )}
-              <Button size="sm" variant={inPlan ? 'ghost' : 'outline'} className="mt-2 self-start" disabled={inPlan} onClick={() => onAddMethod(b.methodId)}>
-                {inPlan ? 'No plano ✓' : 'Quero esse boost'}
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 function DreamSheet({ dream, rate, onClose, onEdit }: { dream: Dream | null; rate: number; onClose: () => void; onEdit: (d: Dream) => void }) {
   const save = useSaveDream();
   const remove = useDeleteDream();
   const removeDep = useRemoveDreamDeposit();
   const toTask = useStepToTask();
   const { data: budget } = useFinance();
-  const [sim, setSim] = useState('');
   const [adding, setAdding] = useState(false);
   useEffect(() => {
-    setSim('');
     setAdding(false);
   }, [dream?.id]);
 
   if (!dream) return <Dialog open={false} />;
   const p = planFor(dream, rate);
-  const simValue = parseMoney(sim);
-  const simMonths = simValue > 0 ? monthsToReach(dream.target, p.saved, simValue, rate) : null;
-  const simDate = simMonths !== null ? reachDate(simMonths) : null;
   const chosen = dream.methods.map((id) => METHOD_BY_ID[id]).filter(Boolean);
   const others = METHODS.filter((m) => !dream.methods.includes(m.id));
   const setMethods = (methods: string[]) => save.mutate({ ...dream, methods });
@@ -628,37 +516,7 @@ function DreamSheet({ dream, rate, onClose, onEdit }: { dream: Dream | null; rat
             </div>
           )}
 
-          {p.status !== 'realizado' && p.status !== 'vencido' && (
-            <SavingPlanSection dream={dream} budget={budget} rate={rate} onAddMethod={(id) => !dream.methods.includes(id) && setMethods([...dream.methods, id])} />
-          )}
-          {p.status !== 'realizado' && p.status !== 'vencido' && (
-            <BoostSection dream={dream} budget={budget} rate={rate} onAddMethod={(id) => !dream.methods.includes(id) && setMethods([...dream.methods, id])} />
-          )}
-
-          {p.status !== 'realizado' && (
-            <section aria-labelledby="dr-sim" className="mt-6">
-              <h3 id="dr-sim" className="flex items-center gap-2 font-bold">
-                <TrendingUp className="size-4 text-primary" aria-hidden /> E se eu guardar…
-              </h3>
-              <div className="mt-2 flex flex-wrap items-end gap-3">
-                <div className="w-40">
-                  <MoneyField id="dr-sim-v" label="Por mês" value={sim} onChange={setSim} placeholder={moneyInput(Math.ceil(p.perMonth))} />
-                </div>
-                <p className="min-w-0 flex-1 pb-2 text-sm">
-                  {simMonths === null ? (
-                    <span className="text-foreground/55">Digite um valor para ver quando você chega lá.</span>
-                  ) : simDate ? (
-                    <>
-                      Você realiza em <strong>{monthLabel(simDate)}</strong> ({Math.ceil(simMonths)} {Math.ceil(simMonths) === 1 ? 'mês' : 'meses'})
-                      {simDate < dream.deadline ? ', antes do prazo 🎉' : simDate.slice(0, 7) === dream.deadline.slice(0, 7) ? ', no prazo.' : ', depois do prazo.'}
-                    </>
-                  ) : (
-                    'Com esse valor o sonho não chega lá. Aumente um pouco.'
-                  )}
-                </p>
-              </div>
-            </section>
-          )}
+          {p.status !== 'realizado' && <PlanBuilder dream={dream} budget={budget} rate={rate} />}
 
           <section aria-labelledby="dr-methods" className="mt-6">
             <h3 id="dr-methods" className="flex items-center gap-2 font-bold">

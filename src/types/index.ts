@@ -390,6 +390,8 @@ export interface Dream {
   methods: string[];
   /** passos concluídos: "metodo:indice" */
   stepsDone: string[];
+  /** simulador do plano (fontes ligadas e valores escolhidos) */
+  plan?: DreamPlanConfig;
   createdAt: string;
   updatedAt: string;
   achievedAt?: string;
@@ -402,4 +404,27 @@ export interface FinanceBudget {
   /** rendimento estimado ao mês, em % (ex.: 0,8) */
   rate: number;
   updatedAt: string;
+}
+
+export interface PlanSource {
+  on: boolean;
+  value: number;
+}
+
+/** Como a pessoa pretende juntar o dinheiro de um sonho (simulador). */
+export interface DreamPlanConfig {
+  sobra: PlanSource;
+  cortes: PlanSource;
+  consumo: PlanSource;
+  /** venda de uma vez, no primeiro mês */
+  vendas: PlanSource;
+  /** valor guardado em cada dezembro (13º, férias) */
+  extra13: PlanSource;
+  freela: { on: boolean; hours: number; hourly: number };
+  /** aumento em % da renda, a partir do 6º mês */
+  promocao: { on: boolean; pct: number };
+  /** lucro por mês, a partir do 4º mês */
+  negocio: PlanSource;
+  /** corrigir o preço do sonho pela inflação */
+  inflation: boolean;
 }
