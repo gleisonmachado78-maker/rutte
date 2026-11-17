@@ -191,7 +191,7 @@ e `text` simples (busca/prévia/afazer); nota antiga sem `html` abre via `textTo
 + fonte da nota (`NoteBox.font`, `lib/note-fonts.ts`; Google Fonts extras só carregam ao abrir as Notas). Não usar textarea com
 height='auto' sem guardar a rolagem (`scrollParent` em note-card) — fazia a tela pular para cima ao digitar.
 
-## Finanças e sonhos
+## Sonhos e metas (rota /finance)
 
 `/finance` (`src/pages/finance.tsx`, `src/lib/finance.ts`; só no contexto Pessoal): `Database.dreams` (valor, prazo, `deposits` com
 retiradas negativas, `methods` + `stepsDone` "metodo:indice") e `Database.finance` (renda, gastos, rendimento % ao mês, padrão 0,8).

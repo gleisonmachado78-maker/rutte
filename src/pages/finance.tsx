@@ -493,7 +493,7 @@ function SavingPlanSection({ dream, budget, rate, onAddMethod }: { dream: Dream;
           </tfoot>
         </table>
       </div>
-      {!budget?.income && <p className="mt-1.5 text-xs text-foreground/55">Preencha "Seu mês" na página de Finanças para a Rutte usar a sua sobra real no plano.</p>}
+      {!budget?.income && <p className="mt-1.5 text-xs text-foreground/55">Preencha "Seu mês" na página Sonhos e metas para a Rutte usar a sua sobra real no plano.</p>}
     </section>
   );
 }
@@ -855,7 +855,7 @@ export function FinancePage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-            <PiggyBank className="size-7 text-primary" aria-hidden /> Finanças e sonhos
+            <PiggyBank className="size-7 text-primary" aria-hidden /> Sonhos e metas
           </h1>
           <p className="mt-1 text-foreground/65">Quanto guardar por mês, quanto já tem e o caminho para chegar lá.</p>
         </div>

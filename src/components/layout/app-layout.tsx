@@ -77,7 +77,7 @@ const NAV: NavEntry[] = [
   { to: '/links', label: 'Links', icon: Link2, group: 'organizar' },
   { to: '/assistant', label: 'Rutte IA', short: 'IA', icon: Sparkles, group: 'organizar' },
   { to: '/life', label: 'Roda da Vida', short: 'Roda', icon: ChartPie, module: 'life', group: 'evoluir' },
-  { to: '/finance', label: 'Finanças', icon: PiggyBank, personalOnly: true, group: 'evoluir' },
+  { to: '/finance', label: 'Sonhos e metas', short: 'Sonhos', icon: PiggyBank, personalOnly: true, group: 'evoluir' },
   { to: '/gym', label: 'Academia', short: 'Treino', icon: Dumbbell, personalOnly: true, module: 'gym', group: 'evoluir' },
   { to: '/gratitude', label: 'Gratidão', icon: HandHeart, group: 'evoluir' },
   { to: '/library', label: 'Biblioteca', short: 'Livros', icon: Library, group: 'evoluir' },
