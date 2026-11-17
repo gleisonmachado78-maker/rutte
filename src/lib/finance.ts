@@ -364,3 +364,108 @@ export const METHODS: FinanceMethod[] = [
 ];
 
 export const METHOD_BY_ID = Object.fromEntries(METHODS.map((m) => [m.id, m])) as Record<string, FinanceMethod>;
+
+/* --------------------------- Plano para juntar o valor --------------------------- */
+
+export interface PlanPart {
+  id: string;
+  methodId?: string;
+  emoji: string;
+  title: string;
+  detail: string;
+  /** por mês (0 se for de uma vez) */
+  monthly: number;
+  /** de uma vez */
+  oneTime: number;
+  total: number;
+}
+
+const roundUp = (n: number, step = 10) => Math.ceil(n / step) * step;
+
+/**
+ * Divide o que falta do sonho em fontes concretas (sobra, cortes, vendas, extras e renda extra),
+ * cada uma com valor por mês e total no prazo. Conservador: não conta rendimento.
+ */
+export function savingPlan(d: Dream, budget: FinanceBudget | null | undefined, others: Dream[] = [], rate = DEFAULT_RATE, today = new Date()) {
+  const saved = savedOf(d);
+  const n = monthsUntil(d.deadline, today);
+  let left = Math.max(0, d.target - saved);
+  const parts: PlanPart[] = [];
+  const push = (p: Omit<PlanPart, 'total'>) => {
+    if (left <= 0) return;
+    let { monthly, oneTime } = p;
+    if (oneTime > left) oneTime = roundUp(left);
+    if (monthly * n > left - oneTime) monthly = roundUp(Math.max(0, left - oneTime) / n);
+    const total = Math.min(left, monthly * n + oneTime);
+    if (total <= 0) return;
+    left -= total;
+    parts.push({ ...p, monthly, oneTime, total });
+  };
+  const totalFree = budget?.income ? Math.max(0, budget.income - budget.expenses) : null;
+  // a sobra é dividida entre os sonhos em andamento, na proporção do que cada um pede por mês
+  const need = (x: Dream) => {
+    const pl = planFor(x, rate, today);
+    return pl.status === 'realizado' || pl.status === 'vencido' ? 0 : pl.perMonth;
+  };
+  const mine = need(d);
+  const all = mine + others.filter((x) => x.id !== d.id).reduce((s, x) => s + need(x), 0);
+  // cortes e consumo também são divididos (o mesmo corte não paga dois sonhos)
+  const share = all > 0 ? mine / all : 1;
+  const free = totalFree === null ? null : all > totalFree && all > 0 ? (totalFree * mine) / all : totalFree;
+
+  if (free) push({ id: 'sobra', methodId: 'pague-se', emoji: '🏦', title: 'Da sua sobra do mês', detail: others.length > 1 ? 'Sua parte da sobra, dividida entre os sonhos' : 'Transferência automática no dia do pagamento', monthly: Math.floor(free), oneTime: 0 });
+  push({ id: 'cortar', methodId: 'cortar', emoji: '✂️', title: 'Cortar assinaturas e taxas', detail: 'Streaming, apps e tarifas que você não usa', monthly: roundUp(150 * share), oneTime: 0 });
+  push({ id: 'consciente', methodId: 'consciente', emoji: '🛒', title: 'Consumo consciente', detail: 'Mercado com lista, marmita 3x por semana, regra das 48 h', monthly: roundUp(250 * share), oneTime: 0 });
+  push({ id: 'vender', methodId: 'vender', emoji: '📦', title: 'Vender o que não usa', detail: 'Roupas, eletrônicos e objetos parados', monthly: 0, oneTime: 800 });
+  if (n >= 6)
+    push({
+      id: 'extras',
+      methodId: 'extras',
+      emoji: '🎁',
+      title: 'Metade do dinheiro extra',
+      detail: '13º, férias, bônus ou restituição do IR',
+      monthly: 0,
+      oneTime: budget?.income ? roundUp(budget.income / 2, 50) : 1000,
+    });
+  if (left > 0)
+    push({ id: 'renda-extra', methodId: 'renda-extra', emoji: '🛠️', title: 'Renda extra com uma habilidade', detail: 'Freelance, aulas, bicos de fim de semana', monthly: roundUp(left / n, 50), oneTime: 0 });
+
+  const monthly = parts.reduce((s, p) => s + p.monthly, 0);
+  return { parts, months: n, saved, monthly, total: parts.reduce((s, p) => s + p.total, 0) + saved };
+}
+
+export interface Boost {
+  id: string;
+  methodId: string;
+  emoji: string;
+  title: string;
+  detail: string;
+  /** a mais por mês */
+  extra: number;
+  /** de uma vez */
+  oneTime: number;
+  /** meses até realizar com o boost */
+  months: number;
+  /** meses a menos que o plano normal */
+  gain: number;
+}
+
+/** Atalhos para ganhar mais e chegar antes: quanto rendem e quantos meses economizam. */
+export function boostsFor(d: Dream, budget: FinanceBudget | null | undefined, rate = DEFAULT_RATE, today = new Date()): Boost[] {
+  const plan = planFor(d, rate, today);
+  if (plan.status === 'realizado') return [];
+  const base = Math.max(plan.perMonth, 1);
+  const baseMonths = monthsToReach(d.target, plan.saved, base, rate);
+  const raise = budget?.income ? roundUp(budget.income * 0.15, 50) : 600;
+  const opts: Omit<Boost, 'months' | 'gain'>[] = [
+    { id: 'freela', methodId: 'renda-extra', emoji: '🛠️', title: 'Renda extra de 5 h por semana', detail: '≈ R$ 40 por hora em freelance, aulas ou bicos', extra: 800, oneTime: 0 },
+    { id: 'promocao', methodId: 'promocao', emoji: '📈', title: 'Promoção ou aumento de 15%', detail: budget?.income ? `15% sobre ${brl(budget.income)} de renda` : 'Preencha "Seu mês" para calcular com a sua renda', extra: raise, oneTime: 0 },
+    { id: 'negocio', methodId: 'negocio', emoji: '🚀', title: 'Negócio paralelo pequeno', detail: 'Lucro de R$ 1.500/mês depois de engrenar', extra: 1500, oneTime: 0 },
+    { id: 'vender', methodId: 'vender', emoji: '📦', title: 'Vender o que não usa', detail: 'Um mutirão de vendas de uma vez', extra: 0, oneTime: 1000 },
+    { id: 'tudo', methodId: 'renda-extra', emoji: '⚡', title: 'Renda extra + vendas + cortes', detail: 'R$ 800 de renda extra, R$ 400 de cortes e R$ 1.000 em vendas', extra: 1200, oneTime: 1000 },
+  ];
+  return opts.map((o) => {
+    const months = monthsToReach(d.target, plan.saved + o.oneTime, base + o.extra, rate);
+    return { ...o, months, gain: Math.max(0, Math.floor(baseMonths - months)) };
+  });
+}

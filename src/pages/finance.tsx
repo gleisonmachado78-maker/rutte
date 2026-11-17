@@ -1,5 +1,5 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import { ChevronDown, CircleCheck, Circle, Info, ListPlus, Minus, Pencil, PiggyBank, Plus, Target, Trash2, TrendingUp, Wallet } from 'lucide-react';
+import { ChevronDown, CircleCheck, Circle, Info, Zap, ListPlus, Minus, Pencil, PiggyBank, Plus, Target, Trash2, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   useSaveFinance,
 } from '@/hooks/use-data';
 import {
+  boostsFor,
   brl,
   budgetCheck,
   DEFAULT_RATE,
@@ -31,13 +32,14 @@ import {
   parseMoney,
   planFor,
   reachDate,
+  savingPlan,
   STATUS_INFO,
   type FinanceMethod,
   type MethodGroup,
 } from '@/lib/finance';
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import type { Dream } from '@/types';
+import type { Dream, FinanceBudget } from '@/types';
 
 /* ------------------------------- Campo de dinheiro ------------------------------- */
 
@@ -158,7 +160,7 @@ type FormState = { title: string; emoji: string; target: string; deadline: strin
 
 const blankForm = (): FormState => ({ title: '', emoji: '✨', target: '', deadline: format(addMonths(new Date(), 12), 'yyyy-MM'), saved: '', why: '', methods: [] });
 
-function DreamForm({ open, onOpenChange, dream, rate }: { open: boolean; onOpenChange: (v: boolean) => void; dream?: Dream; rate: number }) {
+function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; dream?: Dream; rate: number; onCreated?: (id: string) => void }) {
   const save = useSaveDream();
   const [f, setF] = useState<FormState>(blankForm);
   useEffect(() => {
@@ -187,9 +189,10 @@ function DreamForm({ open, onOpenChange, dream, rate }: { open: boolean; onOpenC
     save.mutate(
       { ...(dream ? { id: dream.id } : {}), title: f.title.trim(), emoji: f.emoji, target, deadline, why: f.why.trim() || undefined, methods: f.methods, deposits },
       {
-        onSuccess: () => {
-          toast.success(dream ? 'Sonho atualizado' : 'Sonho criado ✨', { description: f.title.trim() });
+        onSuccess: (created) => {
+          toast.success(dream ? 'Sonho atualizado' : 'Sonho criado ✨', { description: dream ? f.title.trim() : 'Veja abaixo como juntar esse dinheiro.' });
           onOpenChange(false);
+          if (!dream) onCreated?.(created.id);
         },
       },
     );
@@ -327,6 +330,8 @@ function DreamCard({ dream, rate, onOpen }: { dream: Dream; rate: number; onOpen
   const p = planFor(dream, rate);
   const st = STATUS_INFO[p.status];
   const [saving, setSaving] = useState(false);
+  const { data: budget } = useFinance();
+  const boost = p.status === 'realizado' || p.status === 'vencido' ? undefined : boostsFor(dream, budget, rate).find((b) => b.id === 'freela');
   return (
     <li className="flex flex-col rounded-2xl border border-border bg-card p-4">
       <button type="button" onClick={onOpen} className="flex items-start gap-3 text-left">
@@ -358,6 +363,12 @@ function DreamCard({ dream, rate, onOpen }: { dream: Dream; rate: number; onOpen
               Guarde <strong className="tabular-nums">{brl(p.perMonth)}</strong>/mês <span className="text-foreground/60">· ≈ {brl(p.perDay, true)} por dia</span>
             </>
           )}
+        </p>
+      )}
+
+      {boost && boost.gain > 0 && (
+        <p className="mt-1 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-300">
+          <Zap className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Com {brl(boost.extra)}/mês de renda extra, chega {boost.gain} {boost.gain === 1 ? 'mês' : 'meses'} antes
         </p>
       )}
 
@@ -427,11 +438,117 @@ function useStepToTask() {
     });
 }
 
+function SavingPlanSection({ dream, budget, rate, onAddMethod }: { dream: Dream; budget: FinanceBudget | null | undefined; rate: number; onAddMethod: (id: string) => void }) {
+  const { data: dreams = [] } = useDreams();
+  const plan = savingPlan(dream, budget, dreams, rate);
+  if (!plan.parts.length) return null;
+  return (
+    <section aria-labelledby="dr-plan" className="mt-6">
+      <h3 id="dr-plan" className="flex items-center gap-2 font-bold">
+        <PiggyBank className="size-4 text-primary" aria-hidden /> Como juntar {brl(dream.target - plan.saved)}
+      </h3>
+      <p className="text-sm text-foreground/60">
+        Uma sugestão de onde pode vir cada parte, em {plan.months} {plan.months === 1 ? 'mês' : 'meses'}. Toque numa linha para colocá-la no seu plano.
+      </p>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/55">
+            <tr>
+              <th className="px-3 py-2 font-semibold">De onde vem</th>
+              <th className="px-3 py-2 text-right font-semibold">Por mês</th>
+              <th className="px-3 py-2 text-right font-semibold">No total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {plan.saved > 0 && (
+              <tr>
+                <td className="px-3 py-2">✅ Já guardado</td>
+                <td className="px-3 py-2 text-right text-foreground/45">—</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{brl(plan.saved)}</td>
+              </tr>
+            )}
+            {plan.parts.map((part) => {
+              const inPlan = !!part.methodId && dream.methods.includes(part.methodId);
+              return (
+                <tr key={part.id} className={cn(!inPlan && 'cursor-pointer hover:bg-muted/50')} onClick={() => part.methodId && onAddMethod(part.methodId)}>
+                  <td className="px-3 py-2">
+                    <span className="font-medium">
+                      {part.emoji} {part.title}
+                    </span>
+                    {inPlan && <span className="ml-1.5 text-xs text-emerald-600 dark:text-emerald-400">no plano ✓</span>}
+                    <span className="block text-xs text-foreground/55">{part.detail}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right align-top tabular-nums">{part.monthly ? brl(part.monthly) : <span className="text-xs text-foreground/55">uma vez</span>}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right align-top font-semibold tabular-nums">{brl(part.total)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="border-t-2 border-border bg-muted/40">
+            <tr>
+              <td className="px-3 py-2 font-bold">Total</td>
+              <td className="whitespace-nowrap px-3 py-2 text-right font-bold tabular-nums">{brl(plan.monthly)}</td>
+              <td className="whitespace-nowrap px-3 py-2 text-right font-bold tabular-nums">{brl(plan.total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {!budget?.income && <p className="mt-1.5 text-xs text-foreground/55">Preencha "Seu mês" na página de Finanças para a Rutte usar a sua sobra real no plano.</p>}
+    </section>
+  );
+}
+
+function BoostSection({ dream, budget, rate, onAddMethod }: { dream: Dream; budget: FinanceBudget | null | undefined; rate: number; onAddMethod: (id: string) => void }) {
+  const boosts = boostsFor(dream, budget, rate);
+  if (!boosts.length) return null;
+  return (
+    <section aria-labelledby="dr-boost" className="mt-6">
+      <h3 id="dr-boost" className="flex items-center gap-2 font-bold">
+        <Zap className="size-4 text-amber-500" aria-hidden /> Dar um boost: ganhar mais e chegar antes
+      </h3>
+      <p className="text-sm text-foreground/60">Guardando o valor do mês e somando um destes, quando você chega lá:</p>
+      <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+        {boosts.map((b) => {
+          const date = reachDate(b.months);
+          const inPlan = dream.methods.includes(b.methodId);
+          const gains = [b.extra ? `+${brl(b.extra)}/mês` : '', b.oneTime ? `+${brl(b.oneTime)} de uma vez` : ''].filter(Boolean).join(' e ');
+          return (
+            <li key={b.id} className="flex flex-col rounded-xl border border-border p-3">
+              <p className="font-semibold">
+                {b.emoji} {b.title}
+              </p>
+              <p className="text-xs text-foreground/55">{b.detail}</p>
+              <p className="mt-1.5 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{gains}</p>
+              {date && (
+                <p className="text-sm">
+                  Realiza em <strong>{monthLabel(date)}</strong>
+                  {b.gain > 0 ? (
+                    <span className="text-emerald-700 dark:text-emerald-400">
+                      {' '}
+                      · {b.gain} {b.gain === 1 ? 'mês' : 'meses'} antes
+                    </span>
+                  ) : (
+                    ' · no mesmo prazo'
+                  )}
+                </p>
+              )}
+              <Button size="sm" variant={inPlan ? 'ghost' : 'outline'} className="mt-2 self-start" disabled={inPlan} onClick={() => onAddMethod(b.methodId)}>
+                {inPlan ? 'No plano ✓' : 'Quero esse boost'}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function DreamSheet({ dream, rate, onClose, onEdit }: { dream: Dream | null; rate: number; onClose: () => void; onEdit: (d: Dream) => void }) {
   const save = useSaveDream();
   const remove = useDeleteDream();
   const removeDep = useRemoveDreamDeposit();
   const toTask = useStepToTask();
+  const { data: budget } = useFinance();
   const [sim, setSim] = useState('');
   const [adding, setAdding] = useState(false);
   useEffect(() => {
@@ -509,6 +626,13 @@ function DreamSheet({ dream, rate, onClose, onEdit }: { dream: Dream | null; rat
             <div className="mt-3 rounded-xl border border-border p-3">
               <DepositForm dream={dream} suggested={p.perMonth} onDone={() => setAdding(false)} />
             </div>
+          )}
+
+          {p.status !== 'realizado' && p.status !== 'vencido' && (
+            <SavingPlanSection dream={dream} budget={budget} rate={rate} onAddMethod={(id) => !dream.methods.includes(id) && setMethods([...dream.methods, id])} />
+          )}
+          {p.status !== 'realizado' && p.status !== 'vencido' && (
+            <BoostSection dream={dream} budget={budget} rate={rate} onAddMethod={(id) => !dream.methods.includes(id) && setMethods([...dream.methods, id])} />
           )}
 
           {p.status !== 'realizado' && (
@@ -796,7 +920,7 @@ export function FinancePage() {
         <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Conteúdo educativo para organizar seus objetivos. Os valores são estimativas e não são recomendação de investimento.
       </p>
 
-      <DreamForm open={formOpen} onOpenChange={setFormOpen} dream={editing} rate={rate} />
+      <DreamForm open={formOpen} onOpenChange={setFormOpen} dream={editing} rate={rate} onCreated={setOpenId} />
       <DreamSheet
         dream={opened}
         rate={rate}
