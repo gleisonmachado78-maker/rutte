@@ -8,6 +8,9 @@ import type {
   LifeLink,
   Category,
   Contact,
+  Dream,
+  DreamDeposit,
+  FinanceBudget,
   Exercise,
   FocusSession,
   GratitudeEntry,
@@ -422,6 +425,73 @@ export const api = {
     db.gratitude = (db.gratitude ?? []).filter((g) => g.id !== id);
     persist();
     return delay(undefined);
+  },
+
+  /* --------------------------- Finanças e sonhos --------------------------- */
+  async listDreams(): Promise<Dream[]> {
+    return delay([...(load().dreams ?? [])].sort((a, b) => a.deadline.localeCompare(b.deadline)));
+  },
+  /** Cria ou atualiza um sonho (sem id = novo). */
+  async saveDream(data: Partial<Dream> & Pick<Dream, 'title' | 'target' | 'deadline'>): Promise<Dream> {
+    const db = load();
+    const list = db.dreams ?? [];
+    const prev = data.id ? list.find((d) => d.id === data.id) : undefined;
+    const now = new Date().toISOString();
+    const item: Dream = {
+      emoji: '✨',
+      deposits: [],
+      methods: [],
+      stepsDone: [],
+      ...prev,
+      ...data,
+      id: prev?.id ?? uid('dr'),
+      createdAt: prev?.createdAt ?? now,
+      updatedAt: now,
+    };
+    db.dreams = prev ? list.map((d) => (d.id === item.id ? item : d)) : [...list, item];
+    persist();
+    return delay(item);
+  },
+  async deleteDream(id: string): Promise<void> {
+    const db = load();
+    db.dreams = (db.dreams ?? []).filter((d) => d.id !== id);
+    persist();
+    return delay(undefined);
+  },
+  /** Guarda (valor positivo) ou retira (negativo) dinheiro de um sonho. */
+  async addDreamDeposit({ dreamId, amount, note, date }: { dreamId: string; amount: number; note?: string; date: string }): Promise<Dream> {
+    const db = load();
+    const dream = (db.dreams ?? []).find((d) => d.id === dreamId);
+    if (!dream) throw new Error('Sonho não encontrado');
+    const now = new Date().toISOString();
+    const dep: DreamDeposit = { id: uid('dp'), date, amount, note, createdAt: now };
+    const deposits = [...dream.deposits, dep];
+    const saved = deposits.reduce((s, x) => s + x.amount, 0);
+    const item: Dream = { ...dream, deposits, updatedAt: now, achievedAt: saved >= dream.target ? (dream.achievedAt ?? now) : undefined };
+    db.dreams = (db.dreams ?? []).map((d) => (d.id === dreamId ? item : d));
+    persist();
+    return delay(item);
+  },
+  async removeDreamDeposit({ dreamId, depositId }: { dreamId: string; depositId: string }): Promise<void> {
+    const db = load();
+    const now = new Date().toISOString();
+    db.dreams = (db.dreams ?? []).map((d) => {
+      if (d.id !== dreamId) return d;
+      const deposits = d.deposits.filter((x) => x.id !== depositId);
+      const saved = deposits.reduce((s, x) => s + x.amount, 0);
+      return { ...d, deposits, updatedAt: now, achievedAt: saved >= d.target ? d.achievedAt : undefined };
+    });
+    persist();
+    return delay(undefined);
+  },
+  async getFinance(): Promise<FinanceBudget | null> {
+    return delay(load().finance ?? null);
+  },
+  async saveFinance(data: Omit<FinanceBudget, 'updatedAt'>): Promise<FinanceBudget> {
+    const db = load();
+    db.finance = { ...data, updatedAt: new Date().toISOString() };
+    persist();
+    return delay(db.finance);
   },
 
   /* ------------------------- Situação amorosa ------------------------- */

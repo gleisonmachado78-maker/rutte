@@ -20,6 +20,7 @@ const CalendarPage = lazy(() => import('@/pages/calendar').then((m) => ({ defaul
 const FocusPage = lazy(() => import('@/pages/focus').then((m) => ({ default: m.FocusPage })));
 const GymPage = lazy(() => import('@/pages/gym').then((m) => ({ default: m.GymPage })));
 const LibraryPage = lazy(() => import('@/pages/library').then((m) => ({ default: m.LibraryPage })));
+const FinancePage = lazy(() => import('@/pages/finance').then((m) => ({ default: m.FinancePage })));
 const GratitudePage = lazy(() => import('@/pages/gratitude').then((m) => ({ default: m.GratitudePage })));
 const LifePage = lazy(() => import('@/pages/life').then((m) => ({ default: m.LifePage })));
 const NotesPage = lazy(() => import('@/pages/notes').then((m) => ({ default: m.NotesPage })));
@@ -57,6 +58,7 @@ function PrivateRoutes() {
         <Route path="notes" element={<NotesPage />} />
         <Route path="links" element={<LinksPage />} />
         <Route path="library" element={<LibraryPage />} />
+        <Route path="finance" element={<FinancePage />} />
         <Route path="gratitude" element={<GratitudePage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="settings" element={<SettingsPage />} />

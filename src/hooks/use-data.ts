@@ -8,7 +8,7 @@ import { useUI } from '@/store/ui';
 import { formatKg, newRecordsIn } from '@/lib/gym';
 import { celebrate, markFresh } from '@/lib/fx';
 import { useChat } from '@/store/chat';
-import type { Category, Contact, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
+import type { Category, Contact, Dream, Exercise, GymData, Project, Task, TaskInput, WorkoutDay } from '@/types';
 
 export const qk = {
   tasks: ['tasks'] as const,
@@ -26,6 +26,8 @@ export const qk = {
   notebooks: ['notebooks'] as const,
   notes: ['notes'] as const,
   links: ['links'] as const,
+  dreams: ['dreams'] as const,
+  finance: ['finance'] as const,
 };
 
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: api.listTasks });
@@ -452,6 +454,66 @@ export function useDeleteGratitude() {
   return useMutation({
     mutationFn: api.deleteGratitude,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.gratitude }),
+    onError: errorToast,
+  });
+}
+
+/* --------------------------------- Finanças e sonhos --------------------------------- */
+
+export const useDreams = () => useQuery({ queryKey: qk.dreams, queryFn: api.listDreams });
+export const useFinance = () => useQuery({ queryKey: qk.finance, queryFn: api.getFinance });
+
+export function useSaveDream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveDream,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.dreams }),
+    onError: errorToast,
+  });
+}
+
+export function useDeleteDream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteDream,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.dreams }),
+    onError: errorToast,
+  });
+}
+
+export function useDreamDeposit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.addDreamDeposit,
+    onSuccess: (dream: Dream, vars) => {
+      qc.invalidateQueries({ queryKey: qk.dreams });
+      const saved = dream.deposits.reduce((s, x) => s + x.amount, 0);
+      if (vars.amount > 0 && saved >= dream.target && saved - vars.amount < dream.target) {
+        celebrate({ count: 60, spread: 90 });
+        toast.success(`Sonho realizado! ${dream.emoji}`, { description: `Você juntou tudo para “${dream.title}”.` });
+      } else if (vars.amount > 0) {
+        celebrate({ count: 18 });
+        toast.success('Guardado 💰', { description: `Mais um passo para “${dream.title}”.` });
+      } else toast.success('Retirada registrada');
+    },
+    onError: errorToast,
+  });
+}
+
+export function useRemoveDreamDeposit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.removeDreamDeposit,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.dreams }),
+    onError: errorToast,
+  });
+}
+
+export function useSaveFinance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveFinance,
+    onSuccess: (data) => qc.setQueryData(qk.finance, data),
     onError: errorToast,
   });
 }

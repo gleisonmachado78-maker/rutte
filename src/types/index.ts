@@ -361,3 +361,45 @@ export type NoteBlock =
   | { id: string; type: 'imagem'; fileKey: string; w: number; h: number }
   /** h = altura da folha (na escala de 1000 de largura) */
   | { id: string; type: 'desenho'; h: number; paper: 'liso' | 'linhas' | 'quadriculado'; strokes: NoteStroke[] };
+
+/* ------------------------------ Finanças e sonhos ------------------------------ */
+
+/** Dinheiro guardado (ou retirado, se negativo) para um sonho. */
+export interface DreamDeposit {
+  id: string;
+  /** yyyy-MM-dd */
+  date: string;
+  amount: number;
+  note?: string;
+  createdAt: string;
+}
+
+/** Sonho com valor e prazo: a Rutte calcula quanto guardar por mês. */
+export interface Dream {
+  id: string;
+  title: string;
+  emoji: string;
+  /** valor total (R$) */
+  target: number;
+  /** prazo, yyyy-MM-dd */
+  deadline: string;
+  /** por que este sonho importa (motivação) */
+  why?: string;
+  deposits: DreamDeposit[];
+  /** métodos escolhidos para chegar lá (ids de lib/finance) */
+  methods: string[];
+  /** passos concluídos: "metodo:indice" */
+  stepsDone: string[];
+  createdAt: string;
+  updatedAt: string;
+  achievedAt?: string;
+}
+
+/** Orçamento do mês (para saber se os sonhos cabem na sobra). */
+export interface FinanceBudget {
+  income: number;
+  expenses: number;
+  /** rendimento estimado ao mês, em % (ex.: 0,8) */
+  rate: number;
+  updatedAt: string;
+}
