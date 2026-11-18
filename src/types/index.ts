@@ -393,8 +393,10 @@ export interface Dream {
   methods: string[];
   /** passos concluídos: "metodo:indice" */
   stepsDone: string[];
-  /** simulador do plano (fontes ligadas e valores escolhidos) */
-  plan?: DreamPlanConfig;
+  /** de onde vai sair o dinheiro (plano simples) */
+  ways?: DreamWay[];
+  /** plano do simulador antigo (só para converter) */
+  plan?: Partial<DreamPlanConfig>;
   createdAt: string;
   updatedAt: string;
   achievedAt?: string;
@@ -409,12 +411,18 @@ export interface FinanceBudget {
   updatedAt: string;
 }
 
+/** Uma forma de juntar: id de lib/finance WAYS e o valor (por mês ou de uma vez). */
+export interface DreamWay {
+  id: string;
+  value: number;
+}
+
 export interface PlanSource {
   on: boolean;
   value: number;
 }
 
-/** Como a pessoa pretende juntar o dinheiro de um sonho (simulador). */
+/** Plano do simulador antigo (substituído por `Dream.ways`). */
 export interface DreamPlanConfig {
   sobra: PlanSource;
   cortes: PlanSource;

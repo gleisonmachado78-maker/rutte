@@ -193,17 +193,15 @@ height='auto' sem guardar a rolagem (`scrollParent` em note-card) — fazia a te
 
 ## Sonhos e metas (rota /finance)
 
-`/finance` (`src/pages/finance.tsx`, `src/lib/finance.ts`; só no contexto Pessoal): `Database.dreams` (valor, prazo, `deposits` com
-retiradas negativas, `methods` + `stepsDone` "metodo:indice") e `Database.finance` (renda, gastos, rendimento % ao mês, padrão 0,8).
-Quanto guardar por mês = `monthlyNeeded` (com juros compostos; meses inteiros até o prazo).
-"Seu mês" compara a sobra com a soma do que os sonhos pedem. Catálogo `METHODS` (ganhar mais / gastar menos / fazer render) com passos que
-viram afazer (área `financas`). Conteúdo educativo: não recomendar investimento específico.
-Visual no padrão Rutte: **sem emojis** — ícones lucide em blocos `bg-primary/10` (`DREAM_ICONS`, `dreamIcon` converte o emoji de
-sonhos antigos; `Dream.icon`; `METHODS[].icon`). Painel do sonho com abas Resumo · Simulador · Passos. Simulador (`components/finance/plan-builder.tsx`, salvo em `Dream.plan`): fontes ligáveis com
-sliders (sobra, cortes, consumo, vendas no 1º mês, 13º em cada dezembro, renda extra h/semana × R$/h, promoção % a partir do 6º mês,
-negócio a partir do 4º mês) e inflação (4,5% a.a.) no preço; `simulate` roda mês a mês com rendimento → data de realização, gráfico SVG
-(guardado × preço, prazo, hover), "Completar com renda extra" (`hoursToClose`), "Mudar prazo", "Usar este plano" (métodos) e lembrete
-mensal (afazer FREQ=MONTHLY). Salvar o plano manda só id/título/valor/prazo/plan (não sobrescreve depósitos). Criar um sonho abre o painel na aba Simulador.
+`/finance` (`src/pages/finance.tsx`, `src/lib/finance.ts`; só no contexto Pessoal). Feito para ser **simples**: contas sem juros nem
+inflação, só R$ por mês e R$ de uma vez. `Database.dreams` (valor, prazo, `deposits` com retiradas negativas, `ways`, `stepsDone`
+"metodo:indice") e `Database.finance` (entra e sai por mês; `rate` fica 0).
+Página: "Seu mês" (entra/sai/sobra e se os sonhos cabem) + cartões dos sonhos (clicar abre o painel). Painel sem abas, numerado:
+1. Quanto já tenho (guardar/tirar) · 2. De onde vai sair o dinheiro (`WAYS`: sobra, cortes, renda extra, promoção, negócio = por mês;
+vender, 13º = uma vez; `wayPlan` → frase "Dá certo!" ou "Faltam R$ X por mês", mudar prazo, lembrete mensal FREQ=MONTHLY; cada forma tem
+"Como fazer" com os passos de `METHODS`) · 3. Histórico. Sem emojis: ícones lucide (`DREAM_ICONS`, `dreamIcon` converte emoji antigo).
+`waysOf` converte o `plan` do simulador antigo. Salvar o plano manda só id/título/valor/prazo/ways (não sobrescreve depósitos).
+Conteúdo educativo: não recomendar investimento específico.
 
 ## Login e nuvem (Supabase) + tutorial
 

@@ -1,29 +1,8 @@
 import { addMonths, format, parseISO } from 'date-fns';
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronDown,
-  Circle,
-  CircleCheck,
-  Info,
-  ListChecks,
-  ListPlus,
-  Minus,
-  Pencil,
-  PiggyBank,
-  Plus,
-  SlidersHorizontal,
-  Target,
-  Trash2,
-  Trophy,
-  Wallet,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { BellRing, CalendarClock, CalendarDays, ChevronDown, Circle, CircleAlert, CircleCheck, Info, ListPlus, Minus, Pencil, PiggyBank, Plus, Target, Trash2, Trophy, Wallet, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RutteLogo } from '@/components/brand/rutte';
-import { PlanBuilder } from '@/components/finance/plan-builder';
 import { Button } from '@/components/ui/button';
 import { askConfirm } from '@/components/ui/confirm';
 import { Input, Label, Progress, Textarea } from '@/components/ui/form-controls';
@@ -31,37 +10,32 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle, SheetContent } f
 import { useCreateTask, useDeleteDream, useDreamDeposit, useDreams, useFinance, useRemoveDreamDeposit, useSaveDream, useSaveFinance } from '@/hooks/use-data';
 import {
   brl,
-  budgetCheck,
-  DEFAULT_RATE,
   DREAM_ICONS,
   DREAM_IDEAS,
   dreamIcon,
   dreamIconId,
+  freeShare,
   METHOD_BY_ID,
-  METHOD_GROUPS,
-  METHODS,
   moneyInput,
   monthLabel,
   parseMoney,
   planFor,
   STATUS_INFO,
-  type FinanceMethod,
-  type MethodGroup,
+  WAY_BY_ID,
+  wayPlan,
+  WAYS,
+  waysOf,
 } from '@/lib/finance';
 import { todayISO } from '@/lib/task-utils';
 import { cn } from '@/lib/utils';
-import type { Dream } from '@/types';
+import type { Dream, DreamWay } from '@/types';
 
 /* ----------------------------------- Peças ----------------------------------- */
 
-function IconTile({ icon: Icon, size = 'md', className }: { icon: LucideIcon; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+function IconTile({ icon: Icon, size = 'md' }: { icon: LucideIcon; size?: 'sm' | 'md' | 'lg' }) {
   return (
     <span
-      className={cn(
-        'grid shrink-0 place-items-center bg-primary/10 text-primary dark:text-neon',
-        size === 'sm' ? 'size-8 rounded-lg' : size === 'md' ? 'size-10 rounded-xl' : 'size-12 rounded-xl',
-        className,
-      )}
+      className={cn('grid shrink-0 place-items-center bg-primary/10 text-primary dark:text-neon', size === 'sm' ? 'size-9 rounded-lg' : size === 'md' ? 'size-10 rounded-xl' : 'size-12 rounded-xl')}
       aria-hidden
     >
       <Icon className={size === 'lg' ? 'size-6' : size === 'md' ? 'size-5' : 'size-4'} />
@@ -69,95 +43,63 @@ function IconTile({ icon: Icon, size = 'md', className }: { icon: LucideIcon; si
   );
 }
 
-function MoneyField({ id, label, value, onChange, placeholder, hint }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder?: string; hint?: string }) {
+function MoneyInput({ id, value, onChange, placeholder, className, ariaLabel }: { id?: string; value: string; onChange: (v: string) => void; placeholder?: string; className?: string; ariaLabel?: string }) {
+  return (
+    <div className={cn('relative', className)}>
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-foreground/50">R$</span>
+      <Input id={id} inputMode="decimal" autoComplete="off" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={ariaLabel} className="pl-9 tabular-nums" />
+    </div>
+  );
+}
+
+function MoneyField({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-foreground/50">R$</span>
-        <Input id={id} inputMode="decimal" autoComplete="off" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="pl-9 tabular-nums" />
-      </div>
-      {hint && <p className="mt-1 text-xs text-foreground/50">{hint}</p>}
+      <MoneyInput id={id} value={value} onChange={onChange} placeholder={placeholder} />
     </div>
   );
-}
-
-function StatTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
-      <span className="grid size-9 place-items-center rounded-lg bg-muted text-foreground/70" aria-hidden>
-        <Icon className="size-5" />
-      </span>
-      <span>
-        <span className="block text-2xl font-bold tabular-nums">{value}</span>
-        <span className="text-sm text-foreground/60">{label}</span>
-      </span>
-    </div>
-  );
-}
-
-function StatusChip({ status }: { status: keyof typeof STATUS_INFO }) {
-  const st = STATUS_INFO[status];
-  return <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', st.tone)}>{st.label}</span>;
 }
 
 /* ----------------------------------- Seu mês ----------------------------------- */
 
-function BudgetCard({ needed }: { needed: number }) {
+function MonthCard({ needed }: { needed: number }) {
   const { data: budget } = useFinance();
   const save = useSaveFinance();
   const [editing, setEditing] = useState(false);
   const [income, setIncome] = useState('');
   const [expenses, setExpenses] = useState('');
-  const [rate, setRate] = useState('');
 
   useEffect(() => {
     setIncome(moneyInput(budget?.income));
     setExpenses(moneyInput(budget?.expenses));
-    setRate((budget?.rate ?? DEFAULT_RATE).toLocaleString('pt-BR'));
   }, [budget?.updatedAt]);
 
-  const check = budgetCheck(budget, needed);
   const submit = () => {
     const i = parseMoney(income);
     const e = parseMoney(expenses);
-    const r = parseMoney(rate);
     if (!(i > 0)) return toast.error('Informe quanto entra por mês');
-    save.mutate({ income: i, expenses: Number.isFinite(e) ? e : 0, rate: Number.isFinite(r) && r >= 0 && r < 10 ? r : DEFAULT_RATE });
+    save.mutate({ income: i, expenses: Number.isFinite(e) ? e : 0, rate: 0 });
     setEditing(false);
     toast.success('Seu mês foi salvo');
   };
-  const showForm = editing || !budget;
 
-  return (
-    <section aria-labelledby="fin-month" className="rounded-xl border border-border bg-card p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2">
+  if (!budget || editing)
+    return (
+      <section aria-labelledby="fin-month" className="rounded-xl border border-border bg-card p-4 sm:p-5">
         <h2 id="fin-month" className="flex items-center gap-2 font-bold">
-          <Wallet className="size-5 text-primary dark:text-neon" aria-hidden /> Seu mês
+          <Wallet className="size-5 text-primary dark:text-neon" aria-hidden /> {budget ? 'Seu mês' : 'Primeiro passo: o seu mês'}
         </h2>
-        {budget && !editing && (
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            <Pencil /> Editar
-          </Button>
-        )}
-      </div>
-
-      {showForm ? (
+        <p className="mt-1 text-sm text-foreground/60">Quanto entra e quanto sai por mês. Assim eu sei quanto sobra para os seus sonhos.</p>
         <form
-          className="mt-3 space-y-3"
+          className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
         >
-          <p className="text-sm text-foreground/60">Quanto entra e quanto sai por mês. Assim eu sei se os seus sonhos cabem na sobra.</p>
-          <MoneyField id="fin-income" label="Entra por mês" value={income} onChange={setIncome} placeholder="5.000" hint="Salário e outras rendas, líquido" />
-          <MoneyField id="fin-expenses" label="Sai por mês" value={expenses} onChange={setExpenses} placeholder="3.800" hint="Contas, mercado, cartão…" />
-          <div>
-            <Label htmlFor="fin-rate">Rendimento ao mês (%)</Label>
-            <Input id="fin-rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} className="tabular-nums" />
-            <p className="mt-1 text-xs text-foreground/50">Quanto o dinheiro guardado rende. Use 0 para não contar.</p>
-          </div>
+          <MoneyField id="fin-income" label="Entra por mês" value={income} onChange={setIncome} placeholder="4.000" />
+          <MoneyField id="fin-expenses" label="Sai por mês" value={expenses} onChange={setExpenses} placeholder="3.200" />
           <div className="flex gap-2">
             <Button type="submit">Salvar</Button>
             {budget && (
@@ -167,45 +109,42 @@ function BudgetCard({ needed }: { needed: number }) {
             )}
           </div>
         </form>
-      ) : (
-        check && (
-          <div className="mt-3 space-y-3">
-            <dl className="divide-y divide-border text-sm">
-              <div className="flex justify-between py-1.5">
-                <dt className="text-foreground/60">Entra</dt>
-                <dd className="font-semibold tabular-nums">{brl(budget!.income)}</dd>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <dt className="text-foreground/60">Sai</dt>
-                <dd className="font-semibold tabular-nums">{brl(budget!.expenses)}</dd>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <dt className="font-semibold">Sobra</dt>
-                <dd className={cn('font-bold tabular-nums', check.free < 0 && 'text-primary dark:text-neon')}>{brl(check.free)}</dd>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <dt className="text-foreground/60">Sonhos pedem</dt>
-                <dd className="font-semibold tabular-nums">{brl(needed)}</dd>
-              </div>
-            </dl>
-            {needed > 0 && (
-              <>
-                <Progress value={check.free > 0 ? (needed / check.free) * 100 : 100} label="Quanto da sobra os sonhos usam" />
-                <p className="text-sm text-foreground/70">
-                  {check.gap > 0 ? (
-                    <>
-                      Faltam <strong className="text-primary dark:text-neon">{brl(check.gap)} por mês</strong>. Abra um sonho e use o simulador para fechar a conta.
-                    </>
-                  ) : (
-                    <>
-                      Cabe no orçamento: usa <strong>{Math.round(check.share * 100)}%</strong> da sua sobra.
-                    </>
-                  )}
-                </p>
-              </>
-            )}
+      </section>
+    );
+
+  const free = budget.income - budget.expenses;
+  const fits = needed <= free;
+  return (
+    <section aria-labelledby="fin-month" className="rounded-xl border border-border bg-card p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="fin-month" className="flex items-center gap-2 font-bold">
+          <Wallet className="size-5 text-primary dark:text-neon" aria-hidden /> Seu mês
+        </h2>
+        <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+          <Pencil /> Editar
+        </Button>
+      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {(
+          [
+            ['Entra', budget.income],
+            ['Sai', budget.expenses],
+            ['Sobra', free],
+          ] as const
+        ).map(([l, v]) => (
+          <div key={l} className={cn('rounded-lg px-2 py-2', l === 'Sobra' ? 'bg-primary/10' : 'bg-muted/60')}>
+            <dt className="text-xs text-foreground/60">{l}</dt>
+            <dd className={cn('font-bold tabular-nums', l === 'Sobra' && 'text-primary dark:text-neon')}>{brl(v)}</dd>
           </div>
-        )
+        ))}
+      </dl>
+      {needed > 0 && (
+        <p className="mt-3 flex items-start gap-2 text-sm">
+          {fits ? <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-primary dark:text-neon" aria-hidden />}
+          <span>
+            Seus sonhos pedem <strong>{brl(needed)} por mês</strong>. {fits ? 'Cabe na sua sobra.' : `Sua sobra não cobre tudo: faltam ${brl(needed - free)} por mês. Abra um sonho e veja de onde pode vir o resto.`}
+          </span>
+        </p>
       )}
     </section>
   );
@@ -213,38 +152,37 @@ function BudgetCard({ needed }: { needed: number }) {
 
 /* --------------------------------- Novo/editar sonho --------------------------------- */
 
-type FormState = { title: string; icon: string; target: string; deadline: string; saved: string; why: string; methods: string[] };
+type FormState = { title: string; icon: string; target: string; deadline: string; saved: string; why: string };
+const blankForm = (): FormState => ({ title: '', icon: 'sonho', target: '', deadline: format(addMonths(new Date(), 12), 'yyyy-MM'), saved: '', why: '' });
 
-const blankForm = (): FormState => ({ title: '', icon: 'sonho', target: '', deadline: format(addMonths(new Date(), 12), 'yyyy-MM'), saved: '', why: '', methods: [] });
-
-function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; dream?: Dream; rate: number; onCreated?: (id: string) => void }) {
+function DreamForm({ open, onOpenChange, dream, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; dream?: Dream; onCreated?: (id: string) => void }) {
   const save = useSaveDream();
   const [f, setF] = useState<FormState>(blankForm);
   useEffect(() => {
     if (!open) return;
-    setF(dream ? { title: dream.title, icon: dreamIconId(dream), target: moneyInput(dream.target), deadline: dream.deadline.slice(0, 7), saved: '', why: dream.why ?? '', methods: dream.methods } : blankForm());
+    setF(dream ? { title: dream.title, icon: dreamIconId(dream), target: moneyInput(dream.target), deadline: dream.deadline.slice(0, 7), saved: '', why: dream.why ?? '' } : blankForm());
   }, [open, dream?.id]);
 
   const target = parseMoney(f.target);
   const saved = parseMoney(f.saved) || 0;
   const deadline = f.deadline ? `${f.deadline}-28` : '';
-  const alreadySaved = dream ? dream.deposits.reduce((s, x) => s + x.amount, 0) : saved;
+  const already = dream ? dream.deposits.reduce((s, x) => s + x.amount, 0) : saved;
   const preview =
     target > 0 && deadline
-      ? planFor({ id: '', title: '', emoji: '', target, deadline, deposits: [{ id: '', date: '', amount: alreadySaved, createdAt: '' }], methods: [], stepsDone: [], createdAt: new Date().toISOString(), updatedAt: '' }, rate)
+      ? planFor({ id: '', title: '', emoji: '', target, deadline, deposits: [{ id: '', date: '', amount: already, createdAt: '' }], methods: [], stepsDone: [], createdAt: new Date().toISOString(), updatedAt: '' }, 0)
       : null;
 
   const submit = () => {
     if (!f.title.trim()) return toast.error('Dê um nome ao sonho');
-    if (!(target > 0)) return toast.error('Informe quanto o sonho custa');
-    if (!f.deadline) return toast.error('Escolha até quando quer realizar');
+    if (!(target > 0)) return toast.error('Informe quanto custa');
+    if (!f.deadline) return toast.error('Escolha até quando');
     const now = new Date().toISOString();
     const deposits = dream ? dream.deposits : saved > 0 ? [{ id: `dp_${Date.now().toString(36)}`, date: todayISO(), amount: saved, note: 'Já tinha guardado', createdAt: now }] : [];
     save.mutate(
-      { ...(dream ? { id: dream.id } : {}), title: f.title.trim(), icon: f.icon, target, deadline, why: f.why.trim() || undefined, methods: f.methods, deposits },
+      { ...(dream ? { id: dream.id } : {}), title: f.title.trim(), icon: f.icon, target, deadline, why: f.why.trim() || undefined, deposits },
       {
         onSuccess: (created) => {
-          toast.success(dream ? 'Sonho atualizado' : 'Sonho criado', { description: dream ? f.title.trim() : 'Veja no simulador como chegar lá.' });
+          toast.success(dream ? 'Sonho atualizado' : 'Sonho criado', { description: dream ? undefined : 'Agora diga de onde vai sair o dinheiro.' });
           onOpenChange(false);
           if (!dream) onCreated?.(created.id);
         },
@@ -255,9 +193,8 @@ function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boole
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle className="text-lg font-bold">{dream ? 'Editar sonho' : 'Novo sonho ou meta'}</DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-foreground/60">Quanto custa e até quando. Eu calculo quanto guardar por mês.</DialogDescription>
-
+        <DialogTitle className="text-lg font-bold">{dream ? 'Editar sonho' : 'Novo sonho'}</DialogTitle>
+        <DialogDescription className="mt-1 text-sm text-foreground/60">O que você quer, quanto custa e até quando.</DialogDescription>
         <form
           className="mt-4 space-y-4"
           onSubmit={(e) => {
@@ -266,45 +203,34 @@ function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boole
           }}
         >
           {!dream && (
-            <div>
-              <Label>Comece por uma ideia</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {DREAM_IDEAS.map((idea) => {
-                  const Icon = DREAM_ICONS.find((i) => i.id === idea.icon)!.icon;
-                  const on = f.title === idea.title;
-                  return (
-                    <button
-                      key={idea.title}
-                      type="button"
-                      onClick={() => setF((s) => ({ ...s, title: idea.title, icon: idea.icon, target: moneyInput(idea.target), deadline: format(addMonths(new Date(), idea.months), 'yyyy-MM'), methods: idea.methods }))}
-                      className={cn(
-                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors',
-                        on ? 'border-primary bg-primary text-white' : 'border-border text-foreground/70 hover:border-primary/50 hover:text-foreground',
-                      )}
-                    >
-                      <Icon className="size-3.5" aria-hidden /> {idea.title}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {DREAM_IDEAS.map((idea) => {
+                const Icon = DREAM_ICONS.find((i) => i.id === idea.icon)!.icon;
+                const on = f.title === idea.title;
+                return (
+                  <button
+                    key={idea.title}
+                    type="button"
+                    onClick={() => setF((s) => ({ ...s, title: idea.title, icon: idea.icon, target: moneyInput(idea.target), deadline: format(addMonths(new Date(), idea.months), 'yyyy-MM') }))}
+                    className={cn('inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors', on ? 'border-primary bg-primary text-white' : 'border-border text-foreground/70 hover:border-primary/50 hover:text-foreground')}
+                  >
+                    <Icon className="size-3.5" aria-hidden /> {idea.title}
+                  </button>
+                );
+              })}
             </div>
           )}
-
           <div>
-            <Label htmlFor="dr-title">Nome</Label>
+            <Label htmlFor="dr-title">O que você quer</Label>
             <Input id="dr-title" value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} placeholder="Ex.: Viagem para a Europa" maxLength={80} />
-          </div>
-
-          <div>
-            <Label>Ícone</Label>
-            <div className="grid grid-cols-9 gap-1">
+            <div className="mt-2 grid grid-cols-9 gap-1">
               {DREAM_ICONS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setF((s) => ({ ...s, icon: id }))}
-                  className={cn('grid aspect-square place-items-center rounded-lg transition-colors', f.icon === id ? 'bg-primary text-white' : 'text-foreground/60 hover:bg-muted hover:text-foreground')}
-                  aria-label={label}
+                  className={cn('grid aspect-square place-items-center rounded-lg transition-colors', f.icon === id ? 'bg-primary text-white' : 'text-foreground/55 hover:bg-muted hover:text-foreground')}
+                  aria-label={`Ícone: ${label}`}
                   aria-pressed={f.icon === id}
                   title={label}
                 >
@@ -313,7 +239,6 @@ function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boole
               ))}
             </div>
           </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <MoneyField id="dr-target" label="Quanto custa" value={f.target} onChange={(v) => setF((s) => ({ ...s, target: v }))} placeholder="15.000" />
             <div>
@@ -321,33 +246,25 @@ function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boole
               <Input id="dr-deadline" type="month" min={format(addMonths(new Date(), 1), 'yyyy-MM')} value={f.deadline} onChange={(e) => setF((s) => ({ ...s, deadline: e.target.value }))} />
             </div>
           </div>
-          {!dream && <MoneyField id="dr-saved" label="Já tenho guardado (opcional)" value={f.saved} onChange={(v) => setF((s) => ({ ...s, saved: v }))} placeholder="0" />}
+          {!dream && <MoneyField id="dr-saved" label="Já tenho guardado (se tiver)" value={f.saved} onChange={(v) => setF((s) => ({ ...s, saved: v }))} placeholder="0" />}
           <div>
-            <Label htmlFor="dr-why">Por que é importante? (opcional)</Label>
-            <Textarea id="dr-why" value={f.why} onChange={(e) => setF((s) => ({ ...s, why: e.target.value }))} placeholder="Ex.: Levar meus pais para conhecer o mar" className="min-h-[64px]" maxLength={300} />
+            <Label htmlFor="dr-why">Por que é importante (opcional)</Label>
+            <Textarea id="dr-why" value={f.why} onChange={(e) => setF((s) => ({ ...s, why: e.target.value }))} placeholder="Ex.: Levar meus pais para conhecer o mar" className="min-h-[60px]" maxLength={300} />
           </div>
-
-          {preview && (
-            <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3">
+          {preview && preview.perMonth > 0 && (
+            <p className="flex items-center gap-2 rounded-xl bg-muted/60 p-3 text-sm">
               <PiggyBank className="size-5 shrink-0 text-primary dark:text-neon" aria-hidden />
-              <p className="text-sm">
-                {preview.perMonth > 0 ? (
-                  <>
-                    Guardar <strong className="tabular-nums">{brl(preview.perMonth)} por mês</strong> até {monthLabel(deadline)}.
-                  </>
-                ) : (
-                  'Você já tem o valor todo.'
-                )}
-              </p>
-            </div>
+              <span>
+                Você vai precisar guardar <strong className="tabular-nums">{brl(preview.perMonth)} por mês</strong>.
+              </span>
+            </p>
           )}
-
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={save.isPending}>
-              {dream ? 'Salvar' : 'Criar'}
+              {dream ? 'Salvar' : 'Criar sonho'}
             </Button>
           </div>
         </form>
@@ -358,102 +275,148 @@ function DreamForm({ open, onOpenChange, dream, rate, onCreated }: { open: boole
 
 /* ----------------------------------- Guardar ----------------------------------- */
 
-function DepositForm({ dream, suggested, onDone, compact }: { dream: Dream; suggested: number; onDone?: () => void; compact?: boolean }) {
+function DepositForm({ dream, suggested, onDone }: { dream: Dream; suggested: number; onDone: () => void }) {
   const deposit = useDreamDeposit();
   const [value, setValue] = useState(suggested > 0 ? moneyInput(Math.ceil(suggested)) : '');
-  const [note, setNote] = useState('');
   const send = (sign: 1 | -1) => {
     const n = parseMoney(value);
     if (!(n > 0)) return toast.error('Informe um valor');
-    deposit.mutate({ dreamId: dream.id, amount: sign * n, note: note.trim() || undefined, date: todayISO() }, { onSuccess: () => (setNote(''), onDone?.()) });
+    deposit.mutate({ dreamId: dream.id, amount: sign * n, date: todayISO() }, { onSuccess: onDone });
   };
   return (
     <form
-      className="space-y-2"
+      className="mt-3 flex flex-wrap items-center gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         send(1);
       }}
     >
-      <div className={cn('grid gap-2', !compact && 'sm:grid-cols-[10rem_minmax(0,1fr)]')}>
-        <MoneyField id={`dep-${dream.id}${compact ? '-c' : ''}`} label="Valor" value={value} onChange={setValue} />
-        {!compact && (
-          <div>
-            <Label htmlFor={`dep-note-${dream.id}`}>Observação</Label>
-            <Input id={`dep-note-${dream.id}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Salário, 13º, venda…" maxLength={80} />
-          </div>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={deposit.isPending}>
-          <Plus /> Guardar
-        </Button>
-        <Button type="button" size="sm" variant="outline" disabled={deposit.isPending} onClick={() => send(-1)}>
-          <Minus /> Retirar
-        </Button>
-        {onDone && (
-          <Button type="button" size="sm" variant="ghost" onClick={onDone} aria-label="Cancelar">
-            <X />
-          </Button>
-        )}
-      </div>
+      <MoneyInput value={value} onChange={setValue} ariaLabel="Valor" className="w-36" />
+      <Button type="submit" disabled={deposit.isPending}>
+        <Plus /> Guardar
+      </Button>
+      <Button type="button" variant="outline" disabled={deposit.isPending} onClick={() => send(-1)}>
+        <Minus /> Tirei
+      </Button>
+      <Button type="button" variant="ghost" size="icon" onClick={onDone} aria-label="Cancelar">
+        <X />
+      </Button>
     </form>
   );
 }
 
 /* --------------------------------- Cartão do sonho --------------------------------- */
 
-function DreamCard({ dream, rate, onOpen }: { dream: Dream; rate: number; onOpen: (tab?: SheetTab) => void }) {
-  const p = planFor(dream, rate);
-  const [saving, setSaving] = useState(false);
+function DreamCard({ dream, onOpen }: { dream: Dream; onOpen: () => void }) {
+  const p = planFor(dream, 0);
   const Icon = dreamIcon(dream);
+  const st = STATUS_INFO[p.status];
   return (
-    <li className="group flex flex-col rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:shadow-md">
-      <button type="button" onClick={() => onOpen()} className="flex items-center gap-3 text-left">
-        <IconTile icon={Icon} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold">{dream.title}</span>
-          <span className="flex items-center gap-1 text-xs text-foreground/55">
-            <CalendarDays className="size-3" aria-hidden /> até {monthLabel(dream.deadline)}
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group flex h-full w-full flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+      >
+        <span className="flex w-full items-center gap-3">
+          <IconTile icon={Icon} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold">{dream.title}</span>
+            <span className="text-xs text-foreground/55">até {monthLabel(dream.deadline)}</span>
           </span>
+          <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', st.tone)}>{st.label}</span>
         </span>
-        <ArrowRight className="size-4 shrink-0 text-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
-      </button>
-
-      <div className="mt-4">
-        <div className="mb-1.5 flex items-baseline justify-between gap-2 tabular-nums">
-          <span className="text-lg font-bold">{brl(p.saved)}</span>
-          <span className="text-sm text-foreground/55">de {brl(dream.target)}</span>
-        </div>
-        <Progress value={p.pct} label={`${Math.round(p.pct)}% de ${dream.title}`} />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2 text-sm">
-        {p.status === 'realizado' ? (
-          <span className="text-foreground/60">Meta alcançada</span>
-        ) : p.status === 'vencido' ? (
-          <span className="text-foreground/60">Faltam {brl(p.remaining)}</span>
-        ) : (
-          <span>
-            <strong className="tabular-nums">{brl(p.perMonth)}</strong> <span className="text-foreground/55">por mês</span>
+        <span className="block w-full">
+          <span className="mb-1.5 flex items-baseline justify-between gap-2 tabular-nums">
+            <span className="text-lg font-bold">{brl(p.saved)}</span>
+            <span className="text-sm text-foreground/55">de {brl(dream.target)}</span>
           </span>
-        )}
-        <StatusChip status={p.status} />
-      </div>
-
-      {p.status !== 'realizado' && (
-        <div className="mt-3 border-t border-border pt-3">
-          {saving ? (
-            <DepositForm dream={dream} suggested={p.perMonth} onDone={() => setSaving(false)} compact />
+          <Progress value={p.pct} label={`${Math.round(p.pct)}% de ${dream.title}`} />
+        </span>
+        <span className="text-sm text-foreground/70">
+          {p.status === 'realizado' ? (
+            'Você juntou tudo!'
+          ) : p.status === 'vencido' ? (
+            'O prazo passou. Toque para ajustar.'
           ) : (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSaving(true)}>
-                <PiggyBank /> Guardar
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => onOpen('simulador')}>
-                <SlidersHorizontal /> Simular
-              </Button>
-            </div>
+            <>
+              Guarde <strong className="text-foreground">{brl(p.perMonth)} por mês</strong>
+            </>
+          )}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+/* ------------------------------- Painel do sonho ------------------------------- */
+
+function WayRow({ way, onChange, onRemove, dream }: { way: DreamWay; onChange: (v: number) => void; onRemove: () => void; dream: Dream }) {
+  const def = WAY_BY_ID[way.id];
+  const method = METHOD_BY_ID[def?.methodId ?? ''];
+  const [text, setText] = useState(moneyInput(way.value));
+  const [open, setOpen] = useState(false);
+  const save = useSaveDream();
+  const createTask = useCreateTask();
+  if (!def) return null;
+  const toggleStep = (key: string) =>
+    save.mutate({ id: dream.id, title: dream.title, target: dream.target, deadline: dream.deadline, stepsDone: dream.stepsDone.includes(key) ? dream.stepsDone.filter((k) => k !== key) : [...dream.stepsDone, key] });
+  return (
+    <li className="py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <IconTile icon={def.icon} size="sm" />
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="text-sm font-medium leading-tight">{def.label}</p>
+          <p className="text-xs text-foreground/50">{def.hint}</p>
+        </div>
+        <div className="ml-12 flex items-center gap-1.5 sm:ml-0">
+          <MoneyInput
+            value={text}
+            onChange={(v) => {
+              setText(v);
+              const n = parseMoney(v);
+              onChange(Number.isFinite(n) ? n : 0);
+            }}
+            ariaLabel={`${def.label}: valor`}
+            className="w-28"
+          />
+          <span className="w-12 text-xs leading-tight text-foreground/50">{def.kind === 'mensal' ? 'por mês' : 'uma vez'}</span>
+          <Button variant="ghost" size="icon-sm" onClick={onRemove} aria-label={`Tirar ${def.label}`} title="Tirar">
+            <X />
+          </Button>
+        </div>
+      </div>
+      {method && (
+        <div className="ml-12 mt-1">
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline dark:text-neon">
+            Como fazer <ChevronDown className={cn('size-3.5 transition-transform', open && 'rotate-180')} aria-hidden />
+          </button>
+          {open && (
+            <ol className="mt-2 space-y-1.5">
+              {method.steps.map((s, i) => {
+                const key = `${method.id}:${i}`;
+                const done = dream.stepsDone.includes(key);
+                return (
+                  <li key={key} className="group/step flex items-start gap-2 text-sm">
+                    <button type="button" onClick={() => toggleStep(key)} className="mt-0.5 shrink-0 text-foreground/40 hover:text-primary" aria-label={done ? `Desmarcar: ${s}` : `Marcar como feito: ${s}`}>
+                      {done ? <CircleCheck className="size-4 text-primary dark:text-neon" /> : <Circle className="size-4" />}
+                    </button>
+                    <span className={cn('min-w-0 flex-1', done && 'text-foreground/40 line-through')}>{s}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        createTask.mutate({ title: s, whatToDo: `Passo para o sonho ${dream.title}.`, status: 'NOT_STARTED', priority: 'MEDIUM', dueDate: todayISO(), scope: 'PERSONAL', lifeAreaId: 'financas', subtasks: [], links: [] })
+                      }
+                      className="shrink-0 rounded-md p-0.5 text-foreground/35 hover:bg-muted hover:text-primary sm:opacity-0 sm:focus:opacity-100 sm:group-hover/step:opacity-100"
+                      aria-label={`Virar afazer: ${s}`}
+                      title="Virar afazer"
+                    >
+                      <ListPlus className="size-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
       )}
@@ -461,71 +424,76 @@ function DreamCard({ dream, rate, onOpen }: { dream: Dream; rate: number; onOpen
   );
 }
 
-/* ------------------------------- Detalhe do sonho ------------------------------- */
-
-function useStepToTask() {
-  const createTask = useCreateTask();
-  return (step: string, context: string) =>
-    createTask.mutate({ title: step, whatToDo: context, status: 'NOT_STARTED', priority: 'MEDIUM', dueDate: todayISO(), scope: 'PERSONAL', lifeAreaId: 'financas', subtasks: [], links: [] });
-}
-
-function MethodSteps({ method, done, onToggle, onTask }: { method: FinanceMethod; done: (i: number) => boolean; onToggle?: (i: number) => void; onTask: (step: string) => void }) {
-  return (
-    <ol className="space-y-1.5">
-      {method.steps.map((s, i) => (
-        <li key={i} className="group/step flex items-start gap-2 text-sm">
-          {onToggle ? (
-            <button type="button" onClick={() => onToggle(i)} className="mt-0.5 shrink-0 text-foreground/40 hover:text-primary" aria-label={done(i) ? `Desmarcar: ${s}` : `Marcar como feito: ${s}`}>
-              {done(i) ? <CircleCheck className="size-4 text-primary dark:text-neon" /> : <Circle className="size-4" />}
-            </button>
-          ) : (
-            <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-muted text-[10px] font-bold text-foreground/60">{i + 1}</span>
-          )}
-          <span className={cn('min-w-0 flex-1', done(i) && 'text-foreground/40 line-through')}>{s}</span>
-          <button
-            type="button"
-            onClick={() => onTask(s)}
-            className="shrink-0 rounded-md p-0.5 text-foreground/35 hover:bg-muted hover:text-primary sm:opacity-0 sm:focus:opacity-100 sm:group-hover/step:opacity-100"
-            aria-label={`Virar afazer: ${s}`}
-            title="Virar afazer"
-          >
-            <ListPlus className="size-4" />
-          </button>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-type SheetTab = 'resumo' | 'simulador' | 'passos';
-const SHEET_TABS: { id: SheetTab; label: string; icon: LucideIcon }[] = [
-  { id: 'resumo', label: 'Resumo', icon: PiggyBank },
-  { id: 'simulador', label: 'Simulador', icon: SlidersHorizontal },
-  { id: 'passos', label: 'Passos', icon: ListChecks },
-];
-
-function DreamSheet({ dream, rate, onClose, onEdit, startTab }: { dream: Dream | null; rate: number; onClose: () => void; onEdit: (d: Dream) => void; startTab: SheetTab }) {
+function DreamSheet({ dream, onClose, onEdit }: { dream: Dream | null; onClose: () => void; onEdit: (d: Dream) => void }) {
   const save = useSaveDream();
   const remove = useDeleteDream();
   const removeDep = useRemoveDreamDeposit();
-  const toTask = useStepToTask();
+  const createTask = useCreateTask();
+  const { data: dreams = [] } = useDreams();
   const { data: budget } = useFinance();
-  const [tab, setTab] = useState<SheetTab>(startTab);
-  useEffect(() => setTab(startTab), [dream?.id, startTab]);
+  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [ways, setWays] = useState<DreamWay[]>([]);
+  const dirty = useRef(false);
+
+  useEffect(() => {
+    dirty.current = false;
+    setSaving(false);
+    setAdding(false);
+    setWays(dream ? waysOf(dream) : []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dream?.id]);
+
+  // salva as formas de juntar (só os campos do plano: não sobrescreve depósitos)
+  useEffect(() => {
+    if (!dream || !dirty.current) return;
+    const h = setTimeout(() => save.mutate({ id: dream.id, title: dream.title, target: dream.target, deadline: dream.deadline, ways }), 600);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ways]);
 
   if (!dream) return <Dialog open={false} />;
-  const p = planFor(dream, rate);
+  const p = planFor(dream, 0);
+  const wp = wayPlan(dream, ways);
   const Icon = dreamIcon(dream);
-  const chosen = dream.methods.map((id) => METHOD_BY_ID[id]).filter(Boolean);
-  const others = METHODS.filter((m) => !dream.methods.includes(m.id));
-  const base = { id: dream.id, title: dream.title, target: dream.target, deadline: dream.deadline };
-  const setMethods = (methods: string[]) => save.mutate({ ...base, methods });
-  const toggleStep = (key: string) => save.mutate({ ...base, stepsDone: dream.stepsDone.includes(key) ? dream.stepsDone.filter((k) => k !== key) : [...dream.stepsDone, key] });
+  const done = p.status === 'realizado';
+  const missing = WAYS.filter((d) => !ways.find((w) => w.id === d.id));
+  const editWays = (fn: (w: DreamWay[]) => DreamWay[]) => {
+    dirty.current = true;
+    setWays(fn);
+  };
+  const free = budget?.income ? Math.max(0, budget.income - budget.expenses) : 0;
+  const suggestFor = (id: string) => {
+    const def = WAY_BY_ID[id];
+    if (id === 'sobra' && free) return Math.floor(freeShare(dream, dreams, free) / 10) * 10 || def.suggest;
+    // forma mensal: sugere o que ainda falta por mês
+    if (def.kind === 'mensal' && wp.gapMonthly > 0) return Math.min(Math.ceil(wp.gapMonthly / 10) * 10, def.suggest * 3);
+    return def.suggest;
+  };
+  const moveDeadline = () => {
+    if (!wp.reachDate) return;
+    const d = wp.reachDate;
+    save.mutate({ id: dream.id, title: dream.title, target: dream.target, deadline: d, ways }, { onSuccess: () => toast.success('Prazo atualizado', { description: `Até ${monthLabel(d)}` }) });
+  };
+  const reminder = () =>
+    createTask.mutate({
+      title: `Guardar ${brl(wp.monthly)} para ${dream.title}`,
+      whatToDo: 'Separar o dinheiro e registrar em Sonhos e metas.',
+      status: 'NOT_STARTED',
+      priority: 'HIGH',
+      dueDate: todayISO(),
+      recurrenceRule: 'FREQ=MONTHLY',
+      scope: 'PERSONAL',
+      lifeAreaId: 'financas',
+      subtasks: [],
+      links: [],
+    });
 
   return (
     <Dialog open={!!dream} onOpenChange={(v) => !v && onClose()}>
       <SheetContent aria-describedby={undefined}>
-        <div className="border-b border-border px-4 pb-3 pt-4 sm:px-6">
+        <div className="flex-1 overflow-y-auto px-4 pb-10 pt-4 sm:px-6">
+          {/* Cabeçalho */}
           <div className="flex items-center gap-3 pr-12">
             <IconTile icon={Icon} size="lg" />
             <div className="min-w-0 flex-1">
@@ -535,182 +503,179 @@ function DreamSheet({ dream, rate, onClose, onEdit, startTab }: { dream: Dream |
               </p>
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-1">
-            <div role="tablist" aria-label="Seções do sonho" className="flex min-w-0 flex-1 gap-1 rounded-xl border border-border bg-card p-1">
-              {SHEET_TABS.map(({ id, label, icon: TabIcon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  onClick={() => setTab(id)}
-                  className={cn('inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-1 text-sm font-semibold', tab === id ? 'bg-primary text-white' : 'text-foreground/65 hover:text-foreground')}
-                >
-                  <TabIcon className="hidden size-4 shrink-0 sm:block" aria-hidden /> <span className="truncate">{label}</span>
-                </button>
-              ))}
-            </div>
-            <Button variant="ghost" size="icon-sm" aria-label="Editar sonho" title="Editar" onClick={() => onEdit(dream)}>
-              <Pencil />
+          <div className="mt-2 flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(dream)}>
+              <Pencil /> Editar
             </Button>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="sm"
               className="hover:text-primary"
-              aria-label="Excluir sonho"
-              title="Excluir"
               onClick={async () => {
-                if (await askConfirm({ title: `Excluir "${dream.title}"?`, message: 'O sonho e o histórico de depósitos serão apagados.', confirmLabel: 'Excluir', danger: true })) {
+                if (await askConfirm({ title: `Excluir "${dream.title}"?`, message: 'O sonho e o histórico serão apagados.', confirmLabel: 'Excluir', danger: true })) {
                   remove.mutate(dream.id);
                   onClose();
                 }
               }}
             >
-              <Trash2 />
+              <Trash2 /> Excluir
             </Button>
           </div>
-        </div>
+          {dream.why && <p className="mt-2 border-l-4 border-primary pl-3 text-sm italic text-foreground/70">“{dream.why}”</p>}
 
-        <div role="tabpanel" className="flex-1 overflow-y-auto px-4 pb-8 pt-4 sm:px-6">
-          {tab === 'resumo' && (
-            <div className="space-y-5">
-              <section aria-label="Progresso" className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">Guardado</p>
-                    <p className="text-3xl font-bold tabular-nums">{brl(p.saved)}</p>
-                  </div>
-                  <StatusChip status={p.status} />
-                </div>
-                <Progress value={p.pct} className="mt-3 h-2.5" label={`${Math.round(p.pct)}% guardado`} />
-                <div className="mt-1.5 flex justify-between text-xs tabular-nums text-foreground/55">
-                  <span>{Math.round(p.pct)}%</span>
-                  <span>faltam {brl(p.remaining)}</span>
-                </div>
-                {p.status !== 'realizado' && p.status !== 'vencido' && <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-foreground/55">Para chegar no prazo, guarde</p>}
-                {p.status !== 'realizado' && p.status !== 'vencido' && (
-                  <div className="mt-1.5 grid grid-cols-3 divide-x divide-border rounded-lg bg-muted/50 text-center">
-                    {(
-                      [
-                        ['por mês', p.perMonth],
-                        ['por semana', p.perWeek],
-                        ['por dia', p.perDay],
-                      ] as const
-                    ).map(([l, v]) => (
-                      <div key={l} className="px-2 py-2">
-                        <p className="font-bold tabular-nums">{brl(v, v < 100)}</p>
-                        <p className="text-xs text-foreground/55">{l}</p>
-                      </div>
-                    ))}
-                  </div>
+          {/* 1. Quanto já tenho */}
+          <section aria-labelledby="dr-1" className="mt-5 rounded-xl border border-border bg-card p-4">
+            <h3 id="dr-1" className="text-xs font-semibold uppercase tracking-wide text-foreground/55">
+              1. Quanto já tenho
+            </h3>
+            <p className="mt-1 tabular-nums">
+              <span className="text-3xl font-bold">{brl(p.saved)}</span> <span className="text-foreground/55">de {brl(dream.target)}</span>
+            </p>
+            <Progress value={p.pct} className="mt-3 h-2.5" label={`${Math.round(p.pct)}% guardado`} />
+            <p className="mt-1.5 text-sm text-foreground/60">{done ? 'Você juntou tudo. Parabéns!' : `Faltam ${brl(p.remaining)}`}</p>
+            {!done &&
+              (saving ? (
+                <DepositForm dream={dream} suggested={wp.monthly || p.perMonth} onDone={() => setSaving(false)} />
+              ) : (
+                <Button className="mt-3" onClick={() => setSaving(true)}>
+                  <PiggyBank /> Guardar dinheiro
+                </Button>
+              ))}
+          </section>
+
+          {/* 2. De onde vai sair o dinheiro */}
+          {!done && (
+            <section aria-labelledby="dr-2" className="mt-4 rounded-xl border border-border bg-card p-4">
+              <h3 id="dr-2" className="text-xs font-semibold uppercase tracking-wide text-foreground/55">
+                2. De onde vai sair o dinheiro
+              </h3>
+
+              <div aria-live="polite" className={cn('mt-2 flex items-start gap-2 rounded-lg p-3 text-sm', ways.length === 0 ? 'bg-muted/60' : wp.diff !== null && wp.diff >= 0 ? 'bg-emerald-500/10' : 'bg-primary/10')}>
+                {ways.length === 0 ? (
+                  <>
+                    <Info className="mt-0.5 size-4 shrink-0 text-foreground/60" aria-hidden />
+                    <span>
+                      Para chegar até {monthLabel(dream.deadline)} você precisa juntar <strong>{brl(wp.needMonthly)} por mês</strong>. Escolha abaixo de onde vai sair esse dinheiro.
+                    </span>
+                  </>
+                ) : wp.diff !== null && wp.diff >= 0 ? (
+                  <>
+                    <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                    <span>
+                      <strong>Dá certo!</strong> Você junta tudo em <strong>{monthLabel(wp.reachDate!)}</strong>
+                      {wp.diff > 0 ? `, ${wp.diff} ${wp.diff === 1 ? 'mês' : 'meses'} antes do prazo.` : ', bem no prazo.'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CircleAlert className="mt-0.5 size-4 shrink-0 text-primary dark:text-neon" aria-hidden />
+                    <span>
+                      <strong>Ainda não chega no prazo.</strong> Faltam <strong>{brl(wp.gapMonthly)} por mês</strong>.{wp.reachDate ? ` Do jeito que está, você chega em ${monthLabel(wp.reachDate)}.` : ' Adicione algo que entre todo mês.'}
+                    </span>
+                  </>
                 )}
-                {p.status === 'vencido' && <p className="mt-3 text-sm text-foreground/70">O prazo passou. Edite o sonho ou use o simulador para escolher um novo prazo.</p>}
-              </section>
+              </div>
 
-              {p.status !== 'realizado' && (
-                <section aria-labelledby="dr-save" className="space-y-2">
-                  <h3 id="dr-save" className="font-bold">
-                    Registrar dinheiro
-                  </h3>
-                  <DepositForm dream={dream} suggested={p.perMonth} />
-                </section>
+              {ways.length > 0 && (
+                <ul className="mt-1 divide-y divide-border">
+                  {ways.map((w) => (
+                    <WayRow
+                      key={w.id}
+                      way={w}
+                      dream={dream}
+                      onChange={(v) => editWays((ws) => ws.map((x) => (x.id === w.id ? { ...x, value: v } : x)))}
+                      onRemove={() => editWays((ws) => ws.filter((x) => x.id !== w.id))}
+                    />
+                  ))}
+                </ul>
               )}
 
-              {dream.why && <blockquote className="rounded-xl border-l-4 border-primary bg-muted/50 px-4 py-3 text-sm italic text-foreground/80">“{dream.why}”</blockquote>}
+              {ways.length > 0 && (
+                <p className="flex justify-between border-t border-border pt-3 text-sm">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-right tabular-nums">
+                    <strong>{brl(wp.monthly)} por mês</strong>
+                    {wp.once > 0 && <span className="block text-xs text-foreground/55">+ {brl(wp.once)} de uma vez</span>}
+                  </span>
+                </p>
+              )}
 
-              <section aria-labelledby="dr-hist" className="space-y-2">
-                <h3 id="dr-hist" className="font-bold">
-                  Histórico
-                </h3>
-                {dream.deposits.length === 0 ? (
-                  <p className="text-sm text-foreground/55">Nenhum depósito ainda. O primeiro é o mais importante.</p>
+              {missing.length > 0 &&
+                (adding || ways.length === 0 ? (
+                  <div className="mt-3">
+                    <p className="mb-2 text-sm font-medium">{ways.length ? 'Adicionar:' : 'De onde vai sair?'}</p>
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      {missing.map((d) => {
+                        const WIcon = d.icon;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => {
+                              editWays((ws) => [...ws, { id: d.id, value: suggestFor(d.id) }]);
+                              setAdding(false);
+                            }}
+                            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm transition-colors hover:border-primary/50"
+                          >
+                            <WIcon className="size-4 shrink-0 text-primary dark:text-neon" aria-hidden />
+                            <span className="min-w-0 flex-1">{d.label}</span>
+                            <Plus className="size-3.5 shrink-0 text-foreground/40" aria-hidden />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : (
-                  <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-                    {[...dream.deposits].reverse().map((d) => (
-                      <li key={d.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                        <span className="w-16 shrink-0 tabular-nums text-foreground/55">{d.date ? format(parseISO(d.date), 'dd/MM/yy') : ''}</span>
-                        <span className="min-w-0 flex-1 truncate text-foreground/75">{d.note ?? (d.amount < 0 ? 'Retirada' : 'Depósito')}</span>
-                        <span className={cn('shrink-0 font-semibold tabular-nums', d.amount < 0 && 'text-primary dark:text-neon')}>
-                          {d.amount < 0 ? '−' : '+'}
-                          {brl(Math.abs(d.amount), true)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Apagar este lançamento"
-                          onClick={async () => (await askConfirm({ title: 'Apagar este lançamento?', confirmLabel: 'Apagar', danger: true })) && removeDep.mutate({ dreamId: dream.id, depositId: d.id })}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setAdding(true)}>
+                    <Plus /> Adicionar de onde vem o dinheiro
+                  </Button>
+                ))}
+
+              {((wp.diff !== null && wp.diff < 0 && wp.reachDate) || wp.monthly > 0) && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
+                  {wp.diff !== null && wp.diff < 0 && wp.reachDate && (
+                    <Button size="sm" variant="outline" onClick={moveDeadline}>
+                      <CalendarClock /> Mudar prazo para {monthLabel(wp.reachDate)}
+                    </Button>
+                  )}
+                  {wp.monthly > 0 && (
+                    <Button size="sm" variant="ghost" onClick={reminder}>
+                      <BellRing /> Lembrete todo mês
+                    </Button>
+                  )}
+                </div>
+              )}
+            </section>
           )}
 
-          {tab === 'simulador' &&
-            (p.status === 'realizado' ? (
-              <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-border p-8 text-center">
-                <Trophy className="size-8 text-primary dark:text-neon" aria-hidden />
-                <p className="font-semibold">Meta alcançada</p>
-                <p className="text-sm text-foreground/60">Você juntou todo o valor deste sonho.</p>
-              </div>
-            ) : (
-              <PlanBuilder dream={dream} budget={budget} rate={rate} />
-            ))}
-
-          {tab === 'passos' && (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground/60">Os caminhos que você escolheu, passo a passo. Marque o que já fez; qualquer passo pode virar afazer.</p>
-              {chosen.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-foreground/55">Nenhum caminho ainda. Escolha abaixo ou toque em “Usar este plano” no simulador.</p>}
-              <ul className="space-y-3">
-                {chosen.map((m) => {
-                  const doneCount = m.steps.filter((_, i) => dream.stepsDone.includes(`${m.id}:${i}`)).length;
-                  return (
-                    <li key={m.id} className="rounded-xl border border-border bg-card p-4">
-                      <div className="mb-3 flex items-center gap-3">
-                        <IconTile icon={m.icon} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold leading-tight">{m.title}</p>
-                          <p className="text-xs text-foreground/55">
-                            {doneCount} de {m.steps.length} passos · {m.potential}
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="icon-sm" aria-label={`Tirar ${m.title} do plano`} title="Tirar do plano" onClick={() => setMethods(dream.methods.filter((x) => x !== m.id))}>
-                          <X />
-                        </Button>
-                      </div>
-                      <Progress value={(doneCount / m.steps.length) * 100} className="mb-3 h-1.5" label={`${doneCount} de ${m.steps.length} passos`} />
-                      <MethodSteps method={m} done={(i) => dream.stepsDone.includes(`${m.id}:${i}`)} onToggle={(i) => toggleStep(`${m.id}:${i}`)} onTask={(s) => toTask(s, `Passo de “${m.title}” para o sonho ${dream.title}.`)} />
-                    </li>
-                  );
-                })}
+          {/* 3. Histórico */}
+          {dream.deposits.length > 0 && (
+            <details className="group mt-4 rounded-xl border border-border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold">
+                Histórico ({dream.deposits.length})
+                <ChevronDown className="size-4 text-foreground/50 transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <ul className="divide-y divide-border border-t border-border">
+                {[...dream.deposits].reverse().map((d) => (
+                  <li key={d.id} className="flex items-center gap-3 px-4 py-2 text-sm">
+                    <span className="w-16 shrink-0 tabular-nums text-foreground/55">{d.date ? format(parseISO(d.date), 'dd/MM/yy') : ''}</span>
+                    <span className="min-w-0 flex-1 truncate text-foreground/70">{d.note ?? (d.amount < 0 ? 'Retirada' : 'Guardado')}</span>
+                    <span className={cn('shrink-0 font-semibold tabular-nums', d.amount < 0 && 'text-primary dark:text-neon')}>
+                      {d.amount < 0 ? '−' : '+'}
+                      {brl(Math.abs(d.amount), true)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Apagar este lançamento"
+                      onClick={async () => (await askConfirm({ title: 'Apagar este lançamento?', confirmLabel: 'Apagar', danger: true })) && removeDep.mutate({ dreamId: dream.id, depositId: d.id })}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </li>
+                ))}
               </ul>
-              {others.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/55">Adicionar caminho</p>
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    {others.map((m) => {
-                      const MIcon = m.icon;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setMethods([...dream.methods, m.id])}
-                          className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm text-foreground/75 transition-colors hover:border-primary/50 hover:text-foreground"
-                        >
-                          <MIcon className="size-4 shrink-0 text-foreground/45" aria-hidden />
-                          <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                          <Plus className="size-3.5 shrink-0 text-foreground/40" aria-hidden />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            </details>
           )}
         </div>
       </SheetContent>
@@ -718,122 +683,23 @@ function DreamSheet({ dream, rate, onClose, onEdit, startTab }: { dream: Dream |
   );
 }
 
-/* ----------------------------------- Caminhos ----------------------------------- */
-
-function MethodsSection({ dreams }: { dreams: Dream[] }) {
-  const [group, setGroup] = useState<MethodGroup>('ganhar');
-  const [open, setOpen] = useState<string | null>(null);
-  const save = useSaveDream();
-  const toTask = useStepToTask();
-  const g = METHOD_GROUPS.find((x) => x.id === group)!;
-  const active = dreams.filter((d) => planFor(d).status !== 'realizado');
-  return (
-    <section aria-labelledby="fin-methods" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 id="fin-methods" className="text-lg font-bold">
-            Caminhos para juntar dinheiro
-          </h2>
-          <p className="text-sm text-foreground/60">{g.intro}</p>
-        </div>
-        <div role="tablist" aria-label="Tipo de caminho" className="flex gap-1 rounded-xl border border-border bg-card p-1">
-          {METHOD_GROUPS.map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              role="tab"
-              aria-selected={group === x.id}
-              onClick={() => setGroup(x.id)}
-              className={cn('h-8 whitespace-nowrap rounded-lg px-3 text-sm font-semibold', group === x.id ? 'bg-primary text-white' : 'text-foreground/65 hover:text-foreground')}
-            >
-              {x.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <ul className="grid gap-3 md:grid-cols-2">
-        {METHODS.filter((m) => m.group === group).map((m) => {
-          const isOpen = open === m.id;
-          return (
-            <li key={m.id} className="rounded-xl border border-border bg-card">
-              <button type="button" onClick={() => setOpen(isOpen ? null : m.id)} aria-expanded={isOpen} className="flex w-full items-start gap-3 p-4 text-left">
-                <IconTile icon={m.icon} />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{m.title}</span>
-                  <span className="mt-0.5 block text-sm text-foreground/60">{m.summary}</span>
-                  <span className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-foreground/65">
-                    <span className="rounded-full bg-muted px-2 py-0.5">{m.potential}</span>
-                    <span className="rounded-full bg-muted px-2 py-0.5">{m.time}</span>
-                  </span>
-                </span>
-                <ChevronDown className={cn('mt-1 size-4 shrink-0 text-foreground/40 transition-transform', isOpen && 'rotate-180')} aria-hidden />
-              </button>
-              {isOpen && (
-                <div className="border-t border-border px-4 pb-4 pt-3">
-                  <MethodSteps method={m} done={() => false} onTask={(s) => toTask(s, `Passo de “${m.title}”.`)} />
-                  {active.length > 0 && (
-                    <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs font-semibold text-foreground/55">Usar no sonho:</span>
-                      {active.map((d) => {
-                        const has = d.methods.includes(m.id);
-                        const DIcon = dreamIcon(d);
-                        return (
-                          <button
-                            key={d.id}
-                            type="button"
-                            disabled={has}
-                            onClick={() => save.mutate({ id: d.id, title: d.title, target: d.target, deadline: d.deadline, methods: [...d.methods, m.id] }, { onSuccess: () => toast.success('Caminho adicionado', { description: d.title }) })}
-                            className={cn(
-                              'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium',
-                              has ? 'border-primary/30 bg-primary/10 text-primary dark:text-neon' : 'border-border text-foreground/70 hover:border-primary/50 hover:text-foreground',
-                            )}
-                          >
-                            {has ? <CircleCheck className="size-3.5" aria-hidden /> : <DIcon className="size-3.5" aria-hidden />}
-                            {d.title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 /* ------------------------------------ Página ------------------------------------ */
 
 export function FinancePage() {
   const { data: dreams = [] } = useDreams();
-  const { data: budget } = useFinance();
-  const rate = budget?.rate ?? DEFAULT_RATE;
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Dream | undefined>();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [startTab, setStartTab] = useState<SheetTab>('resumo');
   const opened = dreams.find((d) => d.id === openId) ?? null;
-  const open = (id: string, t: SheetTab = 'resumo') => {
-    setStartTab(t);
-    setOpenId(id);
-  };
 
-  const { totals, active, achieved } = useMemo(() => {
-    const withPlan = dreams.map((d) => ({ d, p: planFor(d, rate) }));
+  const { needed, active, achieved } = useMemo(() => {
+    const withPlan = dreams.map((d) => ({ d, p: planFor(d, 0) }));
     return {
-      totals: {
-        saved: withPlan.reduce((s, x) => s + x.p.saved, 0),
-        remaining: withPlan.reduce((s, x) => s + x.p.remaining, 0),
-        perMonth: withPlan.reduce((s, x) => s + (x.p.status === 'realizado' || x.p.status === 'vencido' ? 0 : x.p.perMonth), 0),
-        done: withPlan.filter((x) => x.p.status === 'realizado').length,
-      },
+      needed: withPlan.reduce((s, x) => s + (x.p.status === 'realizado' || x.p.status === 'vencido' ? 0 : x.p.perMonth), 0),
       active: withPlan.filter((x) => x.p.status !== 'realizado').map((x) => x.d),
       achieved: withPlan.filter((x) => x.p.status === 'realizado').map((x) => x.d),
     };
-  }, [dreams, rate]);
+  }, [dreams]);
 
   const newDream = () => {
     setEditing(undefined);
@@ -841,82 +707,63 @@ export function FinancePage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-4">
         <RutteLogo className="w-12 shrink-0 sm:w-14" />
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
             <Target className="size-7 text-primary" aria-hidden /> Sonhos e metas
           </h1>
-          <p className="mt-1 max-w-2xl text-foreground/60">
-            “Me conte o que você quer conquistar, quanto custa e até quando. Eu mostro quanto guardar e o caminho para chegar lá.” — <strong className="text-foreground">Rutte</strong>
-          </p>
+          <p className="mt-1 max-w-2xl text-foreground/60">Diga o que você quer conquistar. Eu mostro quanto guardar por mês e de onde pode sair o dinheiro.</p>
         </div>
         <Button onClick={newDream}>
           <Plus /> Novo sonho
         </Button>
       </header>
 
-      {dreams.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile icon={PiggyBank} label="Guardado" value={brl(totals.saved)} />
-          <StatTile icon={Target} label="Falta juntar" value={brl(totals.remaining)} />
-          <StatTile icon={CalendarDays} label="Guardar por mês" value={brl(totals.perMonth)} />
-          <StatTile icon={Trophy} label="Realizados" value={`${totals.done} de ${dreams.length}`} />
-        </div>
-      )}
+      <MonthCard needed={needed} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section aria-labelledby="fin-dreams" className="min-w-0 space-y-3">
-          <h2 id="fin-dreams" className="text-lg font-bold">
-            Meus sonhos
-          </h2>
-          {dreams.length === 0 ? (
-            <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-border p-8 text-center">
-              <IconTile icon={Target} size="lg" />
-              <p className="mt-1 font-semibold">Qual é o seu próximo sonho?</p>
-              <p className="max-w-md text-sm text-foreground/60">Uma viagem, o carro, a casa, o seu negócio. Diga quanto custa e até quando, e eu mostro quanto guardar por mês e como chegar lá.</p>
-              <Button className="mt-2" onClick={newDream}>
-                <Plus /> Criar meu primeiro sonho
-              </Button>
-            </div>
-          ) : (
-            <ul className="grid gap-3 xl:grid-cols-2">
-              {active.map((d) => (
-                <DreamCard key={d.id} dream={d} rate={rate} onOpen={(t) => open(d.id, t)} />
+      <section aria-labelledby="fin-dreams" className="space-y-3">
+        <h2 id="fin-dreams" className="text-lg font-bold">
+          Meus sonhos
+        </h2>
+        {dreams.length === 0 ? (
+          <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-border p-8 text-center">
+            <IconTile icon={Target} size="lg" />
+            <p className="mt-1 font-semibold">Qual é o seu próximo sonho?</p>
+            <p className="max-w-md text-sm text-foreground/60">Uma viagem, o carro, a casa, o seu negócio. Diga quanto custa e até quando.</p>
+            <Button className="mt-2" onClick={newDream}>
+              <Plus /> Criar meu primeiro sonho
+            </Button>
+          </div>
+        ) : (
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {active.map((d) => (
+              <DreamCard key={d.id} dream={d} onOpen={() => setOpenId(d.id)} />
+            ))}
+          </ul>
+        )}
+        {achieved.length > 0 && (
+          <>
+            <h3 className="flex items-center gap-2 pt-2 font-semibold text-foreground/70">
+              <Trophy className="size-4" aria-hidden /> Realizados
+            </h3>
+            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {achieved.map((d) => (
+                <DreamCard key={d.id} dream={d} onOpen={() => setOpenId(d.id)} />
               ))}
             </ul>
-          )}
-          {achieved.length > 0 && (
-            <>
-              <h3 className="flex items-center gap-2 pt-2 font-semibold text-foreground/70">
-                <Trophy className="size-4" aria-hidden /> Realizados
-              </h3>
-              <ul className="grid gap-3 xl:grid-cols-2">
-                {achieved.map((d) => (
-                  <DreamCard key={d.id} dream={d} rate={rate} onOpen={(t) => open(d.id, t)} />
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <BudgetCard needed={totals.perMonth} />
-        </aside>
-      </div>
-
-      <MethodsSection dreams={dreams} />
+          </>
+        )}
+      </section>
 
       <p className="flex items-start gap-1.5 text-xs text-foreground/50">
-        <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Conteúdo educativo para organizar seus objetivos. Os valores são estimativas e não são recomendação de investimento.
+        <CalendarDays className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Contas simples, sem juros: o que você guarda por mês até o prazo. Conteúdo educativo, não é recomendação de investimento.
       </p>
 
-      <DreamForm open={formOpen} onOpenChange={setFormOpen} dream={editing} rate={rate} onCreated={(id) => open(id, 'simulador')} />
+      <DreamForm open={formOpen} onOpenChange={setFormOpen} dream={editing} onCreated={(id) => setOpenId(id)} />
       <DreamSheet
         dream={opened}
-        rate={rate}
-        startTab={startTab}
         onClose={() => setOpenId(null)}
         onEdit={(d) => {
           setEditing(d);

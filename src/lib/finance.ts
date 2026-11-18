@@ -36,7 +36,7 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import type { Dream, DreamPlanConfig, FinanceBudget } from '@/types';
+import type { Dream, DreamWay, FinanceBudget } from '@/types';
 
 /* ---------------------------------- Dinheiro ---------------------------------- */
 
@@ -421,135 +421,97 @@ export const METHODS: FinanceMethod[] = [
 
 export const METHOD_BY_ID = Object.fromEntries(METHODS.map((m) => [m.id, m])) as Record<string, FinanceMethod>;
 
-const roundUp = (n: number, step = 10) => Math.ceil(n / step) * step;
+/* --------------------------------- Plano simples --------------------------------- */
 
-/* ------------------------------ Simulador interativo ------------------------------ */
+/** De onde vai sair o dinheiro do sonho. */
+export interface WayDef {
+  id: string;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  /** mensal = todo mês; unico = de uma vez */
+  kind: 'mensal' | 'unico';
+  /** passo a passo em METHODS */
+  methodId: string;
+  suggest: number;
+}
 
-/** Inflação estimada ao ano (%) para corrigir o preço do sonho. */
-export const INFLATION = 4.5;
-/** Semanas por mês (para horas de renda extra). */
-const WEEKS = 4.33;
-export const PROMO_FROM = 6;
-export const BUSINESS_FROM = 4;
+export const WAYS: WayDef[] = [
+  { id: 'sobra', label: 'Guardar da sobra do mês', hint: 'O que sobra do salário depois das contas', icon: Landmark, kind: 'mensal', methodId: 'pague-se', suggest: 300 },
+  { id: 'cortes', label: 'Cortar gastos', hint: 'Assinaturas, delivery, compras por impulso', icon: Scissors, kind: 'mensal', methodId: 'cortar', suggest: 200 },
+  { id: 'renda-extra', label: 'Renda extra', hint: 'Bicos, freelas, aulas, fins de semana', icon: Wrench, kind: 'mensal', methodId: 'renda-extra', suggest: 500 },
+  { id: 'promocao', label: 'Aumento ou promoção', hint: 'O que vai entrar a mais no salário', icon: TrendingUp, kind: 'mensal', methodId: 'promocao', suggest: 400 },
+  { id: 'negocio', label: 'Negócio próprio', hint: 'Lucro por mês do seu negócio', icon: Rocket, kind: 'mensal', methodId: 'negocio', suggest: 1000 },
+  { id: 'vender', label: 'Vender o que não usa', hint: 'Entra uma vez só', icon: Package, kind: 'unico', methodId: 'vender', suggest: 800 },
+  { id: 'extras', label: '13º, férias ou bônus', hint: 'Parte do dinheiro extra, uma vez', icon: Gift, kind: 'unico', methodId: 'extras', suggest: 1000 },
+];
+export const WAY_BY_ID = Object.fromEntries(WAYS.map((w) => [w.id, w])) as Record<string, WayDef>;
 
-/** Parte da sobra (e dos cortes) que cabe a este sonho quando há vários. */
-export function shareOf(d: Dream, others: Dream[], rate = DEFAULT_RATE, today = new Date()) {
+/** Formas de juntar do sonho (converte o plano do simulador antigo, se houver). */
+export function waysOf(d: Dream): DreamWay[] {
+  if (d.ways) return d.ways;
+  const p = d.plan;
+  if (!p) return [];
+  const out: DreamWay[] = [];
+  const add = (id: string, v: number) => v > 0 && out.push({ id, value: Math.round(v) });
+  if (p.sobra?.on) add('sobra', p.sobra.value);
+  add('cortes', (p.cortes?.on ? p.cortes.value : 0) + (p.consumo?.on ? p.consumo.value : 0));
+  if (p.freela?.on) add('renda-extra', p.freela.hours * p.freela.hourly * 4.33);
+  if (p.negocio?.on) add('negocio', p.negocio.value);
+  if (p.vendas?.on) add('vender', p.vendas.value);
+  if (p.extra13?.on) add('extras', p.extra13.value);
+  return out;
+}
+
+export interface WayPlan {
+  saved: number;
+  remaining: number;
+  /** meses até o prazo */
+  n: number;
+  monthly: number;
+  once: number;
+  /** quanto precisa por mês (descontando o que entra de uma vez) */
+  needMonthly: number;
+  /** meses até juntar tudo com o plano (null = nunca) */
+  months: number | null;
+  reachDate: string | null;
+  /** meses antes (+) ou depois (−) do prazo */
+  diff: number | null;
+  /** quanto falta por mês para chegar no prazo */
+  gapMonthly: number;
+}
+
+/** Conta simples, sem juros: o que entra por mês + o que entra de uma vez. */
+export function wayPlan(d: Dream, ways: DreamWay[], today = new Date()): WayPlan {
+  const saved = savedOf(d);
+  const n = monthsUntil(d.deadline, today);
+  const monthly = ways.filter((w) => WAY_BY_ID[w.id]?.kind === 'mensal').reduce((s, w) => s + w.value, 0);
+  const once = ways.filter((w) => WAY_BY_ID[w.id]?.kind === 'unico').reduce((s, w) => s + w.value, 0);
+  const remaining = Math.max(0, d.target - saved);
+  const left = Math.max(0, remaining - once);
+  const needMonthly = left / n;
+  const months = left <= 0 ? 0 : monthly > 0 ? Math.ceil(left / monthly) : null;
+  return {
+    saved,
+    remaining,
+    n,
+    monthly,
+    once,
+    needMonthly,
+    months,
+    reachDate: months === null ? null : format(addMonths(today, months), 'yyyy-MM-dd'),
+    diff: months === null ? null : n - months,
+    gapMonthly: Math.max(0, needMonthly - monthly),
+  };
+}
+
+/** Parte da sobra que cabe a este sonho quando há vários (proporcional ao que cada um pede). */
+export function freeShare(d: Dream, all: Dream[], free: number, today = new Date()) {
   const need = (x: Dream) => {
-    const pl = planFor(x, rate, today);
+    const pl = planFor(x, 0, today);
     return pl.status === 'realizado' || pl.status === 'vencido' ? 0 : pl.perMonth;
   };
   const mine = need(d);
-  const all = mine + others.filter((x) => x.id !== d.id).reduce((s, x) => s + need(x), 0);
-  return all > 0 ? mine / all : 1;
-}
-
-/** Quantos dezembros cabem nos próximos `n` meses. */
-export const decembersIn = (n: number, today = new Date()) => Array.from({ length: n }, (_, i) => addMonths(today, i + 1).getMonth()).filter((m) => m === 11).length;
-
-/** Plano inicial: usa os números reais quando existem e completa com renda extra. */
-export function defaultPlanConfig(d: Dream, budget: FinanceBudget | null | undefined, others: Dream[], rate = DEFAULT_RATE, today = new Date()): DreamPlanConfig {
-  const share = shareOf(d, others, rate, today);
-  const free = budget?.income ? Math.max(0, budget.income - budget.expenses) : 0;
-  const n = monthsUntil(d.deadline, today);
-  const cfg: DreamPlanConfig = {
-    sobra: { on: free > 0, value: Math.floor((free * share) / 10) * 10 },
-    cortes: { on: true, value: roundUp(150 * share) },
-    consumo: { on: true, value: roundUp(250 * share) },
-    vendas: { on: true, value: 800 },
-    extra13: { on: decembersIn(n, today) > 0, value: budget?.income ? roundUp(budget.income / 2, 50) : 1000 },
-    freela: { on: false, hours: 5, hourly: 40 },
-    promocao: { on: false, pct: 10 },
-    negocio: { on: false, value: 1500 },
-    inflation: true,
-  };
-  // completa o que faltar com horas de renda extra (até 20 h por semana)
-  const sim = simulate(d, cfg, budget, rate, today);
-  if (sim.gapAtDeadline > 0) {
-    const perMonth = sim.gapAtDeadline / n;
-    cfg.freela = { on: true, hours: Math.min(20, Math.max(1, Math.ceil(perMonth / (cfg.freela.hourly * WEEKS)))), hourly: 40 };
-  }
-  return cfg;
-}
-
-export interface SimPoint {
-  t: number;
-  date: string;
-  balance: number;
-  target: number;
-}
-
-export interface SimResult {
-  /** meses até o prazo */
-  n: number;
-  /** mês em que alcança (null = não alcança em 50 anos) */
-  reach: number | null;
-  reachDate: string | null;
-  /** quanto entra por mês com tudo funcionando (depois de promoção e negócio) */
-  monthlyFull: number;
-  /** quanto entra por mês agora */
-  monthlyNow: number;
-  oneTimes: number;
-  targetAtDeadline: number;
-  balanceAtDeadline: number;
-  gapAtDeadline: number;
-  series: SimPoint[];
-}
-
-/** Valor por mês de cada fonte no mês `t` (1 = próximo mês). */
-export function monthlyAt(cfg: DreamPlanConfig, budget: FinanceBudget | null | undefined, t: number) {
-  let m = 0;
-  if (cfg.sobra.on) m += cfg.sobra.value;
-  if (cfg.cortes.on) m += cfg.cortes.value;
-  if (cfg.consumo.on) m += cfg.consumo.value;
-  if (cfg.freela.on) m += cfg.freela.hours * cfg.freela.hourly * WEEKS;
-  if (cfg.promocao.on && t >= PROMO_FROM) m += ((budget?.income ?? 0) * cfg.promocao.pct) / 100;
-  if (cfg.negocio.on && t >= BUSINESS_FROM) m += cfg.negocio.value;
-  return m;
-}
-
-/** Simula mês a mês: depósitos, vendas, 13º em dezembro, rendimento e preço corrigido pela inflação. */
-export function simulate(d: Dream, cfg: DreamPlanConfig, budget: FinanceBudget | null | undefined, rate = DEFAULT_RATE, today = new Date()): SimResult {
-  const r = rate / 100;
-  const inf = cfg.inflation ? (1 + INFLATION / 100) ** (1 / 12) - 1 : 0;
-  const n = monthsUntil(d.deadline, today);
-  let balance = savedOf(d);
-  const series: SimPoint[] = [{ t: 0, date: format(today, 'yyyy-MM-dd'), balance, target: d.target }];
-  let reach: number | null = balance >= d.target ? 0 : null;
-  let oneTimes = 0;
-  let atDeadline = { balance, target: d.target };
-  for (let t = 1; t <= 600; t++) {
-    const date = addMonths(today, t);
-    let add = monthlyAt(cfg, budget, t);
-    if (t === 1 && cfg.vendas.on) add += cfg.vendas.value;
-    if (date.getMonth() === 11 && cfg.extra13.on) add += cfg.extra13.value;
-    if (t <= n) oneTimes += (t === 1 && cfg.vendas.on ? cfg.vendas.value : 0) + (date.getMonth() === 11 && cfg.extra13.on ? cfg.extra13.value : 0);
-    balance = balance * (1 + r) + add;
-    const target = d.target * (1 + inf) ** t;
-    if (t <= 120) series.push({ t, date: format(date, 'yyyy-MM-dd'), balance, target });
-    if (t === n) atDeadline = { balance, target };
-    if (reach === null && balance >= target) reach = t;
-    if (reach !== null && t >= n && t >= Math.min(reach + 2, 120)) break;
-  }
-  const len = Math.min(120, Math.max(n, reach ?? n) + 2);
-  return {
-    n,
-    reach,
-    reachDate: reach !== null ? format(addMonths(today, reach), 'yyyy-MM-dd') : null,
-    monthlyFull: monthlyAt(cfg, budget, 600),
-    monthlyNow: monthlyAt(cfg, budget, 1),
-    oneTimes,
-    targetAtDeadline: atDeadline.target,
-    balanceAtDeadline: atDeadline.balance,
-    gapAtDeadline: Math.max(0, atDeadline.target - atDeadline.balance),
-    series: series.slice(0, len + 1),
-  };
-}
-
-/** Horas por semana de renda extra que fecham a diferença no prazo. */
-export function hoursToClose(d: Dream, cfg: DreamPlanConfig, budget: FinanceBudget | null | undefined, rate = DEFAULT_RATE, today = new Date()) {
-  for (let h = cfg.freela.on ? cfg.freela.hours : 0; h <= 40; h++) {
-    const sim = simulate(d, { ...cfg, freela: { ...cfg.freela, on: h > 0, hours: h } }, budget, rate, today);
-    if (sim.gapAtDeadline <= 0) return h;
-  }
-  return null;
+  const total = all.reduce((s, x) => s + need(x), 0);
+  return total > free && total > 0 ? (free * mine) / total : Math.min(free, mine);
 }
