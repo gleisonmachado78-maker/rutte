@@ -1,9 +1,41 @@
 /**
- * Finanças e sonhos: contas (quanto guardar por mês, quando chego lá) e o catálogo de métodos
+ * Sonhos e metas: contas (quanto guardar por mês, quando chego lá) e o catálogo de métodos
  * para conseguir o dinheiro (ganhar mais, gastar menos, fazer render). Conteúdo educativo.
  */
 import { addMonths, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  Baby,
+  Bike,
+  Briefcase,
+  CalendarCheck,
+  Car,
+  ChartPie,
+  Dumbbell,
+  Gem,
+  Gift,
+  Globe,
+  GraduationCap,
+  House,
+  Landmark,
+  Laptop,
+  LifeBuoy,
+  Music,
+  Package,
+  PawPrint,
+  PiggyBank,
+  Plane,
+  Receipt,
+  Rocket,
+  Scissors,
+  ShoppingCart,
+  Sparkles,
+  Sprout,
+  TreePalm,
+  TrendingUp,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Dream, DreamPlanConfig, FinanceBudget } from '@/types';
 
 /* ---------------------------------- Dinheiro ---------------------------------- */
@@ -98,9 +130,9 @@ export function planFor(d: Dream, rate = DEFAULT_RATE, today = new Date()): Drea
 export const STATUS_INFO: Record<DreamPlan['status'], { label: string; tone: string }> = {
   realizado: { label: 'Realizado', tone: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
   adiantado: { label: 'Adiantado', tone: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
-  'no-ritmo': { label: 'No ritmo', tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' },
-  atrasado: { label: 'Abaixo do ritmo', tone: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
-  vencido: { label: 'Prazo passou', tone: 'bg-red-500/15 text-red-700 dark:text-red-300' },
+  'no-ritmo': { label: 'No ritmo', tone: 'bg-muted text-foreground/70' },
+  atrasado: { label: 'Abaixo do ritmo', tone: 'bg-primary/10 text-primary dark:text-neon' },
+  vencido: { label: 'Prazo passou', tone: 'bg-primary text-white' },
 };
 
 /** Data em que chega guardando `perMonth`. */
@@ -113,29 +145,53 @@ export function budgetCheck(budget: FinanceBudget | null | undefined, needed: nu
   return { free, needed, gap: Math.max(0, needed - free), share: free > 0 ? needed / free : Infinity };
 }
 
-/* ------------------------------ Ideias de sonhos ------------------------------ */
+/* ------------------------------ Ícones e ideias ------------------------------ */
+
+export const DREAM_ICONS: { id: string; label: string; icon: LucideIcon; emoji: string }[] = [
+  { id: 'sonho', label: 'Sonho', icon: Sparkles, emoji: '✨' },
+  { id: 'reserva', label: 'Reserva', icon: LifeBuoy, emoji: '🛟' },
+  { id: 'viagem', label: 'Viagem', icon: Plane, emoji: '✈️' },
+  { id: 'praia', label: 'Férias', icon: TreePalm, emoji: '🏖️' },
+  { id: 'mundo', label: 'Intercâmbio', icon: Globe, emoji: '🌎' },
+  { id: 'carro', label: 'Carro', icon: Car, emoji: '🚗' },
+  { id: 'moto', label: 'Moto ou bike', icon: Bike, emoji: '🏍️' },
+  { id: 'casa', label: 'Casa', icon: House, emoji: '🏠' },
+  { id: 'negocio', label: 'Negócio', icon: Rocket, emoji: '🚀' },
+  { id: 'casamento', label: 'Casamento', icon: Gem, emoji: '💍' },
+  { id: 'estudos', label: 'Estudos', icon: GraduationCap, emoji: '🎓' },
+  { id: 'eletronico', label: 'Eletrônico', icon: Laptop, emoji: '💻' },
+  { id: 'dividas', label: 'Dívidas', icon: Receipt, emoji: '🧾' },
+  { id: 'bebe', label: 'Filhos', icon: Baby, emoji: '👶' },
+  { id: 'pet', label: 'Pet', icon: PawPrint, emoji: '🐶' },
+  { id: 'musica', label: 'Música', icon: Music, emoji: '🎸' },
+  { id: 'saude', label: 'Saúde', icon: Dumbbell, emoji: '💪' },
+  { id: 'dinheiro', label: 'Dinheiro', icon: PiggyBank, emoji: '💰' },
+];
+const ICON_BY_ID = Object.fromEntries(DREAM_ICONS.map((i) => [i.id, i]));
+const ICON_BY_EMOJI = Object.fromEntries(DREAM_ICONS.map((i) => [i.emoji, i]));
+
+/** Ícone do sonho (sonhos antigos guardavam um emoji). */
+export const dreamIcon = (d: Pick<Dream, 'icon' | 'emoji'>): LucideIcon => (ICON_BY_ID[d.icon ?? ''] ?? ICON_BY_EMOJI[d.emoji] ?? DREAM_ICONS[0]).icon;
+export const dreamIconId = (d: Pick<Dream, 'icon' | 'emoji'>) => (ICON_BY_ID[d.icon ?? ''] ?? ICON_BY_EMOJI[d.emoji] ?? DREAM_ICONS[0]).id;
 
 export interface DreamIdea {
   title: string;
-  emoji: string;
+  icon: string;
   target: number;
   months: number;
   methods: string[];
 }
 
 export const DREAM_IDEAS: DreamIdea[] = [
-  { title: 'Reserva de emergência', emoji: '🛟', target: 15000, months: 12, methods: ['pague-se', 'orcamento', 'render'] },
-  { title: 'Viagem dos sonhos', emoji: '✈️', target: 8000, months: 10, methods: ['pague-se', 'desafio52', 'vender'] },
-  { title: 'Carro', emoji: '🚗', target: 50000, months: 36, methods: ['promocao', 'renda-extra', 'render'] },
-  { title: 'Entrada da casa própria', emoji: '🏠', target: 80000, months: 48, methods: ['promocao', 'pague-se', 'render'] },
-  { title: 'Abrir meu negócio', emoji: '🚀', target: 20000, months: 18, methods: ['negocio', 'renda-extra', 'cortar'] },
-  { title: 'Casamento', emoji: '💍', target: 35000, months: 24, methods: ['orcamento', 'renda-extra', 'extras'] },
-  { title: 'Estudos / curso', emoji: '🎓', target: 12000, months: 12, methods: ['promocao', 'cortar', 'extras'] },
-  { title: 'Celular ou notebook novo', emoji: '💻', target: 5000, months: 6, methods: ['vender', 'cortar', 'consciente'] },
-  { title: 'Quitar dívidas', emoji: '🧾', target: 10000, months: 12, methods: ['dividas', 'orcamento', 'vender'] },
+  { title: 'Reserva de emergência', icon: 'reserva', target: 15000, months: 12, methods: ['pague-se', 'orcamento', 'render'] },
+  { title: 'Viagem', icon: 'viagem', target: 15000, months: 12, methods: ['pague-se', 'renda-extra', 'vender'] },
+  { title: 'Carro', icon: 'carro', target: 50000, months: 36, methods: ['promocao', 'renda-extra', 'render'] },
+  { title: 'Entrada da casa própria', icon: 'casa', target: 80000, months: 48, methods: ['promocao', 'pague-se', 'render'] },
+  { title: 'Abrir meu negócio', icon: 'negocio', target: 20000, months: 18, methods: ['negocio', 'renda-extra', 'cortar'] },
+  { title: 'Casamento', icon: 'casamento', target: 35000, months: 24, methods: ['orcamento', 'renda-extra', 'extras'] },
+  { title: 'Estudos ou curso', icon: 'estudos', target: 12000, months: 12, methods: ['promocao', 'cortar', 'extras'] },
+  { title: 'Quitar dívidas', icon: 'dividas', target: 10000, months: 12, methods: ['dividas', 'orcamento', 'vender'] },
 ];
-
-export const DREAM_EMOJIS = ['✨', '🛟', '✈️', '🚗', '🏠', '🚀', '💍', '🎓', '💻', '🧾', '🏖️', '🏍️', '👶', '🐶', '🎸', '💪', '🌎', '💰'];
 
 /* ------------------------------ Métodos para chegar ------------------------------ */
 
@@ -150,7 +206,7 @@ export const METHOD_GROUPS: { id: MethodGroup; label: string; intro: string }[] 
 export interface FinanceMethod {
   id: string;
   group: MethodGroup;
-  emoji: string;
+  icon: LucideIcon;
   title: string;
   summary: string;
   /** potencial aproximado */
@@ -164,7 +220,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'promocao',
     group: 'ganhar',
-    emoji: '📈',
+    icon: TrendingUp,
     title: 'Conseguir uma promoção',
     summary: 'Mostrar resultado, deixar claro que você quer crescer e chegar preparado para a conversa.',
     potential: '+10% a 30% no salário',
@@ -181,7 +237,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'emprego',
     group: 'ganhar',
-    emoji: '💼',
+    icon: Briefcase,
     title: 'Negociar aumento ou trocar de emprego',
     summary: 'Às vezes o salário só sobe de verdade mudando de empresa, ou mostrando que poderia mudar.',
     potential: '+15% a 40% no salário',
@@ -197,7 +253,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'negocio',
     group: 'ganhar',
-    emoji: '🚀',
+    icon: Rocket,
     title: 'Abrir um negócio',
     summary: 'Começar pequeno, vender antes de investir pesado e reinvestir o lucro.',
     potential: 'Sem teto (começa variável)',
@@ -214,7 +270,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'renda-extra',
     group: 'ganhar',
-    emoji: '🛠️',
+    icon: Wrench,
     title: 'Renda extra com uma habilidade',
     summary: 'Freelance, aulas, consultoria, bicos de fim de semana: vender algumas horas do que você já sabe fazer.',
     potential: 'R$ 300 a R$ 3.000 por mês',
@@ -230,7 +286,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'vender',
     group: 'ganhar',
-    emoji: '📦',
+    icon: Package,
     title: 'Vender o que você não usa',
     summary: 'Roupas, eletrônicos, móveis e objetos parados viram dinheiro rápido para o sonho.',
     potential: 'R$ 200 a R$ 2.000 de uma vez',
@@ -245,7 +301,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'orcamento',
     group: 'economizar',
-    emoji: '📊',
+    icon: ChartPie,
     title: 'Organizar o orçamento (50/30/20)',
     summary: '50% para necessidades, 30% para desejos e 20% para o futuro: um ponto de partida simples.',
     potential: '10% a 20% da renda',
@@ -260,7 +316,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'cortar',
     group: 'economizar',
-    emoji: '✂️',
+    icon: Scissors,
     title: 'Cortar assinaturas e taxas esquecidas',
     summary: 'Streaming, apps, tarifas bancárias e seguros que ninguém lembra que existem.',
     potential: 'R$ 50 a R$ 400 por mês',
@@ -275,7 +331,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'dividas',
     group: 'economizar',
-    emoji: '🧾',
+    icon: Receipt,
     title: 'Renegociar contas e dívidas',
     summary: 'Juros de cartão e cheque especial comem qualquer sonho: primeiro estancar, depois guardar.',
     potential: 'R$ 100 a R$ 1.000 por mês',
@@ -291,7 +347,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'consciente',
     group: 'economizar',
-    emoji: '🛒',
+    icon: ShoppingCart,
     title: 'Consumo consciente',
     summary: 'Pequenos hábitos que, somados, viram centenas de reais por mês.',
     potential: 'R$ 100 a R$ 600 por mês',
@@ -306,7 +362,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'desafio52',
     group: 'economizar',
-    emoji: '🗓️',
+    icon: CalendarCheck,
     title: 'Desafio das 52 semanas',
     summary: 'Guarde R$ 10 na semana 1, R$ 20 na semana 2… Em um ano são R$ 13.780.',
     potential: 'R$ 13.780 em um ano',
@@ -320,7 +376,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'pague-se',
     group: 'render',
-    emoji: '🏦',
+    icon: Landmark,
     title: 'Pague-se primeiro',
     summary: 'Guardar no dia em que o dinheiro entra, não com o que sobra no fim do mês.',
     potential: 'O valor por mês do seu sonho',
@@ -335,7 +391,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'render',
     group: 'render',
-    emoji: '🌱',
+    icon: Sprout,
     title: 'Deixar o dinheiro rendendo com segurança',
     summary: 'Dinheiro parado na conta corrente perde para a inflação. Para sonhos, priorize segurança e poder sacar quando precisar.',
     potential: 'Rendimento sobre o que já guardou',
@@ -350,7 +406,7 @@ export const METHODS: FinanceMethod[] = [
   {
     id: 'extras',
     group: 'render',
-    emoji: '🎁',
+    icon: Gift,
     title: 'Guardar o dinheiro extra',
     summary: '13º, férias, bônus, restituição do IR e presentes em dinheiro: o atalho mais fácil.',
     potential: '1 a 2 salários por ano',
@@ -365,110 +421,7 @@ export const METHODS: FinanceMethod[] = [
 
 export const METHOD_BY_ID = Object.fromEntries(METHODS.map((m) => [m.id, m])) as Record<string, FinanceMethod>;
 
-/* --------------------------- Plano para juntar o valor --------------------------- */
-
-export interface PlanPart {
-  id: string;
-  methodId?: string;
-  emoji: string;
-  title: string;
-  detail: string;
-  /** por mês (0 se for de uma vez) */
-  monthly: number;
-  /** de uma vez */
-  oneTime: number;
-  total: number;
-}
-
 const roundUp = (n: number, step = 10) => Math.ceil(n / step) * step;
-
-/**
- * Divide o que falta do sonho em fontes concretas (sobra, cortes, vendas, extras e renda extra),
- * cada uma com valor por mês e total no prazo. Conservador: não conta rendimento.
- */
-export function savingPlan(d: Dream, budget: FinanceBudget | null | undefined, others: Dream[] = [], rate = DEFAULT_RATE, today = new Date()) {
-  const saved = savedOf(d);
-  const n = monthsUntil(d.deadline, today);
-  let left = Math.max(0, d.target - saved);
-  const parts: PlanPart[] = [];
-  const push = (p: Omit<PlanPart, 'total'>) => {
-    if (left <= 0) return;
-    let { monthly, oneTime } = p;
-    if (oneTime > left) oneTime = roundUp(left);
-    if (monthly * n > left - oneTime) monthly = roundUp(Math.max(0, left - oneTime) / n);
-    const total = Math.min(left, monthly * n + oneTime);
-    if (total <= 0) return;
-    left -= total;
-    parts.push({ ...p, monthly, oneTime, total });
-  };
-  const totalFree = budget?.income ? Math.max(0, budget.income - budget.expenses) : null;
-  // a sobra é dividida entre os sonhos em andamento, na proporção do que cada um pede por mês
-  const need = (x: Dream) => {
-    const pl = planFor(x, rate, today);
-    return pl.status === 'realizado' || pl.status === 'vencido' ? 0 : pl.perMonth;
-  };
-  const mine = need(d);
-  const all = mine + others.filter((x) => x.id !== d.id).reduce((s, x) => s + need(x), 0);
-  // cortes e consumo também são divididos (o mesmo corte não paga dois sonhos)
-  const share = all > 0 ? mine / all : 1;
-  const free = totalFree === null ? null : all > totalFree && all > 0 ? (totalFree * mine) / all : totalFree;
-
-  if (free) push({ id: 'sobra', methodId: 'pague-se', emoji: '🏦', title: 'Da sua sobra do mês', detail: others.length > 1 ? 'Sua parte da sobra, dividida entre os sonhos' : 'Transferência automática no dia do pagamento', monthly: Math.floor(free), oneTime: 0 });
-  push({ id: 'cortar', methodId: 'cortar', emoji: '✂️', title: 'Cortar assinaturas e taxas', detail: 'Streaming, apps e tarifas que você não usa', monthly: roundUp(150 * share), oneTime: 0 });
-  push({ id: 'consciente', methodId: 'consciente', emoji: '🛒', title: 'Consumo consciente', detail: 'Mercado com lista, marmita 3x por semana, regra das 48 h', monthly: roundUp(250 * share), oneTime: 0 });
-  push({ id: 'vender', methodId: 'vender', emoji: '📦', title: 'Vender o que não usa', detail: 'Roupas, eletrônicos e objetos parados', monthly: 0, oneTime: 800 });
-  if (n >= 6)
-    push({
-      id: 'extras',
-      methodId: 'extras',
-      emoji: '🎁',
-      title: 'Metade do dinheiro extra',
-      detail: '13º, férias, bônus ou restituição do IR',
-      monthly: 0,
-      oneTime: budget?.income ? roundUp(budget.income / 2, 50) : 1000,
-    });
-  if (left > 0)
-    push({ id: 'renda-extra', methodId: 'renda-extra', emoji: '🛠️', title: 'Renda extra com uma habilidade', detail: 'Freelance, aulas, bicos de fim de semana', monthly: roundUp(left / n, 50), oneTime: 0 });
-
-  const monthly = parts.reduce((s, p) => s + p.monthly, 0);
-  return { parts, months: n, saved, monthly, total: parts.reduce((s, p) => s + p.total, 0) + saved };
-}
-
-export interface Boost {
-  id: string;
-  methodId: string;
-  emoji: string;
-  title: string;
-  detail: string;
-  /** a mais por mês */
-  extra: number;
-  /** de uma vez */
-  oneTime: number;
-  /** meses até realizar com o boost */
-  months: number;
-  /** meses a menos que o plano normal */
-  gain: number;
-}
-
-/** Atalhos para ganhar mais e chegar antes: quanto rendem e quantos meses economizam. */
-export function boostsFor(d: Dream, budget: FinanceBudget | null | undefined, rate = DEFAULT_RATE, today = new Date()): Boost[] {
-  const plan = planFor(d, rate, today);
-  if (plan.status === 'realizado') return [];
-  const base = Math.max(plan.perMonth, 1);
-  const baseMonths = monthsToReach(d.target, plan.saved, base, rate);
-  const raise = budget?.income ? roundUp(budget.income * 0.15, 50) : 600;
-  const opts: Omit<Boost, 'months' | 'gain'>[] = [
-    { id: 'freela', methodId: 'renda-extra', emoji: '🛠️', title: 'Renda extra de 5 h por semana', detail: '≈ R$ 40 por hora em freelance, aulas ou bicos', extra: 800, oneTime: 0 },
-    { id: 'promocao', methodId: 'promocao', emoji: '📈', title: 'Promoção ou aumento de 15%', detail: budget?.income ? `15% sobre ${brl(budget.income)} de renda` : 'Preencha "Seu mês" para calcular com a sua renda', extra: raise, oneTime: 0 },
-    { id: 'negocio', methodId: 'negocio', emoji: '🚀', title: 'Negócio paralelo pequeno', detail: 'Lucro de R$ 1.500/mês depois de engrenar', extra: 1500, oneTime: 0 },
-    { id: 'vender', methodId: 'vender', emoji: '📦', title: 'Vender o que não usa', detail: 'Um mutirão de vendas de uma vez', extra: 0, oneTime: 1000 },
-    { id: 'tudo', methodId: 'renda-extra', emoji: '⚡', title: 'Renda extra + vendas + cortes', detail: 'R$ 800 de renda extra, R$ 400 de cortes e R$ 1.000 em vendas', extra: 1200, oneTime: 1000 },
-  ];
-  return opts.map((o) => {
-    const months = monthsToReach(d.target, plan.saved + o.oneTime, base + o.extra, rate);
-    return { ...o, months, gain: Math.max(0, Math.floor(baseMonths - months)) };
-  });
-}
 
 /* ------------------------------ Simulador interativo ------------------------------ */
 

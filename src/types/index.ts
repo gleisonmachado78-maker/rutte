@@ -378,7 +378,10 @@ export interface DreamDeposit {
 export interface Dream {
   id: string;
   title: string;
+  /** emoji (sonhos antigos); os novos usam `icon` */
   emoji: string;
+  /** id do ícone (lib/finance DREAM_ICONS) */
+  icon?: string;
   /** valor total (R$) */
   target: number;
   /** prazo, yyyy-MM-dd */

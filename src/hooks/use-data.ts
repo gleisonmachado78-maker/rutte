@@ -490,10 +490,10 @@ export function useDreamDeposit() {
       const saved = dream.deposits.reduce((s, x) => s + x.amount, 0);
       if (vars.amount > 0 && saved >= dream.target && saved - vars.amount < dream.target) {
         celebrate({ count: 60, spread: 90 });
-        toast.success(`Sonho realizado! ${dream.emoji}`, { description: `Você juntou tudo para “${dream.title}”.` });
+        toast.success('Sonho realizado!', { description: `Você juntou tudo para “${dream.title}”.` });
       } else if (vars.amount > 0) {
         celebrate({ count: 18 });
-        toast.success('Guardado 💰', { description: `Mais um passo para “${dream.title}”.` });
+        toast.success('Guardado', { description: `Mais um passo para “${dream.title}”.` });
       } else toast.success('Retirada registrada');
     },
     onError: errorToast,

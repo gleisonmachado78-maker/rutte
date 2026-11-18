@@ -195,14 +195,15 @@ height='auto' sem guardar a rolagem (`scrollParent` em note-card) — fazia a te
 
 `/finance` (`src/pages/finance.tsx`, `src/lib/finance.ts`; só no contexto Pessoal): `Database.dreams` (valor, prazo, `deposits` com
 retiradas negativas, `methods` + `stepsDone` "metodo:indice") e `Database.finance` (renda, gastos, rendimento % ao mês, padrão 0,8).
-Quanto guardar por mês = `monthlyNeeded` (com juros compostos; meses inteiros até o prazo); simulador "E se eu guardar…" (`monthsToReach`).
+Quanto guardar por mês = `monthlyNeeded` (com juros compostos; meses inteiros até o prazo).
 "Seu mês" compara a sobra com a soma do que os sonhos pedem. Catálogo `METHODS` (ganhar mais / gastar menos / fazer render) com passos que
 viram afazer (área `financas`). Conteúdo educativo: não recomendar investimento específico.
-No painel do sonho, simulador "Monte o seu plano" (`components/finance/plan-builder.tsx`, salvo em `Dream.plan`): fontes ligáveis com
+Visual no padrão Rutte: **sem emojis** — ícones lucide em blocos `bg-primary/10` (`DREAM_ICONS`, `dreamIcon` converte o emoji de
+sonhos antigos; `Dream.icon`; `METHODS[].icon`). Painel do sonho com abas Resumo · Simulador · Passos. Simulador (`components/finance/plan-builder.tsx`, salvo em `Dream.plan`): fontes ligáveis com
 sliders (sobra, cortes, consumo, vendas no 1º mês, 13º em cada dezembro, renda extra h/semana × R$/h, promoção % a partir do 6º mês,
 negócio a partir do 4º mês) e inflação (4,5% a.a.) no preço; `simulate` roda mês a mês com rendimento → data de realização, gráfico SVG
 (guardado × preço, prazo, hover), "Completar com renda extra" (`hoursToClose`), "Mudar prazo", "Usar este plano" (métodos) e lembrete
-mensal (afazer FREQ=MONTHLY). Salvar o plano manda só id/título/valor/prazo/plan (não sobrescreve depósitos). Criar um sonho abre o painel.
+mensal (afazer FREQ=MONTHLY). Salvar o plano manda só id/título/valor/prazo/plan (não sobrescreve depósitos). Criar um sonho abre o painel na aba Simulador.
 
 ## Login e nuvem (Supabase) + tutorial
 
