@@ -405,7 +405,11 @@ export function CalendarPage() {
                   tabIndex={0}
                   aria-selected={isSel}
                   aria-label={`${format(d, "d 'de' MMMM", { locale: ptBR })}, ${items.length + proj.length + gev.length + pev.length} itens`}
-                  onClick={() => setSelected(d)}
+                  onClick={() => {
+                    // no celular não existe duplo clique: tocar de novo no dia já escolhido cria o compromisso
+                    if (isSel && window.matchMedia('(pointer: coarse)').matches) openNewTask({ dueDate: toISODate(d) });
+                    else setSelected(d);
+                  }}
                   onDoubleClick={() => openNewTask({ dueDate: toISODate(d) })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -466,7 +470,10 @@ export function CalendarPage() {
 
         <DayList date={selected} tasks={itemsFor(selected)} projected={projFor(selected)} events={gFor(selected)} portal={pFor(selected)} />
       </div>
-      <p className="hidden text-xs text-foreground/50 sm:block">Dica: dê um duplo clique em um dia para criar um afazer nele.</p>
+      <p className="text-xs text-foreground/50">
+        <span className="[@media(pointer:coarse)]:hidden">Dica: dê um duplo clique em um dia para criar um afazer nele.</span>
+        <span className="hidden [@media(pointer:coarse)]:inline">Dica: toque de novo no dia escolhido (ou em Adicionar) para criar um compromisso.</span>
+      </p>
     </div>
   );
 }

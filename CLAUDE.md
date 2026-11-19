@@ -213,7 +213,9 @@ no aparelho. Com `VITE_SUPABASE_SYNC=1`, `services/sync.ts` guarda o banco intei
 segue usando o armazenamento local por conta (`setStorageNamespace`) e cada `persist()` agenda um upsert (1,2 s); offline marca
 "dirty" e envia ao voltar. **Local-first**: com dados locais e conta já ligada, abre na hora e reconcilia com a nuvem em segundo plano
 (`reconcile`, `setRemoteListener` → invalida as queries). Offline: sessão lida do cache `rutte:auth` e perfil do cache `rutte:profile:<uid>`.
-Rotas carregadas sob demanda (`lazy` em App.tsx, Suspense no app-layout); `api.ts` sem latência artificial. `sw.js` (rutte-v4):
+Rotas carregadas sob demanda (`lazyPage` de `lib/lazy-page.ts` em App.tsx, Suspense + `PageErrorBoundary` no app-layout).
+Chunk antigo que sumiu após deploy (celular com versão velha): `lazyPage`/`vite:preloadError`/boundary recarregam com `?v=…`
+(no máx. 1x a cada 30 s; o sw.js busca da rede sem prazo quando a navegação tem `?v`); `api.ts` sem latência artificial. `sw.js` (rutte-v5):
 cache-first para /assets e fontes, network-first com 2,5 s e queda para o cache. Conta nova começa com `createEmpty()` (sem afazeres). A personalização não cria afazeres.
 Administração: `supabase/admin.sql` (tabela `profiles` com RLS, `is_admin()`, gatilho que cria o perfil e faz o e-mail do dono
 admin, RPCs `rutte_touch(p_name)` — último acesso + nome —, `admin_delete_user` e `admin_set_password` (pgcrypto `extensions.crypt`)).

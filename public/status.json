@@ -1,7 +1,3 @@
 {
-  "maintenance": true,
-  "start": "2026-11-19T11:22:16.332Z",
-  "eta": "2026-11-19T12:02:16.332Z",
-  "until": "2026-11-19T12:22:16.332Z",
-  "message": "A Rutte está em atualização"
+  "maintenance": false
 }

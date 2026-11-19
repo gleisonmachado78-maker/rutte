@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { PageErrorBoundary } from '@/components/layout/page-error-boundary';
 import { DevCredit } from '@/components/brand/credit';
 import { BRAND, RutteLogo } from '@/components/brand/rutte';
 import { FocusEngine, FocusPill } from '@/components/focus/focus-engine';
@@ -484,9 +485,11 @@ export function AppLayout() {
 
       <main id="main" className={cn('pb-28 transition-all duration-200 md:pb-10', collapsed ? 'md:pl-[72px]' : 'md:pl-60')}>
         <div key={location.pathname} className="mx-auto w-full max-w-6xl animate-page-in px-4 py-5 sm:px-6 sm:py-8">
-          <Suspense fallback={<PageLoading />}>
-            <Outlet />
-          </Suspense>
+          <PageErrorBoundary>
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
+          </PageErrorBoundary>
           <NewsPopup />
         </div>
       </main>

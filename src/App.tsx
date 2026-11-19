@@ -4,7 +4,8 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { ConfirmHost } from '@/components/ui/confirm';
 import { UpdateDuck } from '@/components/layout/update-duck';
-import { lazy, useEffect } from 'react';
+import { useEffect } from 'react';
+import { lazyPage } from '@/lib/lazy-page';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { PrivacyPage, TermsPage } from '@/pages/public-pages';
@@ -13,19 +14,19 @@ import { DashboardPage } from '@/pages/dashboard';
 import { useUI } from '@/store/ui';
 
 // Telas carregadas sob demanda: o início abre rápido e cada tela só é baixada quando você entra nela
-const AdminPage = lazy(() => import('@/pages/admin').then((m) => ({ default: m.AdminPage })));
-const SettingsPage = lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
-const AssistantPage = lazy(() => import('@/pages/assistant').then((m) => ({ default: m.AssistantPage })));
-const CalendarPage = lazy(() => import('@/pages/calendar').then((m) => ({ default: m.CalendarPage })));
-const FocusPage = lazy(() => import('@/pages/focus').then((m) => ({ default: m.FocusPage })));
-const GymPage = lazy(() => import('@/pages/gym').then((m) => ({ default: m.GymPage })));
-const LibraryPage = lazy(() => import('@/pages/library').then((m) => ({ default: m.LibraryPage })));
-const FinancePage = lazy(() => import('@/pages/finance').then((m) => ({ default: m.FinancePage })));
-const GratitudePage = lazy(() => import('@/pages/gratitude').then((m) => ({ default: m.GratitudePage })));
-const LifePage = lazy(() => import('@/pages/life').then((m) => ({ default: m.LifePage })));
-const NotesPage = lazy(() => import('@/pages/notes').then((m) => ({ default: m.NotesPage })));
-const LinksPage = lazy(() => import('@/pages/links').then((m) => ({ default: m.LinksPage })));
-const TasksPage = lazy(() => import('@/pages/tasks').then((m) => ({ default: m.TasksPage })));
+const AdminPage = lazyPage(() => import('@/pages/admin'), (m) => m.AdminPage);
+const SettingsPage = lazyPage(() => import('@/pages/settings'), (m) => m.SettingsPage);
+const AssistantPage = lazyPage(() => import('@/pages/assistant'), (m) => m.AssistantPage);
+const CalendarPage = lazyPage(() => import('@/pages/calendar'), (m) => m.CalendarPage);
+const FocusPage = lazyPage(() => import('@/pages/focus'), (m) => m.FocusPage);
+const GymPage = lazyPage(() => import('@/pages/gym'), (m) => m.GymPage);
+const LibraryPage = lazyPage(() => import('@/pages/library'), (m) => m.LibraryPage);
+const FinancePage = lazyPage(() => import('@/pages/finance'), (m) => m.FinancePage);
+const GratitudePage = lazyPage(() => import('@/pages/gratitude'), (m) => m.GratitudePage);
+const LifePage = lazyPage(() => import('@/pages/life'), (m) => m.LifePage);
+const NotesPage = lazyPage(() => import('@/pages/notes'), (m) => m.NotesPage);
+const LinksPage = lazyPage(() => import('@/pages/links'), (m) => m.LinksPage);
+const TasksPage = lazyPage(() => import('@/pages/tasks'), (m) => m.TasksPage);
 
 
 function NotFound() {

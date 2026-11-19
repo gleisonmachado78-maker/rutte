@@ -1,7 +1,7 @@
 // Service worker da Rutte: guarda o app para abrir rápido e sem internet.
 // - arquivos com hash (/assets/…): cache primeiro (nunca mudam; abre instantâneo)
 // - página e demais arquivos: rede primeiro, mas se a rede demorar mais de 2,5 s (ou cair) usa a cópia guardada
-const CACHE = 'rutte-v4';
+const CACHE = 'rutte-v5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './favicon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -67,6 +67,11 @@ self.addEventListener('fetch', (e) => {
   if (sameOrigin && /\/(version|status|news)\.json$/.test(url.pathname)) return;
   if ((sameOrigin && url.pathname.includes('/assets/')) || /fonts\.gstatic\.com/.test(req.url)) {
     e.respondWith(caches.match(req).then((r) => r || fetch(req).then((res) => save(req, res))));
+    return;
+  }
+  // recarga pedida pelo app para pegar a versão nova (?v=…): espera a rede, sem prazo
+  if (req.mode === 'navigate' && url.searchParams.has('v')) {
+    e.respondWith(fetch(req).then((res) => save(new Request('./index.html'), res)).catch(() => caches.match('./index.html')));
     return;
   }
   e.respondWith(networkFirst(req, req.mode === 'navigate'));

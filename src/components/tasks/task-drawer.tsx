@@ -53,6 +53,12 @@ const SCOPE_OPTIONS: { value: Scope; label: string; hint: string; icon: typeof T
 
 const PALETTE = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#0891B2', '#DB2777', '#B91B1C', '#475569'];
 
+/** Link sem https:// (ex.: meet.google.com/abc) ganha o https:// sozinho. */
+const withHttps = (v: string) => {
+  const s = (v ?? '').trim();
+  return s && !/^https?:\/\//i.test(s) ? `https://${s}` : s;
+};
+
 /** Drawer global de detalhe/edição. Montado uma vez no layout e controlado pelo store de UI. */
 export function TaskDrawer() {
   const drawer = useUI((s) => s.drawer);
@@ -127,10 +133,17 @@ function TaskForm({
     onDirtyChange(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  const [status, priority, meetingUrl, title, scope, categoryId, projectId, location] = useWatch({
+  const [status, priority, meetingUrl, title, scope, categoryId, projectId, location, startDate, dueDate] = useWatch({
     control,
-    name: ['status', 'priority', 'meetingUrl', 'title', 'scope', 'categoryId', 'projectId', 'location'],
+    name: ['status', 'priority', 'meetingUrl', 'title', 'scope', 'categoryId', 'projectId', 'location', 'startDate', 'dueDate'],
   });
+  // prazo vazio (no celular dá para "limpar" a data) volta para o dia escolhido
+  const defaultDue = toFormValues(task, defaults).dueDate;
+  // início depois do prazo: empurra o prazo junto, em vez de dar erro ao salvar
+  useEffect(() => {
+    if (startDate && dueDate && startDate > dueDate) setValue('dueDate', startDate, { shouldDirty: true, shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate]);
   const scopedCategories = categories.filter((c) => !c.scope || c.scope === scope);
   const scopedProjects = projects.filter((p) => !p.scope || p.scope === scope);
 
@@ -279,7 +292,7 @@ function TaskForm({
           />
           <div>
             <Label htmlFor="f-due">Prazo</Label>
-            <Input id="f-due" type="date" {...register('dueDate')} className={cn(errors.dueDate && 'border-primary')} />
+            <Input id="f-due" type="date" {...register('dueDate', { setValueAs: (v: string) => v || defaultDue })} className={cn(errors.dueDate && 'border-primary')} />
             {errors.dueDate && <p className="mt-1 text-xs text-primary">{errors.dueDate.message}</p>}
           </div>
           <div>
@@ -310,7 +323,7 @@ function TaskForm({
           </div>
           <div className="col-span-2">
             <Label htmlFor="f-meet">Link da reunião</Label>
-            <Input id="f-meet" type="url" placeholder="https://meet.google.com/…" {...register('meetingUrl')} className={cn(errors.meetingUrl && 'border-primary')} />
+            <Input id="f-meet" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" placeholder="https://meet.google.com/…" {...register('meetingUrl', { setValueAs: withHttps })} className={cn(errors.meetingUrl && 'border-primary')} />
             {errors.meetingUrl && <p className="mt-1 text-xs text-primary">{errors.meetingUrl.message}</p>}
           </div>
           <div className="col-span-2">
